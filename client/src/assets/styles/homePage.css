@@ -1,0 +1,326 @@
+.homepage-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* Seção Hero */
+.hero-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6rem 0;
+  gap: 2rem;
+}
+
+.hero-content {
+  flex: 1;
+  max-width: 50%;
+}
+
+.hero-content h1 {
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 1.5rem;
+}
+
+.hero-content p {
+  font-size: 1.1rem;
+  color: var(--secondary-color);
+  margin-bottom: 2.5rem;
+}
+
+.hero-actions .btn {
+  margin-right: 1rem;
+  font-size: 1rem;
+}
+
+.hero-image {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hero-image img {
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  width: 100%;
+}
+
+/* Seção de Funcionalidades */
+.features-section {
+  padding: 6rem 0;
+  text-align: center;
+}
+
+.features-section h2 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.features-section .section-subtitle {
+  font-size: 1.1rem;
+  color: var(--secondary-color);
+  max-width: 600px;
+  margin: 0 auto 4rem auto;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.feature-card {
+  background-color: var(--background-white);
+  padding: 2.5rem;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  text-align: left;
+  transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+}
+
+.feature-icon {
+  width: 50px;
+  height: 50px;
+  margin-bottom: 1.5rem;
+  background-color: var(--primary-color);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* (Adicione ícones SVG brancos na pasta assets para um visual melhor) */
+.feature-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke: var(--background-white);
+}
+
+.feature-card h3 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.feature-card p {
+  color: var(--secondary-color);
+}
+
+/* Seção CTA Final */
+.final-cta-section {
+    background: linear-gradient(45deg, var(--primary-color), #0056b3);
+    color: var(--text-light);
+    text-align: center;
+    padding: 5rem 2rem;
+    border-radius: var(--border-radius);
+    margin: 6rem 0;
+}
+
+.final-cta-section h2 {
+    font-size: 2.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.final-cta-section .btn-light {
+    background-color: var(--background-white);
+    color: var(--primary-color);
+    padding: 1rem 2.5rem;
+    font-size: 1.1rem;
+}
+.final-cta-section .btn-light:hover {
+    background-color: #f0f0f0;
+    transform: translateY(-2px);
+}
+
+/* /src/assets/styles/HomePage.css */
+/* ... (Mantenha os estilos anteriores do HomePage) ... */
+
+/* ESTILOS DE ANIMAÇÃO */
+.fade-in-element {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.fade-in-element.stagger {
+    transition-delay: var(--stagger-delay, 0s);
+}
+
+.fade-in-element.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Títulos e subtítulos padronizados para as seções */
+.section-title {
+    font-size: 2.8rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.section-subtitle {
+    font-size: 1.1rem;
+    color: var(--secondary-color);
+    max-width: 600px;
+    margin: 0 auto 4rem auto;
+    text-align: center;
+}
+
+
+/* SEÇÃO "COMO FUNCIONA" */
+.how-it-works-section {
+    padding: 6rem 0;
+    background-color: var(--background-white);
+}
+
+.steps-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+    position: relative;
+}
+
+/* Linha que conecta os passos */
+.steps-container::before {
+    content: '';
+    position: absolute;
+    top: 35px; 
+    left: 15%;
+    right: 15%;
+    height: 2px;
+    background-image: linear-gradient(to right, var(--border-color) 50%, transparent 50%);
+    background-size: 10px 2px;
+    z-index: 0;
+}
+
+.step {
+    flex: 1;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+    padding: 0 1rem;
+}
+
+.step-number {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background-color: var(--background-white);
+    border: 2px solid var(--primary-color);
+    color: var(--primary-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 auto 1.5rem auto;
+}
+
+.step h3 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+/* SEÇÃO DEPOIMENTOS */
+.testimonials-section {
+    padding: 6rem 0;
+    background-color: var(--background-light);
+}
+
+.testimonials-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+    margin-top: 4rem;
+}
+
+.testimonial-card {
+    background-color: var(--background-white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    display: flex;
+    flex-direction: column;
+}
+
+.testimonial-card p {
+    font-style: italic;
+    color: var(--secondary-color);
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    flex-grow: 1;
+    position: relative;
+    padding-left: 3rem;
+}
+/* Aspas decorativas */
+.testimonial-card p::before {
+    content: '“';
+    font-family: Georgia, serif;
+    font-size: 5rem;
+    color: var(--border-color);
+    position: absolute;
+    left: -10px;
+    top: -20px;
+    z-index: 0;
+}
+
+.testimonial-card footer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: auto;
+}
+
+.testimonial-card footer img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+}
+
+.testimonial-card footer strong {
+    font-size: 1rem;
+    font-weight: 600;
+}
+.testimonial-card footer span {
+    font-size: 0.9rem;
+    color: var(--secondary-color);
+}
+
+
+/* AJUSTES RESPONSIVOS */
+@media (max-width: 992px) {
+    .hero-section {
+        flex-direction: column;
+        text-align: center;
+    }
+    .hero-content {
+        max-width: 100%;
+    }
+    .steps-container {
+        flex-direction: column;
+    }
+    .steps-container::before {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .section-title {
+        font-size: 2.2rem;
+    }
+    .hero-content h1 {
+        font-size: 2.8rem;
+    }
+    .testimonials-grid {
+        grid-template-columns: 1fr;
+    }
+}

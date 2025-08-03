@@ -1,0 +1,148 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+:root {
+    --primary-color: #28a745;
+    --secondary-color: #82c993; 
+    --dark-color: #212529;
+    --light-color: #f8f9fa;
+    --font-family: 'Poppins', sans-serif;
+    --border-radius: 12px;
+    --shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    --transition: all 0.3s ease-in-out;
+}
+
+body {
+    font-family: var(--font-family);
+    color: var(--dark-color);
+}
+
+/* Navbar */
+.navbar {
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid #eee;
+    transition: var(--transition);
+}
+.navbar .navbar-brand {
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--primary-color);
+}
+.navbar .nav-link {
+    font-weight: 600;
+    color: #555;
+    transition: var(--transition);
+}
+.navbar .nav-link:hover {
+    color: var(--primary-color);
+}
+.navbar .btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    border-radius: var(--border-radius);
+}
+.navbar .btn-outline-primary {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    border-radius: var(--border-radius);
+    transition: var(--transition);
+}
+.navbar .btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+
+
+/* Seção Hero */
+.hero-section {
+    padding-top: 120px;
+    padding-bottom: 60px;
+    min-height: 100vh;
+    background-color: #fff;
+}
+.hero-text h1 {
+    font-weight: 700;
+    line-height: 1.2;
+}
+.hero-text .lead {
+    color: #666;
+    margin: 2rem 0;
+}
+.hero-image {
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+}
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    border-radius: var(--border-radius);
+    padding: 12px 30px;
+    font-weight: 600;
+    transition: var(--transition);
+}
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+}
+
+
+/* Títulos de Seção */
+.section-title {
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: var(--dark-color);
+}
+.section-subtitle {
+    max-width: 600px;
+    margin: 0 auto 3rem auto;
+    color: #777;
+}
+
+/* Cards de Funcionalidades */
+.feature-card {
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    text-align: left;
+    padding: 20px;
+    transition: var(--transition);
+    height: 100%;
+}
+.feature-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
+}
+.feature-icon {
+    width: 60px;
+    height: 60px;
+    background-color: var(--secondary-color);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+
+/* Seção CTA */
+.cta-section {
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+    border-radius: var(--border-radius);
+    margin: 4rem auto;
+    max-width: 1140px;
+}
+.btn-light {
+    font-weight: 600;
+    border-radius: var(--border-radius);
+    padding: 12px 30px;
+}
+.btn-light:hover {
+    transform: translateY(-3px);
+}
+
+/* Animações com ScrollReveal */
+.hero-text, .hero-image, .feature-card, #sobre .col-lg-6, .cta-section {
+    visibility: hidden; /* Começa invisível */
+}

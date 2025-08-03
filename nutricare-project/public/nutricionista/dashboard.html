@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - NutriCare</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .dashboard-header { background-color: #fff; padding: 1.5rem; border-bottom: 1px solid #dee2e6;}
+    </style>
+</head>
+<body>
+
+    <header class="dashboard-header d-flex justify-content-between align-items-center">
+        <h2 class="h4">Dashboard do Nutricionista</h2>
+        <div>
+            <span>Olá, Dra. Ana Clara!</span>
+            <a href="index.html" class="btn btn-outline-danger ms-3">Sair</a>
+        </div>
+    </header>
+
+    <main class="container py-5">
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header"><h4>Próximas Consultas</h4></div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div><strong>Carlos Pereira</strong><br><small>10:00 - Consulta de Rotina</small></div>
+                                <span class="badge bg-primary rounded-pill">Hoje</span>
+                            </li>
+                             <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div><strong>Mariana Silva</strong><br><small>11:00 - Retorno</small></div>
+                                <span class="badge bg-primary rounded-pill">Hoje</span>
+                            </li>
+                             <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div><strong>João Santos</strong><br><small>09:00 - Primeira Consulta</small></div>
+                                <span class="badge bg-secondary rounded-pill">Amanhã</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header"><h4>Ações Rápidas</h4></div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary">Adicionar Paciente</button>
+                            <button class="btn btn-secondary">Ver Modelos de Planos</button>
+                            <button class="btn btn-info text-white">Gerar Link de Cadastro</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+             <div class="col-12">
+                 <div class="card">
+                    <div class="card-header"><h4>Meus Pacientes</h4></div>
+                     <div class="card-body">
+                         <table class="table table-hover">
+                             <thead>
+                                 <tr><th>Nome</th><th>Última Consulta</th><th>Status</th><th>Ações</th></tr>
+                             </thead>
+                             <tbody>
+                                 <tr>
+                                     <td>Carlos Pereira</td>
+                                     <td>15/07/2024</td>
+                                     <td><span class="badge bg-success">Ativo</span></td>
+                                     <td><a href="dashboard-paciente.html" class="btn btn-sm btn-outline-primary">Ver Plano</a></td>
+                                 </tr>
+                                 <tr>
+                                     <td>Mariana Silva</td>
+                                     <td>10/07/2024</td>
+                                     <td><span class="badge bg-success">Ativo</span></td>
+                                     <td><a href="dashboard-paciente.html" class="btn btn-sm btn-outline-primary">Ver Plano</a></td>
+                                 </tr>
+                                 <tr>
+                                     <td>Roberto Dias</td>
+                                     <td>01/05/2024</td>
+                                     <td><span class="badge bg-warning text-dark">Em Atraso</span></td>
+                                     <td><a href="dashboard-paciente.html" class="btn btn-sm btn-outline-primary">Ver Plano</a></td>
+                                 </tr>
+                             </tbody>
+                         </table>
+                     </div>
+                 </div>
+             </div>
+        </div>
+    </main>
+
+</body>
+<script></script>
+</html>

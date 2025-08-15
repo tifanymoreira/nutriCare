@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Montador de Cardápio Avançado</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* * CSS VARIÁVEIS (ROOT)
+         * Usar variáveis torna o design mais consistente e fácil de manter.
+         * Se quisermos mudar a cor principal, só precisamos alterar em um lugar.
+        */
+      :root {
+        --cor-primaria: #4a90e2;
+        --cor-sucesso: #28a745;
+        --cor-perigo: #dc3545;
+        --cor-fundo: #f4f7f6;
+        --cor-painel: #ffffff;
+        --cor-texto: #333333;
+        --cor-sombra: rgba(0, 0, 0, 0.1);
+        --raio-borda: 8px;
+      }
+
+      /* ESTILOS GERAIS E LAYOUT */
+      body {
+        font-family: "Poppins", sans-serif;
+        background-color: var(--cor-fundo);
+        color: var(--cor-texto);
+        margin: 0;
+        padding: 25px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        min-height: 100vh;
+        user-select: none;
+      }
+
+      .container-principal {
+        display: flex;
+        gap: 40px;
+        width: 100%;
+        max-width: 1400px;
+      }
+
+      .painel {
+        background-color: var(--cor-painel);
+        padding: 25px;
+        border-radius: var(--raio-borda);
+        box-shadow: 0 4px 15px var(--cor-sombra);
+        flex-basis: 350px; /* Largura base do painel de itens */
+        flex-shrink: 0; /* Impede que o painel encolha */
+      }
+
+      h1,
+      h2 {
+        text-align: center;
+        margin-top: 0;
+        color: var(--cor-texto);
+      }
+
+      /* PAINEL DE ITENS DISPONÍVEIS (ESQUERDA) */
+      #lista-itens .item-arrastavel {
+        padding: 15px 20px;
+        margin-bottom: 10px;
+        background-color: #e9ecef;
+        border: 1px solid #dee2e6;
+        border-radius: var(--raio-borda);
+        cursor: grab;
+        transition: background-color 0.2s, box-shadow 0.2s, opacity 0.3s;
+        font-weight: 500;
+      }
+
+      #lista-itens .item-arrastavel:hover {
+        background-color: #dde2e6;
+        box-shadow: 0 2px 5px var(--cor-sombra);
+      }
+
+      /* Classe aplicada a um item sendo arrastado */
+      .item-arrastavel.arrastando {
+        opacity: 0.5;
+        cursor: grabbing;
+        background-color: var(--cor-primaria);
+        color: white;
+        border-color: var(--cor-primaria);
+      }
+
+      /* Classe para itens que já foram adicionados ao cardápio */
+      .item-arrastavel.item-usado {
+        opacity: 0.4;
+        cursor: not-allowed;
+        background-color: #f8f9fa;
+        text-decoration: line-through;
+      }
+
+      /* FOLHA DE CARDÁPIO (DIREITA) */
+      #folha-cardapio {
+        flex-grow: 1; /* Permite que o painel cresça para ocupar o espaço */
+        min-height: 600px;
+        border: 2px dashed #ced4da; /* Borda tracejada para indicar uma área de soltura */
+        transition: border-color 0.3s, background-color 0.3s;
+      }
+
+      /* Efeito visual quando um item é arrastado sobre a área do cardápio */
+      #folha-cardapio.drag-over {
+        border-color: var(--cor-primaria);
+        background-color: #e9f2fc;
+      }
+
+      /* ESTILO PARA UM ITEM DEPOIS DE ADICIONADO AO CARDÁPIO */
+      .item-cardapio {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 15px;
+        margin: 15px;
+        background-color: var(--cor-painel);
+        border-left: 5px solid var(--cor-sucesso);
+        border-radius: var(--raio-borda);
+        box-shadow: 0 2px 8px var(--cor-sombra);
+        animation: fadeIn 0.5s ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .item-cardapio .info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .item-cardapio .nome-item {
+        font-size: 1.1em;
+        font-weight: 600;
+      }
+
+      .item-cardapio .porcao-display,
+      .item-cardapio .input-porcao {
+        font-size: 1em;
+      }
+
+      /* O input de porção, estilizado */
+      .input-porcao {
+        width: 80px;
+        padding: 5px 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-family: "Poppins", sans-serif;
+      }
+
+      /* Ações (botões de editar/excluir) */
+      .item-cardapio .acoes {
+        display: flex;
+        gap: 10px;
+      }
+
+      .btn-acao {
+        padding: 6px 12px;
+        border: none;
+        border-radius: 4px;
+        color: white;
+        cursor: pointer;
+        font-weight: 500;
+        transition: opacity 0.2s;
+      }
+
+      .btn-acao:hover {
+        opacity: 0.85;
+      }
+
+      .btn-editar {
+        background-color: var(--cor-primaria);
+      }
+      .btn-salvar {
+        background-color: var(--cor-sucesso);
+      }
+      .btn-excluir {
+        background-color: var(--cor-perigo);
+      }
+
+      /* Classe para esconder elementos (usada para alternar entre input e texto) */
+      .escondido {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-principal">
+      <div class="painel">
+        <h2>Itens Disponíveis</h2>
+        <div id="lista-itens">
+          <div class="item-arrastavel" draggable="true" data-item="hamburguer">
+            Hambúrguer
+          </div>
+          <div
+            class="item-arrastavel"
+            draggable="true"
+            data-item="batata-frita"
+          >
+            Batata Frita
+          </div>
+          <div class="item-arrastavel" draggable="true" data-item="pizza">
+            Pizza
+          </div>
+          <div
+            class="item-arrastavel"
+            draggable="true"
+            data-item="refrigerante"
+          >
+            Refrigerante
+          </div>
+          <div
+            class="item-arrastavel"
+            draggable="true"
+            data-item="salada-ceasar"
+          >
+            Salada Ceasar
+          </div>
+          <div
+            class="item-arrastavel"
+            draggable="true"
+            data-item="suco-laranja"
+          >
+            Suco de Laranja
+          </div>
+          <div class="item-arrastavel" draggable="true" data-item="milkshake">
+            Milkshake
+          </div>
+        </div>
+      </div>
+
+      <div id="folha-cardapio" class="painel">
+        <h1>Monte seu Cardápio</h1>
+      </div>
+    </div>
+
+    <script type="module" src="../js/planeEditor.js"></script>
+  </body>
+</html>

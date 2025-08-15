@@ -1,0 +1,607 @@
+/* client/public/css/style.css */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+
+
+:root {
+    --primary-green: #2a9d8f;
+    --secondary-orange: #f4a261;
+    --dark-charcoal: #264653;
+    --danger-red: #e76f51;
+    --light-bg: #f8f9fa;
+    --white: #ffffff;
+    --font-family: 'Poppins', sans-serif;
+    --border-radius: 12px;
+    --shadow-sm: 0 4px 15px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 8px 25px rgba(0, 0, 0, 0.1);
+    --transition: all 0.3s ease-in-out;
+}
+
+/* =================================================================== */
+/* =================== ESTILOS GLOBAIS E DE ALTURA =================== */
+/* =================================================================== */
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--light-bg);
+    color: var(--dark-charcoal);
+    font-weight: 400;
+}
+/* --- ESTILOS GERAIS E BOTÕES --- */
+.section-subtitle {
+    font-weight: 700;
+    color: var(--primary-green);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+.section-title {
+    font-weight: 800;
+    color: var(--dark-charcoal);
+    margin-bottom: 3rem;
+}
+.btn-primary-custom {
+    background: linear-gradient(45deg, var(--secondary-orange), var(--danger-red));
+    border: none;
+    padding: 12px 30px;
+    font-weight: 600;
+    color: var(--white);
+    border-radius: 50px;
+    transition: var(--transition);
+    box-shadow: 0 4px 15px rgba(244, 162, 97, 0.4);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.btn-primary-custom:hover, .btn-primary-custom:focus {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(244, 162, 97, 0.6);
+    color: var(--white);
+}
+
+/* =================================================================== */
+/* ===================== ESTILOS DA LANDING PAGE ===================== */
+/* =================================================================== */
+
+/* --- NAVEGAÇÃO --- */
+.navbar {
+    padding: 1rem 0;
+    transition: var(--transition);
+}
+.navbar.scrolled {
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-sm);
+    padding: 0.5rem 0;
+}
+.navbar-brand {
+    font-weight: 800;
+    font-size: 1.5rem;
+    color: var(--primary-green) !important;
+}
+.navbar-brand i {
+    color: var(--secondary-orange);
+}
+.navbar .nav-link {
+    font-weight: 500;
+    color: var(--dark-charcoal);
+    transition: var(--transition);
+}
+.navbar .nav-link:hover, .navbar .nav-link.active {
+    color: var(--primary-green);
+}
+.navbar.scrolled .nav-link {
+    color: var(--dark-charcoal);
+}
+.navbar.scrolled .nav-link:hover, .navbar.scrolled .nav-link.active {
+    color: var(--primary-green);
+}
+.navbar .btn-outline-light {
+    border-color: rgba(255, 255, 255, 0.5);
+    color: var(--white);
+    border-radius: 50px;
+    font-weight: 500;
+}
+.navbar.scrolled .btn-outline-light {
+    border-color: var(--primary-green);
+    color: var(--primary-green);
+}
+
+/* --- SEÇÃO HERO --- */
+.hero-section {
+    padding: 12rem 0 8rem 0;
+    background: linear-gradient(135deg, #e9f9f7, #fef5ec);
+    position: relative;
+    overflow: hidden;
+}
+.hero-badge {
+    display: inline-block;
+    padding: 6px 14px;
+    background-color: rgba(42, 157, 143, 0.1);
+    color: var(--primary-green);
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    margin-bottom: 1.5rem;
+}
+.hero-text h1 {
+    font-weight: 800;
+    line-height: 1.2;
+}
+.hero-text .lead {
+    font-weight: 400;
+    color: #555;
+    margin: 1.5rem 0 2.5rem 0;
+}
+.hero-image {
+    max-width: 100%;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    position: relative;
+    z-index: 2;
+}
+.hero-shape {
+    position: absolute;
+    bottom: -150px;
+    left: -150px;
+    width: 400px;
+    height: 400px;
+    background-color: rgba(244, 162, 97, 0.15);
+    border-radius: 50%;
+    z-index: 0;
+}
+
+/* --- OUTRAS SEÇÕES DA LANDING PAGE --- */
+#features {
+    background-color: var(--light-bg);
+}
+.feature-card {
+    background-color: var(--white);
+    padding: 2rem 1.5rem;
+    border-radius: var(--border-radius);
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    border-top: 4px solid transparent;
+    width: 100%;
+}
+.feature-card:hover {
+    transform: translateY(-10px);
+    box-shadow: var(--shadow-md);
+    border-top-color: var(--primary-green);
+}
+.feature-icon {
+    font-size: 2.5rem;
+    color: var(--primary-green);
+    margin-bottom: 1rem;
+}
+.feature-card h5 {
+    font-weight: 700;
+    color: var(--dark-charcoal);
+    margin-bottom: 0.5rem;
+}
+.feature-card p {
+    color: #666;
+    font-size: 0.9rem;
+}
+.step-card {
+    background-color: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    position: relative;
+    height: 100%;
+}
+.step-number {
+    position: absolute;
+    top: -20px;
+    left: 2rem;
+    background: linear-gradient(45deg, var(--primary-green), #25a191);
+    color: var(--white);
+    height: 50px;
+    width: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    box-shadow: 0 4px 10px rgba(42, 157, 143, 0.4);
+}
+.step-card h4 {
+    margin-top: 2rem;
+    font-weight: 700;
+}
+.testimonial-card {
+    background-color: #f1f5f9;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.testimonial-text {
+    font-style: italic;
+    color: #444;
+    margin-bottom: 1.5rem;
+    position: relative;
+    padding-left: 2rem;
+}
+.testimonial-text::before {
+    content: '“';
+    position: absolute;
+    left: 0;
+    top: -10px;
+    font-size: 3rem;
+    color: var(--primary-green);
+    opacity: 0.3;
+}
+.testimonial-author {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.testimonial-author img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+}
+.testimonial-author span {
+    color: #777;
+    font-size: 0.9rem;
+}
+.cta-section {
+    background: var(--dark-charcoal) url(https://www.transparenttextures.com/patterns/subtle-carbon.png);
+    color: var(--white);
+}
+.cta-section h2 {
+    font-weight: 800;
+}
+.cta-section .btn-light {
+    font-weight: 600;
+    color: var(--primary-green);
+    border-radius: 50px;
+    padding: 12px 30px;
+}
+.footer a {
+    text-decoration: none;
+    transition: var(--transition);
+}
+.footer a:hover {
+    color: var(--primary-green) !important;
+}
+
+/* =================================================================== */
+/* ===================== ESTILOS DE LOGIN/CADASTRO =================== */
+/* =================================================================== */
+
+.auth-wrapper {
+    display: flex;
+    width: 100%;
+    height: 100vh;
+}
+
+.auth-branding-column {
+    flex: 7;
+    background: linear-gradient(160deg, var(--primary-green), var(--dark-charcoal));
+    color: var(--white);
+    padding: 4rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+}
+
+.auth-form-column {
+    flex: 5;
+    background-color: var(--light-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    margin-top: 15cm;
+}
+
+.auth-branding-column .navbar-brand {
+    color: var(--white) !important;
+    font-size: 1.8rem;
+    position: absolute;
+    top: 2rem;
+    left: 4rem;
+}
+
+.branding-content h1 {
+    font-weight: 800;
+    font-size: 3rem;
+    line-height: 1.2;
+}
+
+.branding-content .lead {
+    font-size: 1.1rem;
+    opacity: 0.8;
+    max-width: 80%;
+}
+
+/* Container que segura o flipper */
+.auth-container {
+    width: 100%;
+    max-width: 450px;
+    min-height: 600px; /* Altura para acomodar o form de cadastro */
+    perspective: 1500px; /* Efeito de profundidade 3D */
+}
+
+/* O elemento que realmente gira */
+.auth-flipper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.8s;
+    transform-style: preserve-3d;
+}
+
+/* Classe adicionada via JS para girar */
+.auth-flipper.is-flipped {
+    transform: rotateY(180deg);
+}
+
+/* Estilo comum para as duas faces do cartão */
+.auth-card {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden; /* Esconde o lado de trás do elemento */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* A face de trás (cadastro) já começa virada */
+.auth-card-back {
+    transform: rotateY(180deg);
+}
+
+
+.auth-title {
+    font-weight: 700;
+    color: var(--dark-charcoal);
+}
+
+.auth-subtitle {
+    color: #6c757d;
+    margin-bottom: 2rem;
+}
+
+.form-control {
+    background-color: #f1f5f9;
+    border: 2px solid transparent;
+    border-radius: var(--border-radius);
+    padding: 0.85rem 1.1rem;
+    transition: var(--transition);
+}
+
+.form-control:focus {
+    background-color: var(--white);
+    border-color: var(--primary-green);
+    box-shadow: 0 0 0 4px rgba(42, 157, 143, 0.1);
+}
+
+.form-switch-link {
+    color: var(--primary-green);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.form-switch-link:hover {
+    text-decoration: underline;
+}
+
+.form-message-container {
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--border-radius);
+    font-size: 0.9rem;
+    font-weight: 500;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.form-message-container.visible {
+    opacity: 1;
+}
+
+.form-message-container.success {
+    background-color: #d1e7dd;
+    color: #0f5132;
+    border: 1px solid #badbcc;
+}
+
+.form-message-container.error {
+    background-color: #f8d7da;
+    color: #842029;
+    border: 1px solid #f5c2c7;
+}
+
+/* =================================================================== */
+/* =================== ESTILOS DASHBOARD NUTRICIONISTA =============== */
+/* =================================================================== */
+
+.dashboard-wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+.dashboard-sidebar {
+    width: 260px;
+    background: linear-gradient(to right, #273616, #5F6C37);
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    transition: var(--transition);
+}
+
+.sidebar-header .navbar-brand {
+    color: var(--white) !important;
+}
+
+.sidebar-nav {
+    flex-grow: 1;
+    margin-top: 2rem;
+}
+.sidebar-nav .nav-item {
+    margin-bottom: 0.5rem;
+}
+.sidebar-nav .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--border-radius);
+    color: #cbd5e1;
+    font-weight: 500;
+    transition: var(--transition);
+}
+.sidebar-nav .nav-link:hover {
+    background-color: rgb(131, 216, 111);
+    color: var(--white);
+}
+.sidebar-nav .nav-item.active .nav-link {
+    background-color: rgba(20, 103, 20, 0.497);
+    color: var(--white);
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(45, 244, 5, 0.121);
+}
+.sidebar-nav .nav-link i {
+    font-size: 1.2rem;
+}
+
+.btn-logout {
+    background-color: rgba(205, 147, 10, 0.69);
+    color: #e2e8f0;
+    font-weight: 500;
+    text-align: left;
+    padding: 0.75rem 1rem;
+}
+.btn-logout:hover {
+    background-color: var(--danger-red);
+    color: var(--white);
+}
+
+.dashboard-main {
+    flex-grow: 1;
+    background-color: #f1f5f9;
+    padding: 2rem;
+    overflow-y: auto;
+}
+
+.dashboard-content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;    
+}
+.dashboard-content-header h1 {
+    font-weight: 800;
+    color: var(--dark-charcoal);
+    font-size: 1.8rem;
+}
+
+.stat-card {
+    background-color: rgba(119, 189, 134, 0.114);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    transition: var(--transition);
+}
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-md);
+}
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    color: var(--white);
+}
+
+.icon-patients { background-color: #273616; }
+.icon-rating { background-color: #273616; }
+.icon-appointments { background-color: #273616; }
+.icon-revenue { background-color: #273616; }
+
+.stat-info .stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--dark-charcoal);
+    display: block;
+    line-height: 1;
+}
+.stat-info .stat-label {
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
+.data-card {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    border: none;
+}
+.data-card .card-header {
+    background-color: transparent;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 1rem 1.5rem;
+}
+.data-card .card-title {
+    font-weight: 700;
+    color: var(--dark-charcoal);
+}
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.badge.bg-success-light { background-color: rgba(22, 163, 74, 0.1); }
+.text-success { color: #16a34a !important; }
+.badge.bg-warning-light { background-color: rgba(245, 158, 11, 0.1); }
+.text-warning { color: #d97706 !important; }
+
+
+/* =================================================================== */
+/* ======================== AJUSTES RESPONSIVOS ====================== */
+/* =================================================================== */
+
+@media (max-width: 991.98px) {
+    .navbar-nav {
+        background-color: var(--white);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-top: 1rem;
+        box-shadow: var(--shadow-md);
+    }
+    .hero-text {
+        text-align: center;
+    }
+    .hero-image-container {
+        margin-top: 3rem;
+    }
+}

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Gerar Link Rápido</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <style>
+        .hidden {
+            display: none;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 40px auto;
+            padding: 24px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px #0001;
+        }
+
+        #generatedLink {
+            word-break: break-all;
+            color: #007bff;
+        }
+
+        button {
+            margin-top: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Gerar Link de Cadastro</h2>
+        <button id="generateLinkBtn">Gerar Link</button>
+        <div id="linkContainer" class="hidden">
+            <p>Link gerado:</p>
+            <span id="generatedLink"></span>
+            <button id="copyLinkBtn">Copiar Link</button>
+        </div>
+    </div>
+    <script type="module" src="././js/dashboard-nutricionista.js"></script>
+</body>
+
+</html>

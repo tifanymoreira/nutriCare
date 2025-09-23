@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    
+
     const nutriID = await verifySession();
     if (!nutriID) {
         window.location.href = '/pages/login.html';
@@ -27,11 +27,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         initializeNutriConfigPage(nutriID);
     } else if (path.endsWith('/nutricionista/nutriInvoicing.html')) {
         initializeInvoicingPage(nutriID);
+    } else if (path.endsWith('/nutricionista/planeEditor.html')) {
+        // Nada a inicializar aqui no momento, mas a estrutura garante que não haja erros.
     }
 
+
     const logoutButton = document.getElementById('logoutBtn');
-    if (logoutButton) {
-        logoutButton.addEventListener('click', handleLogout);
+    const modal = document.getElementById('logoutModal');
+    const buttonYes = document.getElementById('btnYes');
+    const buttonNo = document.getElementById('btnNo');
+    const closeLogoutModalBtn = document.getElementById('closeLogoutModal');
+
+    if (logoutButton && modal && buttonYes && buttonNo && closeLogoutModalBtn) {
+        logoutButton.addEventListener('click', () => {
+            modal.classList.add('is-visible');
+        });
+        
+        buttonYes.addEventListener('click', async () => {
+             await handleLogout();
+        });
+        
+        buttonNo.addEventListener('click', () => {
+            modal.classList.remove('is-visible');
+        });
+        
+        closeLogoutModalBtn.addEventListener('click', () => {
+            modal.classList.remove('is-visible');
+        });
     }
 });
 
@@ -54,6 +76,7 @@ async function verifySession() {
 }
 
 async function handleLogout() {
+    console.log("start handleLogout function")
 
     sessionStorage.removeItem('hasAnimated');
     window.location.href = '/pages/login.html';
@@ -69,6 +92,8 @@ async function handleLogout() {
     } catch (error) {
         console.error('Erro no processo de logout:', error);
     }
+
+
 }
 
 function initializeGenerateLinkModal(nutriId) {
@@ -118,9 +143,9 @@ function initializeProfessionalAgenda(nutriId) {
     const renderDayView = async () => {
         timelineContainer.innerHTML = '';
         updateHeader();
-        
-        const workHours = null; 
-        const appointments = []; 
+
+        const workHours = null;
+        const appointments = [];
 
         if (!workHours) {
             timelineContainer.style.display = 'none';
@@ -144,14 +169,14 @@ function initializeProfessionalAgenda(nutriId) {
         appointments.forEach(apt => {
             const aptBlock = document.createElement('div');
             aptBlock.className = `appointment-block-pro type-${apt.type || 'primeira'}`;
-            
+
             const [aptHour, aptMinute] = apt.time.split(':').map(Number);
             const topPosition = ((aptHour - workHours.start) * 60) + aptMinute;
             const duration = apt.duration || 60;
-            
+
             aptBlock.style.top = `${topPosition}px`;
             aptBlock.style.height = `${duration}px`;
-            
+
             aptBlock.innerHTML = `
                 <div class="appointment-patient-name">${apt.patientName}</div>
                 <div class="appointment-details-pro">${apt.title} - ${apt.time}</div>
@@ -164,13 +189,13 @@ function initializeProfessionalAgenda(nutriId) {
     const updateHeader = () => {
         const today = new Date();
         const isToday = currentDate.toDateString() === today.toDateString();
-        
+
         if (isToday) {
             header.textContent = 'Hoje';
         } else {
             header.textContent = currentDate.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
         }
-        
+
         datePicker.value = currentDate.toISOString().split('T')[0];
     };
 
@@ -202,7 +227,8 @@ function initializeProfessionalAgenda(nutriId) {
 function initializeAgendaModals(nutriId) {
     const modal = document.getElementById('scheduleSettingsModal');
     const openModalBtn = document.getElementById('openScheduleSettingsModalBtn');
-    if (!modal || !openModalBtn) return;
+    if (!openModalBtn) return;
+    if (!modal) return;
 
     const closeModalBtn = document.getElementById('closeScheduleSettingsModal');
     const form = document.getElementById('scheduleSettingsForm');
@@ -223,7 +249,7 @@ function initializeAgendaModals(nutriId) {
 
         const firstDayOfMonth = new Date(year, month, 1);
         const lastDayOfMonth = new Date(year, month + 1, 0);
-        const startDayOfWeek = firstDayOfMonth.getDay(); 
+        const startDayOfWeek = firstDayOfMonth.getDay();
 
         const monthName = calendarDate.toLocaleString('pt-BR', { month: 'long' });
         monthDisplay.textContent = `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${year}`;
@@ -247,11 +273,11 @@ function initializeAgendaModals(nutriId) {
             if (selectedDates.has(dateStr)) {
                 dayDiv.classList.add('selected');
             }
-            
+
             calendarGrid.appendChild(dayDiv);
         }
     };
-    
+
     calendarGrid.addEventListener('click', (e) => {
         const target = e.target;
         if (target.classList.contains('calendar-pro-day') && !target.classList.contains('other-month')) {
@@ -300,16 +326,16 @@ function initializeAgendaModals(nutriId) {
             setButtonLoading(generateBtn, false);
             return;
         }
-        
-        console.log("Enviando para o backend:", formData);
-        await new Promise(resolve => setTimeout(resolve, 1500)); 
 
-        const success = true; 
+        console.log("Enviando para o backend:", formData);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        const success = true;
         if (success) {
             showMessage('schedule-settings-message', 'Agenda gerada com sucesso!', true);
             setTimeout(() => {
                 modal.classList.remove('is-visible');
-                initializeProfessionalAgenda(nutriId); 
+                initializeProfessionalAgenda(nutriId);
             }, 1500);
         } else {
             showMessage('schedule-settings-message', 'Erro ao gerar a agenda. Tente novamente.', false);
@@ -394,7 +420,7 @@ async function initializePatientList(id) {
 
         loadingState.style.display = 'block';
         detailsContent.style.display = 'none';
-        planPane.innerHTML = ''; 
+        planPane.innerHTML = '';
 
         try {
             const [patientResponse, anamneseResponse, mealPlanResponse] = await Promise.all([
@@ -599,7 +625,7 @@ function initializeMetricsPage(nutriId) {
     };
 
     filterButtons.addEventListener('click', handleFilterClick);
-    
+
     filterButtons.querySelector('[data-period="30"]').click();
 }
 
@@ -609,14 +635,14 @@ function initializeNutriConfigPage(nutriId) {
     const passwordForm = document.getElementById('passwordForm');
     const saveDetailsBtn = document.getElementById('saveDetailsBtn');
     const savePasswordBtn = document.getElementById('savePasswordBtn');
-    
+
     const nameInput = document.getElementById('name');
     const emailInput = document.getElementById('email');
     const phoneInput = document.getElementById('phone');
 
     const newPasswordInput = document.getElementById('newPassword');
     const confirmPasswordInput = document.getElementById('confirmPassword');
-    
+
     const requirements = {
         length: document.getElementById('length-update'),
         lowercase: document.getElementById('lowercase-update'),
@@ -636,7 +662,7 @@ function initializeNutriConfigPage(nutriId) {
         container.className = `form-message-container ${isSuccess ? 'success' : 'error'} visible`;
         setTimeout(() => container.classList.remove('visible'), 5000);
     };
-    
+
     const loadNutriData = async () => {
         try {
             const response = await fetch('/api/auth/nutricionista/details');
@@ -652,11 +678,11 @@ function initializeNutriConfigPage(nutriId) {
             showMessage('details-message', 'Erro de comunicação com o servidor.', false);
         }
     };
-    
+
     detailsForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         setButtonLoading(saveDetailsBtn, true);
-        
+
         const payload = {
             name: nameInput.value,
             email: emailInput.value,
@@ -677,7 +703,7 @@ function initializeNutriConfigPage(nutriId) {
             setButtonLoading(saveDetailsBtn, false);
         }
     });
-    
+
     const validatePassword = () => {
         const value = newPasswordInput.value;
         const confirmationValue = confirmPasswordInput.value;
@@ -706,9 +732,9 @@ function initializeNutriConfigPage(nutriId) {
             showMessage('password-message', 'Por favor, cumpra todos os requisitos da nova senha.', false);
             return;
         }
-        
+
         setButtonLoading(savePasswordBtn, true);
-        
+
         const payload = {
             currentPassword: document.getElementById('currentPassword').value,
             newPassword: newPasswordInput.value
@@ -725,7 +751,7 @@ function initializeNutriConfigPage(nutriId) {
 
             if (result.success) {
                 passwordForm.reset();
-                 Object.values(requirements).forEach(req => req.classList.remove('valid'));
+                Object.values(requirements).forEach(req => req.classList.remove('valid'));
             }
         } catch (error) {
             showMessage('password-message', 'Erro de comunicação ao alterar senha.', false);
@@ -764,13 +790,13 @@ function initializeInvoicingPage(nutriId) {
         container.className = `form-message-container ${isSuccess ? 'success' : 'error'} visible`;
         setTimeout(() => container.classList.remove('visible'), 5000);
     };
-    
+
     const loadInvoices = async () => {
         const month = monthFilter.value;
         const status = statusFilter.value;
-        
-        const invoices = []; 
-        
+
+        const invoices = [];
+
         tableBody.innerHTML = '';
         if (invoices.length === 0) {
             emptyState.style.display = 'block';
@@ -829,7 +855,7 @@ function initializeInvoicingPage(nutriId) {
 
     closeModalBtn.addEventListener('click', () => modal.classList.remove('is-visible'));
     addInvoiceItemBtn.addEventListener('click', addInvoiceItem);
-    
+
     newInvoiceForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         setButtonLoading(saveInvoiceBtn, true);
@@ -845,12 +871,12 @@ function initializeInvoicingPage(nutriId) {
             dueDate: document.getElementById('invoiceDueDate').value,
             items: items
         };
-        
+
         console.log("Payload da fatura:", payload);
         await new Promise(resolve => setTimeout(resolve, 1500));
-        
+
         showMessage('invoice-message', 'Fatura criada com sucesso!', true);
-        
+
         setTimeout(() => {
             modal.classList.remove('is-visible');
             loadInvoices();
@@ -883,7 +909,7 @@ async function initializeDashboardPage(nutriId) {
     } catch (error) {
         console.error('Erro ao buscar dados do usuário:', error);
     }
-    
+
     try {
         const response = await fetch('/api/auth/dashboard-overview');
         const result = await response.json();
@@ -929,7 +955,7 @@ function updateDashboardUI(data) {
     const attentionList = document.getElementById('attention-list');
     const emptyAttentionState = document.getElementById('empty-attention-state');
     attentionList.innerHTML = '';
-    
+
     if (data.attentionList.length === 0) {
         emptyAttentionState.style.display = 'block';
     } else {
@@ -937,7 +963,7 @@ function updateDashboardUI(data) {
         data.attentionList.forEach(item => {
             const li = document.createElement('li');
             li.className = 'list-group-item attention-item';
-            
+
             const icons = {
                 birthday: 'bi-gift-fill',
                 return: 'bi-arrow-repeat'

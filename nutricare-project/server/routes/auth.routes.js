@@ -1,17 +1,35 @@
 import express from 'express';
-import { register, login, logout, getMe, getPatientCount, getScoreMedium, generateLink} from '../controllers/auth.controller.js';
+import { 
+    register, login, logout, getMe, getPatientCount, getScoreMedium, 
+    generateLink, patientList, patientDetails, anamneseDetails, sendMsg, 
+    mealPlan, getMetrics, getNutricionistaDetails, updateNutricionistaDetails, 
+    updateNutricionistaPassword, getInvoices, createInvoice, getDashboardOverview 
+} from '../controllers/auth.controller.js'; 
 import checkAuth from '../middlewares/checkAuth.js';
 import { pool } from '../config/dbConnect.js';
-
 const router = express.Router();
 
-router.post('/register', register);
+router.post('/register', register); 
 router.post('/login', login);
 router.post('/logout', checkAuth, logout);
 router.get('/me', checkAuth, getMe);
+
+router.get('/dashboard-overview', checkAuth, getDashboardOverview);
 router.get('/getPatientCount', getPatientCount);
 router.get('/getScoreMedium', getScoreMedium);
 router.get('/generateLink', generateLink);
+router.get('/patientList', patientList);
+router.get('/patientDetails/:id', patientDetails);
+router.get('/anamneseDetails/:id', anamneseDetails);
+router.get('/metrics', checkAuth, getMetrics);
+router.get('/nutricionista/details', checkAuth, getNutricionistaDetails);
+router.put('/nutricionista/details', checkAuth, updateNutricionistaDetails);
+router.put('/nutricionista/password', checkAuth, updateNutricionistaPassword);
+router.get('/invoices', checkAuth, getInvoices);
+router.post('/invoices', checkAuth, createInvoice);
+
+router.get('/sendMsg/:id', sendMsg);
+router.get('/mealplan/:id', mealPlan);
 
 router.get('/nutricionista/:id', checkAuth, async (req, res) => {
     if (req.session.user.role !== 'paciente') {

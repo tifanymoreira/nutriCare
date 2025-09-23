@@ -1,48 +1,155 @@
 import bcrypt from 'bcrypt';
 import { pool } from '../config/dbConnect.js';
-import { validarCRN } from '../middlewares/checkCrn.js'; // Função para validar CRN
+import { validarCRN } from '../middlewares/checkCrn.js';
 const saltRounds = 10;
 
 export async function register(req, res) {
-    const { name, email, password, crn } = req.body;
+    const { role } = req.body;
 
-    const valid = await validarCRN(crn);
-    if (!valid) {
-        return res.status(400).json({ success: false, message: 'CRN inválido.' });
-    } else {
-        console.log("CRN válido");
+    if (role === 'nutricionista') {
+        return registerNutricionista(req, res);
+    }
+    if (role === 'paciente') {
+        return registerPacienteWithAnamnese(req, res);
     }
 
-    if (!name || !email || !password || !crn) {
-        return res.status(400).json({ success: false, message: 'Todos os campos são obrigatórios para o cadastro.' });
+    return res.status(400).json({ success: false, message: 'Role (função) inválida especificada.' });
+}
+
+async function registerNutricionista(req, res) {
+    const { name, email, password, passwordConfirmation, phone, crn } = req.body;
+    const role = 'nutricionista';
+
+    if (!name || !email || !password || !passwordConfirmation || !crn || !phone) {
+        return res.status(400).json({ success: false, message: 'Todos os campos são obrigatórios.' });
+    }
+    
+    if (password !== passwordConfirmation) {
+        return res.status(400).json({ success: false, message: 'As senhas não coincidem.' });
+    }
+    
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\d\W]).{6,}$/;
+    if (!passwordRegex.test(password)) {
+        return res.status(400).json({ success: false, message: 'A senha não atende aos requisitos mínimos de segurança.' });
+    }
+
+    const crnValido = await validarCRN(crn);
+    if (!crnValido) {
+        return res.status(400).json({ success: false, message: 'CRN inválido.' });
+    }
+
+    const connection = await pool.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+        const [userResult] = await connection.query(
+            'INSERT INTO users (name, email, password, role, created_at) VALUES (?, ?, ?, ?, ?)',
+            [name, email, hashedPassword, role, new Date()]
+        );
+        const newUserId = userResult.insertId;
+
+        await connection.query(
+            'INSERT INTO nutricionista (id, name, email, phone, crnCode) VALUES (?, ?, ?, ?, ?)',
+            [newUserId, name, email, phone, crn]
+        );
+
+        await connection.commit();
+        res.status(201).json({ success: true, message: 'Conta de nutricionista criada com sucesso!' });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('Erro no registro de nutricionista:', error);
+        res.status(500).json({ success: false, message: 'Erro interno ao realizar o cadastro.' });
+    } finally {
+        connection.release();
+    }
+}
+
+async function registerPacienteWithAnamnese(req, res) {
+    const { registerData, anamneseData } = req.body;
+    const { name, email, password, nutriID } = registerData;
+    const role = 'paciente';
+
+    if (!name || !email || !password || !nutriID) {
+        return res.status(400).json({ success: false, message: 'Dados de registro do paciente incompletos.' });
+    }
+
+    const connection = await pool.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+        const [userResult] = await connection.query(
+            'INSERT INTO users (name, email, password, role, created_at) VALUES (?, ?, ?, ?, ?)',
+            [name, email, hashedPassword, role, new Date()]
+        );
+        const patientId = userResult.insertId;
+
+        await connection.query(
+            'INSERT INTO pacientes (id, nome, email, nutriID) VALUES (?, ?, ?, ?)',
+            [patientId, name, email, nutriID]
+        );
+
+        const {
+            peso, altura, data_nascimento, objetivos, problema_saude, cirurgia, digestao, intestino,
+            consistencia_fezes, ingestao_agua, ciclo_menstrual, tratamento_anterior, mastigacao,
+            alergias, aversao, gostos, alcool, medicacao, atividade_fisica, sono, exames_sangue, expectativas
+        } = anamneseData;
+
+        await connection.query(
+            `INSERT INTO anamnese (
+            nutriID, patientID, name, weight, height, birthdate, objective, 
+            health_issue, surgerie, digestion, intestino, fezes, water_ingestion, 
+            period_cicle, previous_diet, mastigacao, allergic, avoidment, fav_food, 
+            alcohol, medicine, exercise, wake_up_time, blood_exam, final_question, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                nutriID, patientId, name, peso, altura, data_nascimento, JSON.stringify(objetivos),
+                problema_saude, cirurgia, digestao, intestino, consistencia_fezes, ingestao_agua,
+                ciclo_menstrual, tratamento_anterior, mastigacao, alergias, aversao, gostos, alcool,
+                medicacao, atividade_fisica, sono, exames_sangue, expectativas, new Date()
+            ]
+        );
+
+        await connection.commit();
+
+        req.session.user = { id: patientId, name, email, role, nutriID };
+
+        res.status(201).json({ success: true, message: 'Cadastro e anamnese realizados com sucesso!' });
+
+    } catch (error) {
+        await connection.rollback();
+        console.log('Erro no registro do paciente com anamnese:', error);
+        res.status(500).json({ success: false, message: 'Erro interno ao processar o cadastro.' });
+    } finally {
+        connection.release();
+    }
+}
+
+export async function sendMsg(req, res) {
+    const nutriId = req.params.id; 
+
+    if (!nutriId) {
+        return res.status(400).json({ success: false, message: 'ID do nutricionista não fornecido.' });
     }
 
     try {
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
-        var role = 'nutricionista';
-        var created_at = new Date();
+        const [rows] = await pool.query('SELECT phone FROM nutricionista WHERE id = ?', [nutriId]);
 
-        await pool.query(
-            'INSERT INTO users (name, email, password, role, created_at) VALUES (?, ?, ?, ?, ?)',
-            [name, email, hashedPassword, role, created_at]
-        );
-
-        await pool.query(
-            'INSERT INTO nutricionista (name, email, crnCode) VALUES (?, ?, ?)',
-            [name, email, hashedPassword, crn]
-        );
-
-        res.status(201).json({ success: true, message: 'Conta de nutricionista criada com sucesso!' });
+        if (rows.length > 0) {
+            res.json({ success: true, number: rows[0].phone }); 
+        } else {
+            res.status(404).json({ success: false, message: 'Nenhum telefone encontrado.' });
+        }
     } catch (error) {
-        console.log("error code");
-        console.log(error);
-        // if (error.code === 'ER_DUP_ENTRY') {
-        //     return res.status(409).json({ success: false, message: 'Este e-mail já está em uso.' });
-        // }
-        console.error('Erro no registro de nutricionista:', error);
-        res.status(500).json({ success: false, message: 'Erro interno ao realizar o cadastro.' });
+        console.error("Erro em sendMsg:", error);
+        res.status(500).json({ success: false, message: 'Erro interno no servidor.' });
     }
 }
+
 
 export async function login(req, res) {
     const { email, password } = req.body;
@@ -51,38 +158,35 @@ export async function login(req, res) {
     }
 
     try {
-        let user, role, redirectUrl;
-
-        const [nutriRows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
-        if (nutriRows.length > 0) {
-            user = nutriRows[0];
-            role = 'nutricionista';
-            redirectUrl = '/pages/nutricionista/dashboard.html';
-        } else {
-            const [patientRows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
-            if (patientRows.length > 0) {
-                user = patientRows[0];
-                role = 'paciente';
-                redirectUrl = '/pages/paciente/dashboard.html';
-            }
-        }
-        if (!user) {
+        const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+        if (rows.length === 0) {
             return res.status(401).json({ success: false, message: 'E-mail ou senha inválidos.' });
         }
 
+        const user = rows[0];
         const match = await bcrypt.compare(password, user.password);
 
         if (match) {
-            req.session.user = {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: role,
-                ...(role === 'paciente' && { nutriID: user.nutriID })
-            };
+            let redirectUrl = '';
+            let nutriID = null;
+
+            if (user.role === 'nutricionista') {
+                redirectUrl = '/pages/nutricionista/dashboard.html';
+            } else if (user.role === 'paciente') {
+                const [pacienteRows] = await pool.query('SELECT nutriID FROM pacientes WHERE id = ?', [user.id]);
+                if (pacienteRows.length > 0) {
+                    nutriID = pacienteRows[0].nutriID;
+                }
+                redirectUrl = '/pages/paciente/dashboard.html';
+            } else {
+                return res.status(500).json({ success: false, message: 'Tipo de usuário desconhecido.' });
+            }
+
+            req.session.user = { id: user.id, name: user.name, email: user.email, role: user.role, nutriID };
             res.json({ success: true, redirectUrl });
+
         } else {
-            return res.status(401).json({ success: false, message: 'E-mail ou senha inválidos.' });
+            res.status(401).json({ success: false, message: 'E-mail ou senha inválidos.' });
         }
     } catch (error) {
         console.error('Erro no processo de login:', error);
@@ -125,6 +229,7 @@ export async function getPatientCount(req, res) {
 }
 
 export async function getScoreMedium(req, res) {
+    console.log("start getScoreMedium function")
     try {
         const nutriId = req.user?.id || req.query.nutriId;
         if (!nutriId) {
@@ -141,11 +246,226 @@ export async function getScoreMedium(req, res) {
 }
 
 export async function generateLink(req, res) {
+    console.log("start generateLink function")
     try {
-        const link = `https://nutricare.com/paciente/register?nutriId=${req.session.user.id}`;
+        const link = `http://localhost:3000/pages/paciente/preSchedule.html?nutriId=${req.session.user.id}`;
         res.json({ success: true, link });
     } catch (error) {
         console.error('Erro ao gerar o link:', error);
         res.status(500).json({ success: false, message: 'Erro ao gerar o link.' });
+    }
+}
+
+export async function patientList(req, res) {
+    console.log("start patientList function")
+    var nutriId = req.session.user?.id || req.query.nutriId;
+    console.log("patientList | nutriId = ", nutriId)
+
+    const [rows] = await pool.query('SELECT id, nome, email, status FROM pacientes WHERE nutriID = ?', [nutriId]);
+
+    console.log("patientList | rows =")
+    console.log(rows)
+
+    if (rows.length > 0) {
+        res.json({ success: true, patients: rows });
+    } else {
+        res.status(404).json({ success: false, message: 'Nenhum paciente encontrado.' });
+    }
+}
+
+
+export async function patientDetails(req, res) {
+    console.log("start patientDetails function")
+    var nutriId = req.session.user?.id || req.query.nutriId;
+    var patientId = req.params.id;
+    console.log("patientDetails | nutriId = ", nutriId)
+    console.log("patientDetails | patientId = ", patientId)
+
+    const [rows] = await pool.query('SELECT id, nome, email, status FROM pacientes WHERE nutriID = ? AND id = ?', [nutriId, patientId]);
+
+    console.log("patientDetails | rows =")
+    console.log(rows)
+
+    if (rows.length > 0) {
+        res.json({ success: true, patients: rows });
+    } else {
+        res.status(404).json({ success: false, message: 'Nenhum paciente encontrado.' });
+    }
+
+}
+export async function anamneseDetails(req, res) {
+    console.log("start anamneseDetails function")
+    var nutriId = req.session.user?.id || req.query.nutriId;
+    var patientId = req.params.id;
+    console.log("anamneseDetails | nutriId = ", nutriId)
+    console.log("anamneseDetails | patientId = ", patientId)
+
+    const [rows] = await pool.query('SELECT * FROM anamnese WHERE nutriID = ? AND patientID = ?', [nutriId, patientId]);
+
+    console.log("anamneseDetails | rows =")
+    console.log(rows)
+
+    if (rows.length > 0) {
+        res.json({ success: true, patients: rows });
+    } else {
+        res.status(404).json({ success: false, message: 'Nenhuma anamnese encontrada.' });
+    }
+
+}
+
+export async function mealPlan(req, res) {
+    try {
+        const patientId = req.params.id;
+        const rows = []; 
+
+        if (rows.length > 0) {
+            res.json({ success: true, plan: rows });
+        } else {
+            res.json({ success: true, plan: [] }); 
+        }
+    } catch (error) {
+        console.error("Erro ao buscar plano alimentar:", error);
+        res.status(500).json({ success: false, message: 'Erro interno no servidor.' });
+    }
+}
+
+export async function getMetrics(req, res) {
+    const period = req.query.period || '30';
+    const nutriId = req.session.user.id;
+    
+    const emptyData = {
+        kpis: { revenue: 0, patients: 0, retention: 0, avgAppointments: 0 },
+        evolution: { labels: [], revenue: [], patients: [] },
+        appointmentTypes: { labels: [], data: [] },
+        patientGoals: { labels: [], data: [] }
+    };
+
+    res.json({ success: true, data: emptyData });
+}
+
+export async function getNutricionistaDetails(req, res) {
+    try {
+        const nutriId = req.session.user.id;
+        const [rows] = await pool.query(
+            'SELECT name, email, phone FROM nutricionista WHERE id = ?',
+            [nutriId]
+        );
+        if (rows.length > 0) {
+            res.json({ success: true, data: rows[0] });
+        } else {
+            res.status(404).json({ success: false, message: 'Nutricionista não encontrado.' });
+        }
+    } catch (error) {
+        console.error("Erro ao buscar detalhes do nutricionista:", error);
+        res.status(500).json({ success: false, message: 'Erro interno no servidor.' });
+    }
+}
+
+export async function updateNutricionistaDetails(req, res) {
+    const { name, email, phone } = req.body;
+    const nutriId = req.session.user.id;
+
+    if (!name || !email || !phone) {
+        return res.status(400).json({ success: false, message: 'Nome, email e celular são obrigatórios.' });
+    }
+
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        await connection.query(
+            'UPDATE users SET name = ?, email = ? WHERE id = ?',
+            [name, email, nutriId]
+        );
+
+        await connection.query(
+            'UPDATE nutricionista SET name = ?, email = ?, phone = ? WHERE id = ?',
+            [name, email, phone, nutriId]
+        );
+
+        await connection.commit();
+
+        req.session.user.name = name;
+        req.session.user.email = email;
+
+        res.json({ success: true, message: 'Dados atualizados com sucesso!' });
+    } catch (error) {
+        await connection.rollback();
+        console.error("Erro ao atualizar detalhes do nutricionista:", error);
+        res.status(500).json({ success: false, message: 'Erro interno ao atualizar os dados.' });
+    } finally {
+        connection.release();
+    }
+}
+
+export async function updateNutricionistaPassword(req, res) {
+    const { currentPassword, newPassword } = req.body;
+    const nutriId = req.session.user.id;
+
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ success: false, message: 'Todos os campos são obrigatórios.' });
+    }
+    
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\d\W]).{6,}$/;
+    if (!passwordRegex.test(newPassword)) {
+        return res.status(400).json({ success: false, message: 'A nova senha não atende aos requisitos mínimos de segurança.' });
+    }
+
+    try {
+        const [rows] = await pool.query('SELECT password FROM users WHERE id = ?', [nutriId]);
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Usuário não encontrado.' });
+        }
+
+        const user = rows[0];
+        const match = await bcrypt.compare(currentPassword, user.password);
+
+        if (!match) {
+            return res.status(401).json({ success: false, message: 'A senha atual está incorreta.' });
+        }
+
+        const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
+        await pool.query('UPDATE users SET password = ? WHERE id = ?', [hashedNewPassword, nutriId]);
+
+        res.json({ success: true, message: 'Senha alterada com sucesso!' });
+    } catch (error) {
+        console.error("Erro ao alterar a senha:", error);
+        res.status(500).json({ success: false, message: 'Erro interno ao alterar a senha.' });
+    }
+}
+
+export async function getInvoices(req, res) {
+    const nutriId = req.session.user.id;
+    res.json({ success: true, data: { invoices: [], kpis: {} } });
+}
+
+export async function createInvoice(req, res) {
+    const nutriId = req.session.user.id;
+    const { patientId, issueDate, dueDate, items } = req.body;
+    res.json({ success: true, message: 'Fatura criada com sucesso!' });
+}
+
+export async function getDashboardOverview(req, res) {
+    const nutriId = req.session.user.id;
+    
+    try {
+        //query
+
+        const overviewData = {
+            kpis: {
+                todayAppointments: 0,
+                activePatients: 0,
+                monthlyRevenue: 0,
+                avgScore: null
+            },
+            todayAppointments: [],
+            attentionList: []
+        };
+        
+        res.json({ success: true, data: overviewData });
+
+    } catch (error) {
+        console.error("Erro ao buscar dados do dashboard:", error);
+        res.status(500).json({ success: false, message: 'Erro interno no servidor.' });
     }
 }

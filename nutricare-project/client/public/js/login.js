@@ -1,7 +1,6 @@
 document.addEventListener("DOMContentLoaded", async function () {
     await checkIfAlreadyLoggedIn();
 
-    // --- Seleção dos Elementos ---
     const flipper = document.querySelector('.auth-flipper');
     const showRegisterLink = document.getElementById('showRegister');
     const showLoginLink = document.getElementById('showLogin');
@@ -11,6 +10,16 @@ document.addEventListener("DOMContentLoaded", async function () {
     
     const loginMessageContainer = document.getElementById('login-message');
     const registerMessageContainer = document.getElementById('register-message');
+    
+    const passwordInput = document.getElementById('registerPassword');
+    const passwordConfirmationInput = document.getElementById('registerPasswordConfirmation');
+    const requirements = {
+        length: document.getElementById('length'),
+        lowercase: document.getElementById('lowercase'),
+        uppercase: document.getElementById('uppercase'),
+        special: document.getElementById('special'),
+        match: document.getElementById('match')
+    };
 
     const showMessage = (container, message, isSuccess = true) => {
         container.textContent = message;
@@ -36,10 +45,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 
    
     async function checkIfAlreadyLoggedIn() {
-        console.log("checkIfAlreadyLoggedIn function")
         try {
             const response = await fetch('/api/auth/me');
-            console.log("how's response = ", response)
             if (response.ok) {
                 const result = await response.json();
                 if (result.success && result.user) {
@@ -54,7 +61,28 @@ document.addEventListener("DOMContentLoaded", async function () {
         }
     };
 
-    // --- LÓGICA DE SUBMISSÃO DO FORMULÁRIO DE LOGIN ---
+    const validatePassword = () => {
+        const value = passwordInput.value;
+        const confirmationValue = passwordConfirmationInput.value;
+
+        const isLengthValid = value.length >= 6;
+        const hasLowercase = /[a-z]/.test(value);
+        const hasUppercase = /[A-Z]/.test(value);
+        const hasSpecial = /[\d\W]/.test(value);
+        const doPasswordsMatch = value === confirmationValue && value.length > 0;
+
+        requirements.length.classList.toggle('valid', isLengthValid);
+        requirements.lowercase.classList.toggle('valid', hasLowercase);
+        requirements.uppercase.classList.toggle('valid', hasUppercase);
+        requirements.special.classList.toggle('valid', hasSpecial);
+        requirements.match.classList.toggle('valid', doPasswordsMatch);
+
+        return isLengthValid && hasLowercase && hasUppercase && hasSpecial && doPasswordsMatch;
+    };
+
+    passwordInput.addEventListener('input', validatePassword);
+    passwordConfirmationInput.addEventListener('input', validatePassword);
+
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('loginEmail').value;
@@ -68,7 +96,6 @@ document.addEventListener("DOMContentLoaded", async function () {
             });
             const result = await response.json();
             if (result.success) {
-                // Redireciona para o dashboard correto em caso de sucesso
                 window.location.href = result.redirectUrl;
             } else {
                 showMessage(loginMessageContainer, result.message, false);
@@ -78,27 +105,35 @@ document.addEventListener("DOMContentLoaded", async function () {
         }
     });
 
-    // --- LÓGICA DE SUBMISSÃO DO FORMULÁRIO DE CADASTRO ---
     registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        if (!validatePassword()) {
+            showMessage(registerMessageContainer, 'Por favor, cumpra todos os requisitos da senha.', false);
+            return;
+        }
+
         const name = document.getElementById('registerName').value;
         const email = document.getElementById('registerEmail').value;
-        const password = document.getElementById('registerPassword').value;
+        const password = passwordInput.value;
+        const passwordConfirmation = passwordConfirmationInput.value;
+        const phone = document.getElementById('registerPhone').value;
         const crn = document.getElementById('registerCRN').value;
+        const role = 'nutricionista'
 
         try {
             const response = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password, crn })
+                body: JSON.stringify({ name, email, password, passwordConfirmation, phone, crn, role })
             });
             const result = await response.json();
             if (result.success) {
                 showMessage(registerMessageContainer, result.message, true);
-                // Após 2 segundos, vira o cartão de volta para o login
                 setTimeout(() => {
                     flipper.classList.remove('is-flipped');
-                    registerForm.reset(); // Limpa o formulário de cadastro
+                    registerForm.reset(); 
+                    Object.values(requirements).forEach(req => req.classList.remove('valid'));
                 }, 2000);
             } else {
                 showMessage(registerMessageContainer, result.message, false);

@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Minha Agenda</title>
+    <title>Meus Pacientes - NutriCare</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-
     <link rel="stylesheet" href="../../css/style.css">
+</head>
 
 <body>
     <div class="dashboard-wrapper">
@@ -21,20 +21,24 @@
             </div>
             <nav class="sidebar-nav">
                 <ul class="list-unstyled">
-                    <li class="nav-item active">
+                    <li class="nav-item">
                         <a href="dashboard.html" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Visão Geral</a>
                     </li>
-                    <li class="nav-item">
-                        <a href="patientsList.html" class="nav-link"><i class="bi bi-people-fill"></i> Meus Pacientes</a>
+                    <li class="nav-item active">
+                        <a href="patientsList.html" class="nav-link"><i class="bi bi-people-fill"></i> Meus
+                            Pacientes</a>
                     </li>
                     <li class="nav-item">
-                        <a href="nutriAgenda.html" class="nav-link"><i class="bi bi-calendar2-week-fill"></i> Minha Agenda</a>
+                        <a href="nutriAgenda.html" class="nav-link"><i class="bi bi-calendar2-week-fill"></i> Minha
+                            Agenda</a>
                     </li>
                     <li class="nav-item">
-                        <a href="nutriMetrics.html" class="nav-link"><i class="bi bi-graph-up-arrow"></i> Minhas Métricas</a>
+                        <a href="nutriMetrics.html" class="nav-link"><i class="bi bi-graph-up-arrow"></i> Minhas
+                            Métricas</a>
                     </li>
                     <li class="nav-item">
-                        <a href="nutriConfig.html" class="nav-link"><i class="bi bi-person-fill-gear"></i> Meus Detalhes</a>
+                        <a href="nutriConfig.html" class="nav-link"><i class="bi bi-person-fill-gear"></i> Meus
+                            Detalhes</a>
                     </li>
                     <li class="nav-item">
                         <a href="nutriInvoicing.html" class="nav-link"><i class="bi bi-cash-stack"></i> Faturamento</a>
@@ -47,8 +51,116 @@
                 </button>
             </div>
         </aside>
-    </div>
 
+        <main class="dashboard-main">
+            <header class="dashboard-content-header">
+                <h1>Meus Pacientes</h1>
+            </header>
+
+            <div class="card data-card">
+                 <div class="card-header patient-list-header">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" id="patientSearchInput" placeholder="Buscar por nome ou e-mail...">
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Paciente</th>
+                                    <th>Contato</th>
+                                    <th>Status</th>
+                                    <th>Próxima Consulta</th>
+                                    <th class="text-end">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="patientTableBody">
+                                </tbody>
+                        </table>
+                    </div>
+                    <div id="emptyState" class="empty-state-card" style="display: none;">
+                        <div class="empty-state-icon"><i class="bi bi-person-x"></i></div>
+                        <h5 class="empty-state-title">Nenhum paciente encontrado</h5>
+                        <p class="empty-state-text">
+                           Você ainda não possui pacientes cadastrados ou nenhum corresponde à sua busca.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-backdrop" id="patientDetailsModal">
+                <div class="modal-content modal-lg">
+                    <button type="button" class="modal-close" id="closePatientModal">&times;</button>
+                    <div class="modal-header d-flex align-items-center">
+                        <img id="patientAvatar" src="" alt="Avatar do Paciente" class="avatar me-3">
+                        <div>
+                            <h5 class="modal-title mb-0" id="modalPatientName"></h5>
+                            <span class="text-muted" id="modalPatientEmail"></span>
+                        </div>
+                    </div>
+
+                    <div class="modal-body">
+                         <div class="text-center" id="modalLoadingState">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Carregando detalhes...</p>
+                        </div>
+                        <div id="modalDetailsContent" style="display: none;">
+                            <ul class="nav nav-tabs" id="patientTab" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="details-tab" data-bs-toggle="tab" data-bs-target="#details-pane" type="button" role="tab">Detalhes</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="anamnese-tab" data-bs-toggle="tab" data-bs-target="#anamnese-pane" type="button" role="tab">Anamnese</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="plan-tab" data-bs-toggle="tab" data-bs-target="#plan-pane" type="button" role="tab">Plano Alimentar</button>
+                                </li>
+                            </ul>
+                            <div class="tab-content" id="patientTabContent">
+                                <div class="tab-pane fade show active" id="details-pane" role="tabpanel">
+                                    <div class="row pt-3">
+                                        <div class="col-md-6">
+                                            <h6>Informações Pessoais</h6>
+                                            <p><strong>Telefone:</strong> <span id="patientPhone" class="text-muted"></span></p>
+                                            <p><strong>Nascimento:</strong> <span id="patientBirthdate" class="text-muted"></span></p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6>Consulta</h6>
+                                            <p><strong>Próxima consulta:</strong> <span id="patientAppointmentDate" class="text-muted"></span></p>
+                                            <p><strong>Status do Paciente:</strong> <span id="patientStatus" class="text-muted"></span></p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="tab-pane fade" id="anamnese-pane" role="tabpanel">
+                                    <div class="anamnese-details-grid pt-3">
+                                        <div class="anamnese-item"><strong>Objetivo(s)</strong><p id="anamneseObjetivos"></p></div>
+                                        <div class="anamnese-item"><strong>Problemas de Saúde</strong><p id="anamneseSaude"></p></div>
+                                        <div class="anamnese-item"><strong>Cirurgias</strong><p id="anamneseCirurgia"></p></div>
+                                        <div class="anamnese-item"><strong>Alergias</strong><p id="anamneseAlergias"></p></div>
+                                        <div class="anamnese-item"><strong>Medicamentos</strong><p id="anamneseMedicacao"></p></div>
+                                        <div class="anamnese-item"><strong>Atividade Física</strong><p id="anamneseAtividade"></p></div>
+                                        <div class="anamnese-item"><strong>Ingestão de Álcool</strong><p id="anamneseAlcool"></p></div>
+                                        <div class="anamnese-item"><strong>Digestão</strong><p id="anamneseDigestao"></p></div>
+                                        <div class="anamnese-item"><strong>Intestino</strong><p id="anamneseIntestino"></p></div>
+                                        <div class="anamnese-item"><strong>Qualidade do Sono</strong><p id="anamneseSono"></p></div>
+                                        <div class="anamnese-item col-span-2"><strong>Expectativas</strong><p id="anamneseExpectativas"></p></div>
+                                    </div>
+                                </div>
+                                <div class="tab-pane fade" id="plan-pane" role="tabpanel">
+                                    </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/scrollreveal"></script>
     <script type="module" src="../../js/dashboard-nutricionista.js"></script>
 </body>
 

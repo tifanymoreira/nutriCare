@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anamnese - NutriCare</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../../css/style.css">
+    <style>
+        .form-question {
+            background-color: #f8f9fa;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .form-question label.form-label {
+            font-weight: 600;
+        }
+
+        .form-question .form-check {
+            margin-bottom: 0.5rem;
+        }
+
+        .form-question .form-check-input:checked {
+            background-color: var(--primary-green);
+            border-color: var(--primary-green);
+        }
+
+        .form-question .form-check-label {
+            color: #495057;
+        }
+
+        .form-question img {
+            max-width: 100px;
+            height: auto;
+            border: 1px solid #dee2e6;
+            border-radius: var(--border-radius);
+        }
+
+        .stool-chart-option {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <header class="text-center mb-5">
+                    <a class="navbar-brand" href="#">
+                        <i class="bi bi-heart-pulse-fill"></i> NutriCare
+                    </a>
+                    <h1 class="section-title mt-4">Questionário Pré-Consulta</h1>
+                    <p class="lead text-muted">
+                        <i class="bi bi-exclamation-circle-fill text-danger me-2"></i> Campos com asterisco (*) são
+                        obrigatórios.
+                    </p>
+                </header>
+                <div class="card data-card">
+                    <div class="card-body">
+                        <form id="anamneseForm">
+                            <div class="form-question">
+                                <label for="email" class="form-label">E-mail *</label>
+                                <input type="email" class="form-control" id="email" required>
+                            </div>
+                            <div class="form-question">
+                                <div class="form-question">
+                                    <label for="password" class="form-label">Crie a sua senha de acesso *</label>
+                                    <input type="password" class="form-control" id="password" required>
+
+                                    <label for="password_confirmation" class="form-label mt-3">Confirme a sua senha
+                                        *</label>
+                                    <input type="password" class="form-control" id="password_confirmation" required>
+                                </div>
+                            </div>
+                            <div class="form-question">
+                                <label for="nome" class="form-label">Nome completo *</label>
+                                <input type="text" class="form-control" id="nome" required>
+                            </div>
+                            <div class="form-question">
+                                <label for="peso" class="form-label">Peso atual *</label>
+                                <input type="text" class="form-control" id="peso" placeholder="Ex: 65"
+                                    required>
+                            </div>
+                            <div class="form-question">
+                                <label for="altura" class="form-label">Sua altura*</label>
+                                <input type="text" class="form-control" id="peso" placeholder="Ex: 156"
+                                    required>
+                            </div>
+                            <div class="form-question">
+                                <label for="data_nascimento" class="form-label">Data de Nascimento *</label>
+                                <input type="date" class="form-control" id="data_nascimento" required>
+                            </div>
+                            <div class="form-question">
+                                <label class="form-label">Qual o objetivo da sua consulta? *</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="objetivo" id="emagrecimento"
+                                        value="emagrecimento">
+                                    <label class="form-check-label" for="emagrecimento">Emagrecimento</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="objetivo" id="hipertrofia"
+                                        value="hipertrofia">
+                                    <label class="form-check-label" for="hipertrofia">Hipertrofia</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="objetivo" id="reeducacao"
+                                        value="reeducacao">
+                                    <label class="form-check-label" for="reeducacao">Reeducação alimentar</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="objetivo" id="imunidade"
+                                        value="imunidade">
+                                    <label class="form-check-label" for="imunidade">Melhora da Imunidade</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="objetivo" id="saude_geral"
+                                        value="saude_geral">
+                                    <label class="form-check-label" for="saude_geral">Saúde em geral</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="objetivo" id="dieta_esportiva"
+                                        value="dieta_esportiva">
+                                    <label class="form-check-label" for="dieta_esportiva">Dieta esportiva</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="objetivo" id="outro_objetivo"
+                                        value="outro">
+                                    <label class="form-check-label" for="outro_objetivo">Outro:</label>
+                                </div>
+                                <input type="text" class="form-control mt-2" id="outro_objetivo_input"
+                                    style="display: none;">
+                            </div>
+                            <div class="form-question">
+                                <label for="problema_saude" class="form-label">Possui algum problema de saúde?
+                                    (diabetes, hipertensão, gordura no fígado, etc.) *</label>
+                                <textarea class="form-control" id="problema_saude" rows="3" required></textarea>
+                            </div>
+                            <div class="form-question">
+                                <label for="cirurgia" class="form-label">Realizou alguma cirurgia? *</label>
+                                <input type="text" class="form-control" id="cirurgia" required>
+                            </div>
+                            <div class="form-question">
+                                <label for="digestao" class="form-label">Descreva como está sua digestão. (Exemplo:
+                                    regular, com refluxo, distensão abdominal, gases, etc.) *</label>
+                                <textarea class="form-control" id="digestao" rows="3" required></textarea>
+                            </div>
+                            <div class="form-question">
+                                <label class="form-label">Como é seu funcionamento intestinal? *</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="intestino" id="diario"
+                                        value="diario" required>
+                                    <label class="form-check-label" for="diario">Diário</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="intestino" id="alternado"
+                                        value="alternado">
+                                    <label class="form-check-label" for="alternado">Dias alternados</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="intestino" id="semanalmente"
+                                        value="semanalmente">
+                                    <label class="form-check-label" for="semanalmente">Semanalmente</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="intestino" id="outro_intestino"
+                                        value="outro">
+                                    <label class="form-check-label" for="outro_intestino">Outro:</label>
+                                </div>
+                                <input type="text" class="form-control mt-2" id="outro_intestino_input"
+                                    style="display: none;">
+                            </div>
+                            <div class="form-question">
+                                <label class="form-label">Como é a consistência regular das fezes? *</label>
+                                <div class="row g-3">
+                                    <div class="col-md-4 col-sm-6 stool-chart-option">
+                                        <input class="form-check-input" type="radio" name="consistencia_fezes"
+                                            id="tipo1" value="tipo1" required>
+                                        <label class="form-check-label" for="tipo1">
+                                            <img src="../../images/stool-type1.jpg" alt="Tipo 1: Semelhante a nozes"
+                                                class="img-fluid">
+                                            <p>1) Semelhante a nozes</p>
+                                        </label>
+                                    </div>
+                                    <div class="col-md-4 col-sm-6 stool-chart-option">
+                                        <input class="form-check-input" type="radio" name="consistencia_fezes"
+                                            id="tipo2" value="tipo2">
+                                        <label class="form-check-label" for="tipo2">
+                                            <img src="../../images/stool-type2.jpg"
+                                                alt="Tipo 2: Formato de salsicha com grumos" class="img-fluid">
+                                            <p>2) Formato de salsicha com grumos</p>
+                                        </label>
+                                    </div>
+                                    <div class="col-md-4 col-sm-6 stool-chart-option">
+                                        <input class="form-check-input" type="radio" name="consistencia_fezes"
+                                            id="tipo3" value="tipo3">
+                                        <label class="form-check-label" for="tipo3">
+                                            <img src="../../images/stool-type3.jpg"
+                                                alt="Tipo 3: Formato de salsicha com fissuras" class="img-fluid">
+                                            <p>3) Formato de salsicha com fissuras na superfície</p>
+                                        </label>
+                                    </div>
+                                    <div class="col-md-4 col-sm-6 stool-chart-option">
+                                        <input class="form-check-input" type="radio" name="consistencia_fezes"
+                                            id="tipo4" value="tipo4">
+                                        <label class="form-check-label" for="tipo4">
+                                            <img src="../../images/stool-type4.jpg"
+                                                alt="Tipo 4: Formato de salsicha lisa e macia" class="img-fluid">
+                                            <p>4) Formato de salsicha ou banana lisa e macia</p>
+                                        </label>
+                                    </div>
+                                    <div class="col-md-4 col-sm-6 stool-chart-option">
+                                        <input class="form-check-input" type="radio" name="consistencia_fezes"
+                                            id="tipo5" value="tipo5">
+                                        <label class="form-check-label" for="tipo5">
+                                            <img src="../../images/stool-type5.jpg" alt="Tipo 5: Pedaços moles"
+                                                class="img-fluid">
+                                            <p>5) Pedaços moles, mas com contornos nítidos</p>
+                                        </label>
+                                    </div>
+                                    <div class="col-md-4 col-sm-6 stool-chart-option">
+                                        <input class="form-check-input" type="radio" name="consistencia_fezes"
+                                            id="tipo6" value="tipo6">
+                                        <label class="form-check-label" for="tipo6">
+                                            <img src="../../images/stool-type6.jpg" alt="Tipo 6: Pedaços aerados"
+                                                class="img-fluid">
+                                            <p>6) Pedaços aerados com contornos esgarçados</p>
+                                        </label>
+                                    </div>
+                                    <div class="col-md-4 col-sm-6 stool-chart-option">
+                                        <input class="form-check-input" type="radio" name="consistencia_fezes"
+                                            id="tipo7" value="tipo7">
+                                        <label class="form-check-label" for="tipo7">
+                                            <img src="../../images/stool-type7.jpg" alt="Tipo 7: Líquido"
+                                                class="img-fluid">
+                                            <p>7) Líquido</p>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-question">
+                                <label class="form-label">Como é sua ingestão de água? *</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="ingestao_agua" id="mais_2l"
+                                        value="mais_2l" required>
+                                    <label class="form-check-label" for="mais_2l">Mais que 2 Litros ao dia</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="ingestao_agua" id="menos_2l"
+                                        value="menos_2l">
+                                    <label class="form-check-label" for="menos_2l">Menos que 2 Litros ao dia</label>
+                                </div>
+                            </div>
+                            <div class="form-question">
+                                <label class="form-label">Como é seu ciclo menstrual? *</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="ciclo_menstrual"
+                                        id="regular_anticoncepcional" value="regular_anticoncepcional" required>
+                                    <label class="form-check-label" for="regular_anticoncepcional">Regular com uso de
+                                        anticoncepcional</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="ciclo_menstrual"
+                                        id="regular_sem_anticoncepcional" value="regular_sem_anticoncepcional">
+                                    <label class="form-check-label" for="regular_sem_anticoncepcional">Regular sem uso
+                                        de anticoncepcional</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="ciclo_menstrual" id="irregular"
+                                        value="irregular">
+                                    <label class="form-check-label" for="irregular">Irregular</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="ciclo_menstrual"
+                                        id="nao_se_aplica" value="nao_se_aplica">
+                                    <label class="form-check-label" for="nao_se_aplica">Não se aplica</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="ciclo_menstrual" id="outro_ciclo"
+                                        value="outro">
+                                    <label class="form-check-label" for="outro_ciclo">Outro:</label>
+                                </div>
+                                <input type="text" class="form-control mt-2" id="outro_ciclo_input"
+                                    style="display: none;">
+                            </div>
+                            <div class="form-question">
+                                <label class="form-label">Realizou algum tratamento dietético anterior? *</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="tratamento_anterior"
+                                        id="tratamento_sim" value="sim" required>
+                                    <label class="form-check-label" for="tratamento_sim">Sim</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="tratamento_anterior"
+                                        id="tratamento_nao" value="nao">
+                                    <label class="form-check-label" for="tratamento_nao">Não</label>
+                                </div>
+                            </div>
+                            <div class="form-question">
+                                <label class="form-label">Como é sua mastigação? *</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="mastigacao" id="lenta"
+                                        value="lenta" required>
+                                    <label class="form-check-label" for="lenta">Lenta</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="mastigacao" id="normal"
+                                        value="normal">
+                                    <label class="form-check-label" for="normal">Normal</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="mastigacao" id="rapida"
+                                        value="rapida">
+                                    <label class="form-check-label" for="rapida">Rápida</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="mastigacao" id="outro_mastigacao"
+                                        value="outro">
+                                    <label class="form-check-label" for="outro_mastigacao">Outro:</label>
+                                </div>
+                                <input type="text" class="form-control mt-2" id="outro_mastigacao_input"
+                                    style="display: none;">
+                            </div>
+                            <div class="form-question">
+                                <label for="alergias" class="form-label">Possui alergias ou intolerâncias alimentares?
+                                    *</label>
+                                <input type="text" class="form-control" id="alergias" required>
+                            </div>
+                            <div class="form-question">
+                                <label for="aversao" class="form-label">Possui aversão a algum alimento? Cite os
+                                    principais. *</label>
+                                <input type="text" class="form-control" id="aversao" required>
+                            </div>
+                            <div class="form-question">
+                                <label for="gostos" class="form-label">Quais os alimentos que mais gosta? Cite os
+                                    principais. *</label>
+                                <input type="text" class="form-control" id="gostos" required>
+                            </div>
+                            <div class="form-question">
+                                <label class="form-label">Faz ingestão de bebida alcoólica? *</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="alcool" id="nao" value="nao"
+                                        required>
+                                    <label class="form-check-label" for="nao">Não</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="alcool" id="diariamente"
+                                        value="diariamente">
+                                    <label class="form-check-label" for="diariamente">Diariamente</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="alcool" id="semanalmente"
+                                        value="semanalmente">
+                                    <label class="form-check-label" for="semanalmente">Semanalmente</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="alcool" id="esporadicamente"
+                                        value="esporadicamente">
+                                    <label class="form-check-label" for="esporadicamente">Esporadicamente</label>
+                                </div>
+                            </div>
+                            <div class="form-question">
+                                <label for="medicacao" class="form-label">Faz uso de alguma medicação atualmente? Cite e
+                                    mencione as indicações. *</label>
+                                <textarea class="form-control" id="medicacao" rows="3" required></textarea>
+                            </div>
+                            <div class="form-question">
+                                <label for="atividade_fisica" class="form-label">Pratica atividade física? Se sim,
+                                    descreva a modalidade, frequência e horário. *</label>
+                                <textarea class="form-control" id="atividade_fisica" rows="3" required></textarea>
+                            </div>
+                            <div class="form-question">
+                                <label for="sono" class="form-label">Qual horário você acorda e dorme geralmente?
+                                    *</label>
+                                <textarea class="form-control" id="sono" rows="3" required></textarea>
+                            </div>
+                            <div class="form-question">
+                                <label for="exames_sangue" class="form-label">Possui alterações em exame de sangue
+                                    recente? Se sim, cite quais. *</label>
+                                <textarea class="form-control" id="exames_sangue" rows="3" required></textarea>
+                            </div>
+                            <div class="form-question">
+                                <label for="expectativas" class="form-label">Espaço aberto para descrever suas
+                                    expectativas referentes a consulta, mencione por exemplo os alimentos que gostaria
+                                    que não fossem excluídos da rotina, as dificuldades pré-existentes, etc. *</label>
+                                <textarea class="form-control" id="expectativas" rows="3" required></textarea>
+                            </div>
+
+                            <div class="d-grid mt-4">
+                                <button type="submit" class="btn btn-primary-custom btn-lg"><i
+                                        class="bi bi-check-circle"></i> Enviar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://unpkg.com/scrollreveal"></script>
+    <script type="module" src="../../js/anamnese.js"></script>
+</body>
+
+</html>

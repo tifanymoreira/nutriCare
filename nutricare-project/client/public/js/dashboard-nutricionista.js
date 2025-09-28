@@ -85,6 +85,7 @@ async function handleLogout() {
         const result = await response.json();
         if (result.success) {
             sessionStorage.removeItem('hasAnimated');
+            setTimeout(50000)
             window.location.href = result.redirectUrl;
         } else {
             alert('Erro ao tentar fazer logout.');
@@ -331,6 +332,12 @@ function initializeAgendaModals(nutriId) {
         await new Promise(resolve => setTimeout(resolve, 1500));
 
         const success = true;
+
+        try {
+            axios.post('/', formData)
+        } catch {
+            console.log("error")
+        }
         if (success) {
             showMessage('schedule-settings-message', 'Agenda gerada com sucesso!', true);
             setTimeout(() => {

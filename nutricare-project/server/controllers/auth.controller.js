@@ -23,11 +23,11 @@ async function registerNutricionista(req, res) {
     if (!name || !email || !password || !passwordConfirmation || !crn || !phone) {
         return res.status(400).json({ success: false, message: 'Todos os campos são obrigatórios.' });
     }
-    
+
     if (password !== passwordConfirmation) {
         return res.status(400).json({ success: false, message: 'As senhas não coincidem.' });
     }
-    
+
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\d\W]).{6,}$/;
     if (!passwordRegex.test(password)) {
         return res.status(400).json({ success: false, message: 'A senha não atende aos requisitos mínimos de segurança.' });
@@ -130,7 +130,7 @@ async function registerPacienteWithAnamnese(req, res) {
 }
 
 export async function sendMsg(req, res) {
-    const nutriId = req.params.id; 
+    const nutriId = req.params.id;
 
     if (!nutriId) {
         return res.status(400).json({ success: false, message: 'ID do nutricionista não fornecido.' });
@@ -140,7 +140,7 @@ export async function sendMsg(req, res) {
         const [rows] = await pool.query('SELECT phone FROM nutricionista WHERE id = ?', [nutriId]);
 
         if (rows.length > 0) {
-            res.json({ success: true, number: rows[0].phone }); 
+            res.json({ success: true, number: rows[0].phone });
         } else {
             res.status(404).json({ success: false, message: 'Nenhum telefone encontrado.' });
         }
@@ -245,6 +245,82 @@ export async function getScoreMedium(req, res) {
     }
 }
 
+export async function generateAgenda(req, res) {
+    console.log("start generateAgenda function")
+    console.log("generateAgenda function | req.body")
+    console.log(req.body)
+
+    try {
+        const nutriId = req.user?.id || req.body.formData.nutriID
+        const startTime = req.body.startTime
+        const endTime = req.body.endTime
+        const duration = req.body.slotDuration
+        const availableDays = req.body.dates
+
+        await connection.query(
+            'INSERT INTO nutri_agenda (nutriID, startTime, endTime, duration, available_days) VALUES (?, ?, ?, ?, ?)',
+            [nutriId, startTime, endTime, duration, availableDays]
+        );
+
+        res.status(200).json({ success: true, message: 'Dados inseridos com sucesso' });
+
+    } catch {
+        res.status(500).json({ success: false, message: 'Erro ao gerar agenda.' });
+
+    }
+}
+
+export async function updateNutriAndPatientAgenda(req, res) {
+    console.log("start updateNutriAndPatientAgenda function")
+    console.log("updateNutriAndPatientAgenda function | req.body")
+    console.log(req.body)
+
+    try {
+        const nutriId = req.body.formData.nutriID
+        const patientId = req.body.patientId
+        const selectedDate = req.body.startTime
+        const selectedTime = req.body.endTime
+        const duration = req.body.slotDuration
+        const availableDays = req.body.dates
+
+        let nutriAgenda = await connection.query(
+            'SELECT available_days FROM nutri_agenda WHERE nutriID = ?', [nutriId]
+        )
+
+        console.log("how's nutriAgenda?")
+        console.log(nutriAgenda)
+
+        let updatedNutriAgenda = updatedNutriAgenda(selectedDate, selectedTime, nutriAgenda)
+
+        await connection.query(
+            'UPDATE nutri_agenda SET available_days = ? WHERE nutriID = ?',
+            [updatedNutriAgenda, nutriId]
+        );
+
+        await connection.query(
+            'UPDATE patient_agenda SET available_days = ? WHERE patientID = ?',
+            [selectedDate, selectedTime, patientId]
+        );
+
+        res.status(200).json({ success: true, message: 'Dados inseridos com sucesso' });
+
+    } catch {
+        res.status(500).json({ success: false, message: 'Erro ao gerar agenda.' });
+
+    }
+}
+
+function updatedNutriAgenda(date, time, nutriAgenda) {
+    console.log("start updatedNutriAgenda function")
+    console.log("updatedNutriAgenda | date = ", date)
+    console.log("updatedNutriAgenda | time = ", time)
+    console.log("updatedNutriAgenda | nutriAgenda = ")
+    console.log(nutriAgenda
+
+        
+    )
+}
+
 export async function generateLink(req, res) {
     console.log("start generateLink function")
     try {
@@ -252,6 +328,7 @@ export async function generateLink(req, res) {
         res.json({ success: true, link });
     } catch (error) {
         console.error('Erro ao gerar o link:', error);
+        res.status(500).json({ success: false, message: 'Erro ao gerar o link.' });
         res.status(500).json({ success: false, message: 'Erro ao gerar o link.' });
     }
 }
@@ -316,12 +393,12 @@ export async function anamneseDetails(req, res) {
 export async function mealPlan(req, res) {
     try {
         const patientId = req.params.id;
-        const rows = []; 
+        const rows = [];
 
         if (rows.length > 0) {
             res.json({ success: true, plan: rows });
         } else {
-            res.json({ success: true, plan: [] }); 
+            res.json({ success: true, plan: [] });
         }
     } catch (error) {
         console.error("Erro ao buscar plano alimentar:", error);
@@ -332,7 +409,7 @@ export async function mealPlan(req, res) {
 export async function getMetrics(req, res) {
     const period = req.query.period || '30';
     const nutriId = req.session.user.id;
-    
+
     const emptyData = {
         kpis: { revenue: 0, patients: 0, retention: 0, avgAppointments: 0 },
         evolution: { labels: [], revenue: [], patients: [] },
@@ -405,7 +482,7 @@ export async function updateNutricionistaPassword(req, res) {
     if (!currentPassword || !newPassword) {
         return res.status(400).json({ success: false, message: 'Todos os campos são obrigatórios.' });
     }
-    
+
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\d\W]).{6,}$/;
     if (!passwordRegex.test(newPassword)) {
         return res.status(400).json({ success: false, message: 'A nova senha não atende aos requisitos mínimos de segurança.' });
@@ -447,7 +524,7 @@ export async function createInvoice(req, res) {
 
 export async function getDashboardOverview(req, res) {
     const nutriId = req.session.user.id;
-    
+
     try {
         //query
 
@@ -461,7 +538,7 @@ export async function getDashboardOverview(req, res) {
             todayAppointments: [],
             attentionList: []
         };
-        
+
         res.json({ success: true, data: overviewData });
 
     } catch (error) {

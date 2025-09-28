@@ -13,6 +13,36 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .carousel-item img {
+            height: 400px;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+
+        .carousel-caption {
+            background: rgba(255, 255, 255, 0.9);
+            color: #264653;
+            border-radius: 12px;
+            padding: 1.5rem;
+            bottom: 1.5rem;
+            left: 10%;
+            right: 10%;
+            text-align: left;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .carousel-control-prev-icon,
+        .carousel-control-next-icon {
+            background-color: #2a9d8f;
+            border-radius: 50%;
+            padding: 1rem;
+        }
+
+        .carousel-indicators [data-bs-target] {
+            background-color: #2a9d8f;
+        }
+    </style>
 </head>
 <body>
 
@@ -165,6 +195,54 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="creator" class="py-5 bg-light">
+        <div class="container">
+            <div class="text-center mb-5">
+                <span class="section-subtitle">A HISTÓRIA POR TRÁS DA INOVAÇÃO</span>
+                <h2 class="section-title">Conheça as Idealizadoras</h2>
+            </div>
+            
+            <div id="idealizadorasCarousel" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-indicators">
+                    <button type="button" data-bs-target="#idealizadorasCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+                    <button type="button" data-bs-target="#idealizadorasCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
+                    <button type="button" data-bs-target="#idealizadorasCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
+                </div>
+                <div class="carousel-inner">
+                    <div class="carousel-item active">
+                        <img src="../images/mae index.jpg" class="d-block w-100" alt="Foto de Tifany e Andrelina, idealizadoras da NutriCare">
+                        <div class="carousel-caption d-none d-md-block text-center">
+                            <h3 class="fw-bold">A História da NutriCare</h3>
+                            <p class="mb-0">A NutriCare nasceu de uma história familiar, da união entre a paixão pela nutrição e a visão tecnológica. O projeto final de Tifany na faculdade se tornou uma solução real, inspirada na luta de sua mãe, Andrelina, com a burocracia do dia a dia de uma nutricionista. A plataforma foi criada para otimizar a gestão e permitir que o foco principal seja o paciente, unindo a tecnologia ao cuidado humano.</p>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="../images/mae index.jpg" class="d-block w-100" alt="Foto de Andrelina Maria de Jesus Moreira">
+                        <div class="carousel-caption d-none d-md-block text-center">
+                            <h3 class="fw-bold">Andrelina Maria de Jesus Moreira</h3>
+                            <p class="mb-0">Nutricionista com vasta experiência, Andrelina trouxe o cuidado e a humanização que são a essência da NutriCare. Observando-a se desdobrar com tarefas manuais como a criação de planos alimentares no Word e a gestão de agendamentos, Tifany viu a oportunidade de criar um sistema que não apenas otimiza o tempo, mas também fortalece a conexão entre profissional e paciente. A experiência de Andrelina é a alma do projeto, garantindo que ele seja feito de nutricionista para nutricionista.</p>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="https://i.pravatar.cc/1000?u=tifany" class="d-block w-100" alt="Foto de Tifany Luiza de Jesus Moreira">
+                        <div class="carousel-caption d-none d-md-block text-center">
+                            <h3 class="fw-bold">Tifany Luiza de Jesus Moreira</h3>
+                            <p class="mb-0">Com uma visão moderna e paixão por tecnologia, Tifany decidiu que seu TCC não seria apenas um diploma, mas uma solução para a pessoa que ela mais ama. A desenvolvedora criou a NutriCare como uma forma de dizer "obrigado", usando o que ela ama para ajudar sua mãe a fazer o que faz de melhor: cuidar das pessoas. A sua expertise técnica em Node.js, Express, MySQL, HTML, CSS e JavaScript foi o pilar para transformar a ideia em uma plataforma eficiente e intuitiva.</p>
+                        </div>
+                    </div>
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#idealizadorasCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#idealizadorasCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
             </div>
         </div>
     </section>

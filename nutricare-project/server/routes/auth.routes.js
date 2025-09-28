@@ -3,7 +3,7 @@ import {
     register, login, logout, getMe, getPatientCount, getScoreMedium, 
     generateLink, patientList, patientDetails, anamneseDetails, sendMsg, 
     mealPlan, getMetrics, getNutricionistaDetails, updateNutricionistaDetails, 
-    updateNutricionistaPassword, getInvoices, createInvoice, getDashboardOverview 
+    updateNutricionistaPassword, getInvoices, createInvoice, getDashboardOverview, generateAgenda
 } from '../controllers/auth.controller.js'; 
 import checkAuth from '../middlewares/checkAuth.js';
 import { pool } from '../config/dbConnect.js';
@@ -24,6 +24,7 @@ router.get('/anamneseDetails/:id', anamneseDetails);
 router.get('/metrics', checkAuth, getMetrics);
 router.get('/nutricionista/details', checkAuth, getNutricionistaDetails);
 router.put('/nutricionista/details', checkAuth, updateNutricionistaDetails);
+router.put('/nutricionista/generateAgenda', generateAgenda);
 router.put('/nutricionista/password', checkAuth, updateNutricionistaPassword);
 router.get('/invoices', checkAuth, getInvoices);
 router.post('/invoices', checkAuth, createInvoice);

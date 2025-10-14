@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receituário - NutriCare</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="../../css/style.css">
+</head>
+
+<body>
+    <div class="dashboard-wrapper">
+        <aside class="dashboard-sidebar">
+            <div class="sidebar-header"><a class="navbar-brand" href="#"><i class="bi bi-heart-pulse-fill"></i> NutriCare</a></div>
+            <nav class="sidebar-nav">
+                <ul class="list-unstyled">
+                    <li class="nav-item"><a href="dashboard.html" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Início</a></li>
+                    <li class="nav-item"><a href="planoAlimentar.html" class="nav-link"><i class="bi bi-file-earmark-text-fill"></i> Plano Alimentar</a></li>
+                    <li class="nav-item"><a href="agenda.html" class="nav-link"><i class="bi bi-calendar2-week-fill"></i> Minha Agenda</a></li>
+                    <li class="nav-item"><a href="encaminhamentos.html" class="nav-link"><i class="bi bi-folder-symlink-fill"></i> Encaminhamentos</a></li>
+                    <li class="nav-item active"><a href="receituario.html" class="nav-link"><i class="bi bi-capsule-pill"></i> Receituário</a></li>
+                    <li class="nav-item"><a href="pagamentos.html" class="nav-link"><i class="bi bi-wallet-fill"></i> Pagamentos</a></li>
+                    <li class="nav-item"><a href="configuracoes.html" class="nav-link"><i class="bi bi-person-fill-gear"></i> Configurações</a></li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer"><button id="logoutBtn" class="btn btn-logout w-100"><i class="bi bi-box-arrow-left"></i> Sair</button></div>
+        </aside>
+
+        <main class="dashboard-main">
+            <header class="dashboard-content-header">
+                <h1>Meu Receituário</h1>
+            </header>
+
+            <div class="card data-card">
+                <div class="card-body">
+                    <div class="empty-state-card" style="opacity: 1; animation: none;">
+                        <div class="empty-state-icon"><i class="bi bi-prescription"></i></div>
+                        <h5 class="empty-state-title">Nenhum receituário disponível.</h5>
+                        <p class="empty-state-text">
+                           Aqui você encontrará as receitas de suplementos e fitoterápicos prescritos pela sua Nutri.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script type="module" src="../../js/dashboard-paciente.js"></script>
+</body>
+
+</html>

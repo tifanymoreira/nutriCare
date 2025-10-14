@@ -72,6 +72,35 @@
         </main>
     </div>
 
+    <div class="modal-backdrop" id="patientContactModal">
+        <div class="modal-content pro-modal">
+            <button class="modal-close" id="closePatientContactModal">&times;</button>
+            <div class="modal-icon" style="background-color: rgba(244, 162, 97, 0.15); color: var(--secondary-orange);"><i class="bi bi-person-circle"></i></div>
+            <h4 class="modal-title-pro" id="modalPatientName">Detalhes da Consulta</h4>
+            <p class="modal-subtitle-pro text-start">
+                <strong class="d-block mb-1">Horário:</strong> <span id="modalAppointmentDateTime" class="text-dark-charcoal"></span><br>
+                <strong class="d-block mb-1">Serviço:</strong> <span id="modalAppointmentService" class="text-dark-charcoal"></span>
+            </p>
+            
+            <hr>
+            <h6 class="text-start fw-bold mb-3">Informações de Contato</h6>
+            <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
+                <div class="text-muted"><i class="bi bi-telephone-fill me-2"></i> Telefone:</div>
+                <span id="modalPatientPhone" class="fw-bold"></span>
+            </div>
+            <div class="d-flex justify-content-between mb-4 border-bottom pb-2">
+                <div class="text-muted"><i class="bi bi-envelope-fill me-2"></i> E-mail:</div>
+                <span id="modalPatientEmail" class="fw-bold"></span>
+            </div>
+
+            <a id="btnWppContact" class="btn-wpp-large w-100" target="_blank">
+                <i class="bi bi-whatsapp me-2"></i> Chamar no WhatsApp
+            </a>
+            
+            <p class="text-muted small mt-3">A mensagem de saudação será preenchida automaticamente.</p>
+        </div>
+    </div>
+    
     <div class="modal-backdrop" id="scheduleSettingsModal">
         <div class="modal-content pro-modal modal-lg">
             <button class="modal-close" id="closeScheduleSettingsModal">&times;</button>
@@ -140,6 +169,7 @@
         </div>
     </div>
     
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module" src="../../js/dashboard-nutricionista.js"></script>
 </body>
 

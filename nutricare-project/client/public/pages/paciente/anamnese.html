@@ -66,9 +66,20 @@
                 <div class="card data-card">
                     <div class="card-body">
                         <form id="anamneseForm">
+                            <input type="hidden" id="nutriId" value="">
+                            <input type="hidden" id="appointmentId" value="">
+                            
+                            <div class="form-question">
+                                <label for="nome" class="form-label">Nome completo *</label>
+                                <input type="text" class="form-control" id="nome" required>
+                            </div>
                             <div class="form-question">
                                 <label for="email" class="form-label">E-mail *</label>
                                 <input type="email" class="form-control" id="email" required>
+                            </div>
+                            <div class="form-question">
+                                <label for="phone" class="form-label">Celular (WhatsApp) *</label>
+                                <input type="tel" class="form-control" id="phone" required>
                             </div>
                             <div class="form-question">
                                 <div class="form-question">
@@ -80,10 +91,7 @@
                                     <input type="password" class="form-control" id="password_confirmation" required>
                                 </div>
                             </div>
-                            <div class="form-question">
-                                <label for="nome" class="form-label">Nome completo *</label>
-                                <input type="text" class="form-control" id="nome" required>
-                            </div>
+                           
                             <div class="form-question">
                                 <label for="peso" class="form-label">Peso atual *</label>
                                 <input type="text" class="form-control" id="peso" placeholder="Ex: 65"
@@ -91,7 +99,7 @@
                             </div>
                             <div class="form-question">
                                 <label for="altura" class="form-label">Sua altura*</label>
-                                <input type="text" class="form-control" id="peso" placeholder="Ex: 156"
+                                <input type="text" class="form-control" id="altura" placeholder="Ex: 156"
                                     required>
                             </div>
                             <div class="form-question">

@@ -17,8 +17,11 @@
             <a class="navbar-brand" href="/">
                 <i class="bi bi-heart-pulse-fill"></i> NutriCare
             </a>
-            <h1 class="section-title mt-4">Agende sua Consulta</h1>
-            <p class="lead text-muted">Siga os passos abaixo para marcar seu horário com <strong id="nutriName">Dra. Nutricionista</strong>.</p>
+            <h1 class="section-title mt-4">Solicitação de Consulta</h1>
+            <p class="lead text-muted">Solicite seu horário com <strong id="nutriName">Dra. Nutricionista</strong>.</p>
+            <div id="loading-message" class="mt-3" style="display: none;">
+                <span class="text-primary"><i class="bi bi-arrow-clockwise spinner-border spinner-border-sm me-2"></i> Carregando dados da Nutri...</span>
+            </div>
         </header>
 
         <div class="row justify-content-center">
@@ -26,8 +29,9 @@
                 <div class="card data-card shadow-sm">
                     <div class="card-body p-4 p-md-5">
                         <div id="booking-flow">
+                            
                             <div class="booking-step active" id="step1">
-                                <h4 class="step-title">1. Escolha o tipo de consulta</h4>
+                                <h4 class="step-title">1. Escolha o serviço</h4>
                                 <div class="service-list">
                                     <div class="service-item" data-service-id="1" data-duration="60">
                                         <div class="service-icon"><i class="bi bi-person-check-fill"></i></div>
@@ -67,15 +71,19 @@
 
                             <div class="booking-step" id="step2">
                                 <h4 class="step-title">2. Selecione a data e o horário</h4>
+                                <div id="agenda-alert-message" class="alert alert-warning" style="display: none;"></div>
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div id="datepicker" class="mb-4"></div>
                                     </div>
                                     <div class="col-md-6">
                                         <div id="time-slots-container">
-                                            <h6 class="text-center" id="selectedDate"></h6>
+                                            <h6 class="text-center" id="selectedDate">Escolha uma data no calendário</h6>
                                             <div class="time-slots-list">
                                                 </div>
+                                            <div id="slots-loader" class="text-center mt-3" style="display: none;">
+                                                <span class="spinner-border spinner-border-sm text-primary"></span> Carregando horários...
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -85,7 +93,7 @@
                             <div class="booking-step" id="step3">
                                 <h4 class="step-title">3. Confirme seus dados</h4>
                                 <div class="booking-summary">
-                                    <h5>Resumo do Agendamento</h5>
+                                    <h5>Resumo da Solicitação</h5>
                                     <p><i class="bi bi-card-checklist"></i> <strong>Serviço:</strong> <span id="summaryService"></span></p>
                                     <p><i class="bi bi-calendar-check"></i> <strong>Data e Hora:</strong> <span id="summaryDateTime"></span></p>
                                     <p><i class="bi bi-cash-coin"></i> <strong>Valor:</strong> <span id="summaryPrice"></span></p>
@@ -113,19 +121,19 @@
                                     </div>
                                     <div class="d-flex justify-content-between">
                                         <button type="button" class="btn btn-outline-secondary" id="backToStep2"><i class="bi bi-arrow-left"></i> Voltar</button>
-                                        <button type="submit" class="btn btn-primary-custom" id="confirmBookingBtn">Confirmar Agendamento</button>
+                                        <button type="submit" class="btn btn-primary-custom" id="confirmBookingBtn">Solicitar Agendamento</button>
                                     </div>
                                 </form>
                             </div>
 
                             <div class="booking-step" id="step4">
                                 <div class="text-center py-4">
-                                    <div class="success-icon mx-auto mb-4">
-                                        <i class="bi bi-check-lg"></i>
+                                    <div class="success-icon mx-auto mb-4" style="background-color: var(--secondary-orange);">
+                                        <i class="bi bi-hourglass-split"></i>
                                     </div>
-                                    <h2 class="h4 fw-bold">Agendamento Realizado!</h2>
-                                    <p class="text-muted">Seu horário foi confirmado com sucesso. Você receberá um e-mail com todos os detalhes e um lembrete próximo à data da consulta.</p>
-                                    <p class="mt-4">O próximo passo é preencher o questionário pré-consulta para que a sua nutri possa te conhecer melhor. É rapidinho!</p>
+                                    <h2 class="h4 fw-bold" id="successTitle">Solicitação Enviada!</h2>
+                                    <p class="text-muted" id="successMessage">Seu pré-agendamento foi enviado com sucesso! Aguarde a aprovação do seu nutricionista, que pode levar até 24h.</p>
+                                    <p class="mt-4" id="nextStepMessage">O próximo passo é preencher o questionário pré-consulta para criar sua conta.</p>
                                     <a href="#" id="anamneseLink" class="btn btn-primary-custom mt-2">
                                         <i class="bi bi-file-text-fill me-2"></i>Ir para o Questionário
                                     </a>

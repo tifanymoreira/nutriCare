@@ -953,7 +953,13 @@ body {
     box-shadow: var(--shadow-sm);
     transition: var(--transition);
     cursor: pointer;
+    
+    /* Novo: Flex container para alinhar nome e ações */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
+
 .appointment-block-pro.type-retorno {
     background-color: #fef5ec;
     border-left-color: var(--secondary-orange);
@@ -968,6 +974,30 @@ body {
     color: var(--text-secondary);
 }
 
+.appointment-actions-pro {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.appointment-actions-pro .btn-icon {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.appointment-actions-pro .btn-icon:hover {
+    background-color: #e2e8f0;
+}
+/* Estilo específico para o ícone do WhatsApp */
+.appointment-actions-pro .text-success {
+    color: #25D366 !important;
+}
 
 /* =================================================================== */
 /* ======================== PÁGINA DE MÉTRICAS ======================= */
@@ -1137,13 +1167,11 @@ body {
 /* ======================== PATIENT LIST ====================== */
 /* =================================================================== */
 
-.text-end {
-    text-align: start;
+.patient-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
-
-/* =================================================================== */
-/* ======================== CARDÁPIO (NUTRI) ====================== */
-/* =================================================================== */
 
 /* =================================================================== */
 /* ==============       NOVO EDITOR DE PLANOS         ============== */
@@ -2044,77 +2072,703 @@ body {
 .appointment-time { font-size: 0.75rem; }
 
 /* =================================================================== */
-/* ==============        PÁGINA DE AGENDAMENTO (PACIENTE)      ======= */
+/* ============= ESTILOS ADICIONAIS PARA DASHBOARD PACIENTE ========== */
 /* =================================================================== */
 
-.booking-step { display: none; }
-.booking-step.active { display: block; animation: fadeIn 0.5s ease-in-out; }
-
-.step-title {
-    font-weight: 700;
-    margin-bottom: 2rem;
-    color: var(--dark-charcoal);
-    border-bottom: 2px solid var(--primary-green);
-    padding-bottom: 0.5rem;
-    display: inline-block;
+/* Utilitários de cor para texto dinâmico */
+.text-danger-red {
+    color: var(--danger-red) !important;
+}
+.text-primary-green {
+    color: var(--primary-green) !important;
+}
+.text-primary-custom {
+    /* Usando a cor de destaque da marca (o secundário laranja/vermelho do botão) para ícones */
+    color: var(--secondary-orange) !important;
+}
+.text-secondary-orange {
+    color: var(--secondary-orange) !important;
 }
 
-.service-list .service-item {
+
+/* Destaque para a próxima consulta */
+.next-appointment-card {
+    border-left: none;
+    background: linear-gradient(90deg, #e9f9f7 0%, var(--white) 30%); /* Fundo mais suave */
+    border: 1px solid rgba(42, 157, 143, 0.2);
+    box-shadow: 0 4px 20px rgba(42, 157, 143, 0.1);
+}
+
+.next-appointment-card:hover {
+    transform: none; /* Não desliza para evitar distração no destaque */
+    box-shadow: 0 4px 25px rgba(42, 157, 143, 0.2);
+}
+
+/* Ajuste no stat-card para melhor leitura da diferença de peso */
+.stat-card .stat-number.text-danger-red,
+.stat-card .stat-number.text-primary-green {
+    font-size: 1.7rem; /* Levemente menor para caber melhor o texto com ícone */
+}
+
+/* Estilo para o ícone de diferença de peso no KPI */
+.stat-card .stat-number i {
+    font-size: 1.4rem;
+    vertical-align: middle;
+}
+
+/* Estilo para o botão de contato do WPP na agenda da Nutri */
+.btn-wpp-large {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    background-color: #25D366; /* Cor oficial do WhatsApp */
+    color: white;
+
+    font-size: 1.1rem;
+    font-weight: 700;
+
+    padding: 12px 30px;
+    border: none;
+    border-radius: 50px;
+
+    box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+}
+
+.btn-wpp-large:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(37, 211, 102, 0.6);
+    color: white;
+}
+
+/* =================================================================== */
+/* ============= NOVO SISTEMA DE NOTIFICAÇÃO (PACIENTE) ============= */
+/* =================================================================== */
+
+.notification-icon-container {
+    position: relative;
     display: flex;
     align-items: center;
-    padding: 1.25rem;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    margin-bottom: 1rem;
-    cursor: pointer;
-    transition: var(--transition);
-}
-.service-list .service-item:hover {
-    border-color: var(--primary-green);
-    background-color: #f8f9fa;
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-sm);
 }
 
-.service-icon {
-    font-size: 2rem;
+.notification-icon {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--dark-charcoal);
+    cursor: pointer;
+    position: relative;
+    padding: 5px;
+    transition: color 0.2s;
+}
+
+.notification-icon:hover {
+    color: var(--primary-green);
+}
+
+.notification-badge {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    background-color: var(--danger-red);
+    color: white;
+    border-radius: 50%;
+    padding: 0.1rem 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    min-width: 20px;
+    text-align: center;
+    line-height: 1;
+    border: 2px solid var(--light-bg); /* Contraste com o fundo */
+}
+
+.notification-dropdown {
+    position: absolute;
+    top: 50px;
+    right: 0;
+    width: 350px;
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+    max-height: 400px;
+    overflow: hidden;
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease-in-out;
+}
+
+.notification-dropdown.is-visible {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.notification-dropdown .dropdown-header {
+    padding: 0.75rem 1rem;
+    font-weight: 700;
+    color: var(--dark-charcoal);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.notification-dropdown .dropdown-body {
+    overflow-y: auto;
+    max-height: 340px;
+    padding: 0.5rem 0;
+}
+
+.notification-item {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f8f9fa;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    gap: 1rem;
+}
+
+.notification-item:hover {
+    background-color: #f1f5f9;
+}
+
+.notification-icon-status {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.notification-content {
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.status-approved { color: var(--primary-green); }
+.status-rejected { color: var(--danger-red); }
+
+/* ------------------------------------------------------------------ */
+/* ----------- Aprimoramento UX/UI: Agenda do Paciente -------------- */
+/* ------------------------------------------------------------------ */
+
+.appointment-card.type-retorno {
+    border-left-color: var(--secondary-orange);
+}
+.appointment-card.type-online {
+    border-left-color: var(--danger-red);
+}
+.appointment-card.type-primeira {
+    border-left-color: var(--primary-green);
+}
+
+.appointment-card .appointment-icon.type-retorno {
+    color: var(--secondary-orange);
+}
+.appointment-card .appointment-icon.type-online {
+    color: var(--danger-red);
+}
+.appointment-card .appointment-icon.type-primeira {
+     color: var(--primary-green);
+}
+
+/* Estilo para o botão de ação Remarcar */
+.appointment-card .btn-outline-primary {
+    color: var(--secondary-orange);
+    border-color: var(--secondary-orange);
+    font-weight: 500;
+}
+.appointment-card .btn-outline-primary:hover {
+    background-color: var(--secondary-orange);
+    color: var(--white);
+    border-color: var(--secondary-orange);
+}
+
+/* Destaque para o Próximo Compromisso (UX Enhancements) */
+.highlight-appointment-card {
+    border-left: none;
+    background: linear-gradient(90deg, #e9f9f7 0%, var(--white) 30%);
+    border: 1px solid rgba(42, 157, 143, 0.2);
+    box-shadow: 0 4px 20px rgba(42, 157, 143, 0.1);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.highlight-appointment-card:hover {
+    transform: none;
+    box-shadow: 0 4px 25px rgba(42, 157, 143, 0.2);
+}
+.highlight-details i {
+    font-size: 2.2rem;
     color: var(--primary-green);
     margin-right: 1.5rem;
-    width: 50px;
+}
+.highlight-details {
+    display: flex;
+    align-items: center;
+}
+.highlight-title {
+    font-weight: 700;
+    color: var(--dark-charcoal);
+    margin-bottom: 0.25rem;
+}
+.highlight-info {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+/* Estilos para a lista dentro do card principal (substitui o estilo padrão do .appointment-card) */
+#appointmentsListContainer .appointment-card {
+    margin-bottom: 0;
+    border-radius: 0;
+    border-left: 5px solid transparent !important; /* Reseta o estilo base */
+    border-right: none;
+    box-shadow: none;
+    border-top: 1px solid #f1f3f5;
+    animation: none;
+    opacity: 1;
+    transform: none;
+    flex-wrap: wrap; /* Permite quebrar no mobile */
+}
+
+/* Re-aplica a borda lateral de cor do serviço na lista (o !important é para sobrescrever) */
+#appointmentsListContainer .appointment-card.type-retorno {
+    border-left: 5px solid var(--secondary-orange) !important;
+}
+#appointmentsListContainer .appointment-card.type-online {
+    border-left: 5px solid var(--danger-red) !important;
+}
+#appointmentsListContainer .appointment-card.type-primeira {
+    border-left: 5px solid var(--primary-green) !important;
+}
+
+#appointmentsListContainer .appointment-card:hover {
+    box-shadow: none;
+    background-color: #f8f9fa;
+    transform: none;
+}
+#appointmentsListContainer .appointment-card:last-child {
+    border-bottom: 1px solid #f1f3f5;
+}
+#appointmentsListContainer .d-flex.gap-2.align-items-center {
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+/* Modal de Confirmação de Ação */
+#actionConfirmModal .btn-danger {
+    background-color: var(--danger-red);
+    border-color: var(--danger-red);
+    font-weight: 600;
+}
+#actionConfirmModal .btn-danger:hover {
+    background-color: #c95138;
+    border-color: #c95138;
+}
+#actionConfirmModal .btn-primary-custom {
+    font-weight: 600;
+}
+
+/* Media Query para Mobile (Ajuste a lista para empilhar melhor) */
+@media (max-width: 768px) {
+    #appointmentsListContainer .appointment-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    #appointmentsListContainer .d-flex.gap-2.align-items-center {
+        margin-left: 0;
+        margin-top: 1rem;
+    }
+    #appointmentsListContainer .appointment-details {
+         padding-left: 0;
+    }
+    #appointmentsListContainer .appointment-icon {
+        width: auto;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* =================================================================== */
+/* =================== TOAST/TOGGLE DE NOTIFICAÇÃO =================== */
+/* =================================================================== */
+
+.custom-toast {
+    position: fixed;
+    bottom: 25px;
+    left: 50%;
+    /* Inicia fora da tela e centralizado horizontalmente */
+    transform: translateX(-50%) translateY(100px); 
+    z-index: 1100;
+    padding: 1rem 1.5rem;
+    border-radius: 50px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-weight: 600;
+    opacity: 0;
+    visibility: hidden;
+    /* Animação com um pequeno 'bounce' */
+    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55); 
+    max-width: 90%;
+}
+
+.custom-toast.show {
+    opacity: 1;
+    visibility: visible;
+    /* Move para a posição final */
+    transform: translateX(-50%) translateY(0);
+}
+
+.custom-toast.success {
+    background-color: var(--primary-green);
+    color: var(--white);
+}
+
+.custom-toast.error {
+    background-color: var(--danger-red);
+    color: var(--white);
+}
+
+.custom-toast .toast-icon {
+    font-size: 1.5rem;
+}
+
+/* nutricare-project/client/public/css/survey.css */
+
+.survey-section {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.survey-section:last-of-type {
+    border-bottom: none;
+    margin-bottom: 1rem;
+}
+
+.survey-section-title {
+    font-weight: 600;
+    color: var(--dark-charcoal);
+    margin-bottom: 1rem;
     text-align: center;
 }
 
-.service-details { flex-grow: 1; }
-.service-details h5 { font-weight: 600; margin-bottom: 0.25rem; }
-.service-details p { color: var(--text-secondary); margin-bottom: 0; font-size: 0.9rem; }
+.rating-stars {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 2rem;
+    color: #ffc107;
+    cursor: pointer;
+}
 
-.service-meta { text-align: right; }
-.service-meta span { display: block; color: var(--text-secondary); font-size: 0.9rem; }
-.service-meta strong { font-size: 1.1rem; color: var(--dark-charcoal); }
+.rating-stars .bi-star {
+    transition: transform 0.2s;
+}
+.rating-stars .bi-star:hover {
+    transform: scale(1.2);
+}
 
-#time-slots-container {
+.rating-nps {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.25rem;
+}
+
+.nps-score {
+    flex: 1;
+    border: 2px solid #ced4da;
+    background-color: #f8f9fa;
+    color: var(--text-secondary);
+    font-weight: 700;
+    border-radius: 8px;
+    padding: 0.5rem 0;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+}
+
+.nps-score:hover {
+    border-color: var(--primary-green);
+    color: var(--primary-green);
+}
+
+.nps-score.selected {
+    background-color: var(--primary-green);
+    border-color: var(--primary-green);
+    color: white;
+    transform: scale(1.1);
+    box-shadow: 0 4px 10px rgba(42, 157, 143, 0.3);
+}
+
+
+/* =================================================================== */
+/* =============     FIX DE LAYOUT MODAL PACIENTE        ============= */
+/* =================================================================== */
+
+#patientDetailsModal .modal-body {
+    min-height: 60vh; /* Define uma altura mínima para o corpo do modal */
+    max-height: 60vh; /* Define uma altura máxima para o corpo do modal */
+    overflow-y: auto; /* Adiciona scroll se o conteúdo ultrapassar a altura */
+}
+
+#patientDetailsModal .tab-content {
+    min-height: 55vh; /* Garante que a área da aba também tenha uma altura mínima */
+}
+
+/* =================================================================== */
+/* =============       NOVA ABA DE ACOMPANHAMENTO        ============= */
+/* =================================================================== */
+
+.modal-xl {
+    max-width: 1200px;
+}
+
+#followup-pane .row {
+    height: 100%;
+}
+
+.bg-primary-soft {
+    background-color: rgba(42, 157, 143, 0.1);
+}
+
+.border-dashed {
+    border: 2px dashed #e0e0e0;
+}
+
+.history-container {
     background-color: #f8f9fa;
     border-radius: var(--border-radius);
+    padding: 1.5rem;
+    height: 100%;
+    overflow-y: auto;
+    max-height: 60vh;
+}
+
+#consultation-history-timeline {
+    position: relative;
+    padding-left: 30px;
+    margin-top: 1rem;
+}
+
+#consultation-history-timeline::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: #e9ecef;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 1.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    padding: 0.5rem;
+    border-radius: 8px;
+}
+
+.timeline-item:hover, .timeline-item.active {
+    background-color: #e9ecef;
+}
+
+
+.timeline-icon {
+    position: absolute;
+    left: -5px;
+    top: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background-color: var(--primary-green);
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    border: 3px solid #f8f9fa;
+}
+
+.timeline-item.past .timeline-icon {
+    background-color: #6c757d;
+}
+
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-body .small {
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.soap-notes {
+    background-color: var(--white);
+    border-radius: 8px;
     padding: 1rem;
-    max-height: 400px;
+    border: 1px solid #e9ecef;
+    font-size: 0.85rem;
+}
+
+.soap-notes p {
+    margin-bottom: 0.5rem;
+}
+
+/* Estilos para o Modal de Agendamento de Retorno */
+.time-slots-container {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    max-height: 300px;
     overflow-y: auto;
 }
-#selectedDate { font-weight: 600; margin-bottom: 1rem; }
 
 .time-slots-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 0.5rem;
 }
 
 .time-slot {
-    padding: 0.75rem;
+    padding: 0.5rem;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
     text-align: center;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
     cursor: pointer;
-    font-weight: 500;
+    background-color: var(--white);
+    transition: all 0.2s ease-in-out;
+}
+
+.time-slot:hover {
+    border-color: var(--primary-green);
+    color: var(--primary-green);
+}
+
+.time-slot.selected {
+    background-color: var(--primary-green);
+    color: var(--white);
+    border-color: var(--primary-green);
+    font-weight: 600;
+}
+
+/* Força o Datepicker a ficar visível */
+.datepicker {
+    z-index: 1060 !important; /* Maior que o z-index do modal */
+}
+
+/* =================================================================== */
+/* =================== ESTILOS DO PRÉ-AGENDAMENTO ================== */
+/* =================================================================== */
+
+/* Container Principal */
+.booking-step {
+    display: none;
+}
+.booking-step.active {
+    display: block;
+    animation: fadeIn 0.5s ease-in-out;
+}
+.step-title {
+    font-weight: 700;
+    color: var(--dark-charcoal);
+    margin-bottom: 1.5rem;
+}
+
+/* Lista de Serviços */
+.service-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.service-item {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.25rem;
+    border: 2px solid #e9ecef;
+    border-radius: var(--border-radius);
+    cursor: pointer;
     transition: var(--transition);
+}
+.service-item:hover {
+    border-color: var(--primary-green);
+    background-color: #f8f9fa;
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-sm);
+}
+.service-icon {
+    font-size: 1.8rem;
+    color: var(--primary-green);
+}
+.service-details h5 {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+.service-details p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+.service-meta {
+    margin-left: auto;
+    text-align: right;
+    flex-shrink: 0;
+}
+.service-meta span {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+.service-meta strong {
+    font-weight: 700;
+    color: var(--primary-green);
+}
+
+/* Datepicker e Horários */
+#datepicker {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 0.5rem;
+}
+.datepicker-picker {
+    box-shadow: var(--shadow-md);
+}
+.datepicker-controls .btn, .datepicker-view .dow, .datepicker-view span {
+    font-weight: 500;
+}
+.datepicker-view .day.selected, .datepicker-view .day.selected:hover {
+    background-color: var(--primary-green);
+    text-shadow: none;
+}
+#time-slots-container {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    min-height: 250px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+.time-slots-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 0.5rem;
+}
+.time-slot {
+    padding: 0.5rem;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    text-align: center;
+    cursor: pointer;
+    background-color: var(--white);
+    transition: all 0.2s ease-in-out;
+    font-weight: 500;
 }
 .time-slot:hover {
     border-color: var(--primary-green);
@@ -2124,150 +2778,39 @@ body {
     background-color: var(--primary-green);
     color: var(--white);
     border-color: var(--primary-green);
+    font-weight: 600;
 }
 
+/* Resumo e Confirmação */
 .booking-summary {
     background-color: #f8f9fa;
-    border-radius: var(--border-radius);
     padding: 1.5rem;
+    border-radius: var(--border-radius);
     margin-bottom: 2rem;
 }
-.booking-summary h5 { border-bottom: 1px solid #ddd; padding-bottom: 0.5rem; margin-bottom: 1rem; }
-.booking-summary p { margin-bottom: 0.5rem; }
+.booking-summary p {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+.booking-summary i {
+    color: var(--primary-green);
+    margin-right: 0.75rem;
+}
 
+/* Tela de Sucesso */
 .success-icon {
     width: 80px;
     height: 80px;
-    background-color: var(--primary-green);
-    color: white;
+    background-color: rgba(42, 157, 143, 0.1);
+    color: var(--primary-green);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2.5rem;
+    font-size: 3rem;
 }
 
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
-}
-
-/* =================================================================== */
-/* ==============        PÁGINA: LISTA DE PACIENTES      ============= */
-/* =================================================================== */
-
-.patient-list-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.patient-list-header .input-group {
-    max-width: 400px;
-}
-
-.filter-buttons .btn {
-    border-radius: 50px !important;
-    font-weight: 500;
-}
-.filter-buttons .btn.active {
-    background-color: var(--dark-charcoal);
-    color: var(--white);
-}
-
-.status-badge {
-    padding: 0.25em 0.6em;
-    font-size: 0.75rem;
-    font-weight: 600;
-    border-radius: 50px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-.status-active { background-color: rgba(42, 157, 143, 0.1); color: var(--primary-green); }
-.status-inactive { background-color: rgba(108, 117, 125, 0.1); color: #6c757d; }
-.status-new { background-color: rgba(244, 162, 97, 0.15); color: var(--secondary-orange); }
-
-
-/* --- Modal de Detalhes do Paciente --- */
-.modal-lg { max-width: 800px; }
-.modal-header { border-bottom: 1px solid var(--border-color); }
-
-.nav-tabs { border-bottom: none; }
-.nav-tabs .nav-link {
-    font-weight: 600;
-    color: var(--text-secondary);
-    border: none;
-    border-bottom: 3px solid transparent;
-}
-.nav-tabs .nav-link.active {
-    color: var(--primary-green);
-    border-bottom-color: var(--primary-green);
-}
-
-.tab-content {
-    background-color: #f8f9fa;
-    border-radius: 0 0 var(--border-radius) var(--border-radius);
-    padding: 1.5rem;
-}
-
-.anamnese-details-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-}
-.anamnese-item {
-    background-color: var(--white);
-    padding: 1rem;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-}
-.anamnese-item strong {
-    display: block;
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    margin-bottom: 0.25rem;
-}
-.anamnese-item p { margin-bottom: 0; color: var(--dark-charcoal); }
-.anamnese-item.col-span-2 { grid-column: span 2; }
-
-
-/* =================================================================== */
-/* ======================== TELA DE CARREGAMENTO ===================== */
-/* =================================================================== */
-
-#loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(248, 249, 250, 0.85); /* Cor de fundo suave com transparência */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
-}
-
-#loading-overlay.visible {
-    opacity: 1;
-    visibility: visible;
-}
-
-.spinner {
-    width: 50px;
-    height: 50px;
-    border: 4px solid var(--primary-green);
-    border-top: 4px solid var(--secondary-orange);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
 }

@@ -8,6 +8,7 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.4/dist/css/datepicker-bs5.min.css">
     <link rel="stylesheet" href="../../css/style.css">
 </head>
 
@@ -91,7 +92,7 @@
             </div>
 
             <div class="modal-backdrop" id="patientDetailsModal">
-                <div class="modal-content modal-lg">
+                <div class="modal-content modal-xl">
                     <button type="button" class="modal-close" id="closePatientModal">&times;</button>
                     <div class="modal-header d-flex align-items-center">
                         <img id="patientAvatar" src="" alt="Avatar do Paciente" class="avatar me-3">
@@ -111,17 +112,20 @@
                         <div id="modalDetailsContent" style="display: none;">
                             <ul class="nav nav-tabs" id="patientTab" role="tablist">
                                 <li class="nav-item" role="presentation">
-                                    <button class="nav-link active" id="details-tab" data-bs-toggle="tab" data-bs-target="#details-pane" type="button" role="tab">Detalhes</button>
+                                    <button class="nav-link" id="details-tab" data-bs-toggle="tab" data-bs-target="#details-pane" type="button" role="tab">Detalhes</button>
                                 </li>
                                 <li class="nav-item" role="presentation">
                                     <button class="nav-link" id="anamnese-tab" data-bs-toggle="tab" data-bs-target="#anamnese-pane" type="button" role="tab">Anamnese</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="followup-tab" data-bs-toggle="tab" data-bs-target="#followup-pane" type="button" role="tab">Acompanhamento</button>
                                 </li>
                                 <li class="nav-item" role="presentation">
                                     <button class="nav-link" id="plan-tab" data-bs-toggle="tab" data-bs-target="#plan-pane" type="button" role="tab">Plano Alimentar</button>
                                 </li>
                             </ul>
                             <div class="tab-content" id="patientTabContent">
-                                <div class="tab-pane fade show active" id="details-pane" role="tabpanel">
+                                <div class="tab-pane fade" id="details-pane" role="tabpanel">
                                     <div class="row pt-3">
                                         <div class="col-md-6">
                                             <h6>Informações Pessoais</h6>
@@ -132,6 +136,9 @@
                                             <h6>Consulta</h6>
                                             <p><strong>Próxima consulta:</strong> <span id="patientAppointmentDate" class="text-muted"></span></p>
                                             <p><strong>Status do Paciente:</strong> <span id="patientStatus" class="text-muted"></span></p>
+                                        </div>
+                                        <div class="col-12 mt-4">
+                                            <button class="btn btn-primary-custom" id="btnScheduleReturn"><i class="bi bi-calendar-plus-fill me-2"></i>Agendar Retorno</button>
                                         </div>
                                     </div>
                                 </div>
@@ -150,9 +157,56 @@
                                         <div class="anamnese-item col-span-2"><strong>Expectativas</strong><p id="anamneseExpectativas"></p></div>
                                     </div>
                                 </div>
+                                <div class="tab-pane fade show active" id="followup-pane" role="tabpanel">
+                                    <div class="row pt-3 gx-4">
+                                        <div class="col-lg-7">
+                                            <div id="consultation-form-container">
+                                                </div>
+                                        </div>
+                                        <div class="col-lg-5">
+                                            <div class="history-container">
+                                                <h6 class="mb-3"><i class="bi bi-clock-history me-2"></i> Histórico de Consultas</h6>
+                                                <div id="consultation-history-timeline">
+                                                    </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="tab-pane fade" id="plan-pane" role="tabpanel">
                                     </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-backdrop" id="scheduleReturnModal">
+                <div class="modal-content pro-modal modal-lg">
+                    <button class="modal-close" id="closeScheduleReturnModal">&times;</button>
+                    <div class="modal-icon"><i class="bi bi-calendar2-plus"></i></div>
+                    <h4 class="modal-title-pro">Agendar Consulta de Retorno</h4>
+                    <p class="modal-subtitle-pro">Selecione um horário disponível para <strong id="returnPatientName"></strong>.</p>
+                    
+                    <div id="return-schedule-flow">
+                        <div id="return-schedule-alert" class="alert alert-warning" style="display: none;"></div>
+                        <div class="row gx-4">
+                            <div class="col-md-6">
+                                <div id="returnDatePicker" class="mb-4"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="time-slots-container">
+                                    <h6 class="text-center mb-3" id="returnSelectedDate">Escolha uma data no calendário</h6>
+                                    <div class="time-slots-list" id="returnTimeSlots"></div>
+                                    <div id="return-slots-loader" class="text-center mt-3" style="display: none;">
+                                        <span class="spinner-border spinner-border-sm text-primary"></span> Carregando...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end mt-3">
+                             <button type="button" class="btn btn-primary-custom" id="confirmReturnScheduleBtn" disabled>
+                                <i class="bi bi-check-circle-fill me-2"></i> Confirmar Agendamento
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -172,6 +226,7 @@
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.4/dist/js/datepicker-full.min.js"></script>
     <script src="https://unpkg.com/scrollreveal"></script>
     <script type="module" src="../../js/dashboard-nutricionista.js"></script>
 </body>

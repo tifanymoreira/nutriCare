@@ -1,3 +1,4 @@
+// nutricare-project/client/public/js/login.js
 document.addEventListener("DOMContentLoaded", async function () {
     await checkIfAlreadyLoggedIn();
 
@@ -47,6 +48,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     async function checkIfAlreadyLoggedIn() {
         try {
             const response = await fetch('/api/auth/me');
+            
+            // VERIFICA SE O STATUS É SUCESSO (200-299)
             if (response.ok) {
                 const result = await response.json();
                 if (result.success && result.user) {
@@ -56,6 +59,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                     window.location.href = redirectUrl;
                 }
             }
+            // SE O STATUS FOR 401, response.ok é false, e a função continua.
         } catch (error) {
             console.error('Não foi possível verificar o status de autenticação.', error);
         }

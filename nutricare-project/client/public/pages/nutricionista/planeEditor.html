@@ -59,6 +59,9 @@
             <button class="nav-link active" id="foods-tab" data-bs-toggle="tab" data-bs-target="#foods-pane" type="button" role="tab">Alimentos</button>
           </li>
           <li class="nav-item" role="presentation">
+            <button class="nav-link" id="patients-tab" data-bs-toggle="tab" data-bs-target="#patients-pane" type="button" role="tab">Pacientes</button>
+          </li>
+          <li class="nav-item" role="presentation">
             <button class="nav-link" id="templates-tab" data-bs-toggle="tab" data-bs-target="#templates-pane" type="button" role="tab">Modelos</button>
           </li>
         </ul>
@@ -68,35 +71,14 @@
               <input type="text" class="form-control" placeholder="Buscar alimento...">
             </div>
             <div class="accordion accordion-flush" id="foodGroupsAccordion">
-              <div class="accordion-item">
-                <h2 class="accordion-header">
-                  <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#group-carbs">
-                    Carboidratos
-                  </button>
-                </h2>
-                <div id="group-carbs" class="accordion-collapse collapse show" data-bs-parent="#foodGroupsAccordion">
-                  <div class="accordion-body">
-                    <div class="food-item" draggable="true" data-food-name="Arroz Branco">Arroz Branco</div>
-                    <div class="food-item" draggable="true" data-food-name="Batata Doce">Batata Doce</div>
-                    <div class="food-item" draggable="true" data-food-name="Pão Integral">Pão Integral</div>
-                  </div>
-                </div>
               </div>
-              <div class="accordion-item">
-                <h2 class="accordion-header">
-                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#group-proteins">
-                    Proteínas
-                  </button>
-                </h2>
-                <div id="group-proteins" class="accordion-collapse collapse" data-bs-parent="#foodGroupsAccordion">
-                  <div class="accordion-body">
-                    <div class="food-item" draggable="true" data-food-name="Frango Grelhado">Frango Grelhado</div>
-                    <div class="food-item" draggable="true" data-food-name="Ovos Cozidos">Ovos Cozidos</div>
-                    <div class="food-item" draggable="true" data-food-name="Salmão">Salmão</div>
-                  </div>
-                </div>
-              </div>
+          </div>
+          <div class="tab-pane fade" id="patients-pane" role="tabpanel">
+            <div class="p-3">
+                <input type="text" id="patientSearchInput" class="form-control" placeholder="Buscar paciente...">
             </div>
+            <div class="list-group list-group-flush" id="patientsListContainer">
+                </div>
           </div>
           <div class="tab-pane fade" id="templates-pane" role="tabpanel">
             <div class="template-list">
@@ -119,12 +101,16 @@
         <header class="editor-header">
           <div>
             <h1>Editor de Plano Alimentar</h1>
-            <p class="text-muted">Plano para: <strong id="patientName">Bruna Oliveira</strong></p>
+            <p class="text-muted">Plano para: <strong id="patientName">Carregando...</strong></p>
           </div>
           <div class="editor-actions">
-            <button class="btn btn-outline-secondary"><i class="bi bi-arrow-counterclockwise"></i> Limpar</button>
-            <button class="btn btn-secondary"><i class="bi bi-star"></i> Salvar como Modelo</button>
-            <button class="btn btn-primary-custom"><i class="bi bi-check-circle-fill"></i> Salvar Plano</button>
+            <button class="btn btn-outline-secondary" id="clearPlanBtn"><i class="bi bi-arrow-counterclockwise"></i> Limpar</button>
+            <button class="btn btn-primary-custom" id="savePlanBtn">
+                <span class="btn-text"><i class="bi bi-check-circle-fill"></i> Salvar Plano</span>
+                <div class="spinner-container" style="display: none;">
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                </div>
+            </button>
           </div>
         </header>
         <div class="meal-plan-canvas" id="mealPlanCanvas">
@@ -134,8 +120,12 @@
         </div>
       </div>
     </main>
-
   </div>
+
+    <div id="customToast" class="custom-toast">
+        <div class="toast-icon"><i class="bi"></i></div>
+        <div class="toast-message"></div>
+    </div>
 
     <div class="modal-backdrop" id="logoutModal">
         <div class="modal-content text-center">

@@ -1,5 +1,26 @@
+// nutricare-project/client/public/js/anamnese.js
 document.addEventListener("DOMContentLoaded", function () {
     const form = document.getElementById('anamneseForm');
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // CAMPOS DE REGISTRO, ID DA NUTRI E ID DO AGENDAMENTO
+    const nutriId = urlParams.get('nutriId');
+    const appointmentId = urlParams.get('appointmentId'); // Captura o ID do agendamento
+    const patientName = decodeURIComponent(urlParams.get('patientName') || '');
+    const patientEmail = decodeURIComponent(urlParams.get('patientEmail') || '');
+    const patientPhone = decodeURIComponent(urlParams.get('patientPhone') || '');
+
+    // Preenche os campos de registro com os dados do pré-agendamento
+    if (document.getElementById('nutriId')) document.getElementById('nutriId').value = nutriId;
+    if (document.getElementById('appointmentId')) document.getElementById('appointmentId').value = appointmentId; // Preenche o campo oculto
+    if (document.getElementById('nome')) document.getElementById('nome').value = patientName;
+    if (document.getElementById('email')) document.getElementById('email').value = patientEmail;
+    if (document.getElementById('phone')) document.getElementById('phone').value = patientPhone;
+
+    if (!nutriId) {
+        console.log("!nutriId")
+    }
+
 
     const outroObjetivoCheckbox = document.getElementById('outro_objetivo');
     const outroObjetivoInput = document.getElementById('outro_objetivo_input');
@@ -47,17 +68,17 @@ document.addEventListener("DOMContentLoaded", function () {
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('password_confirmation').value;
             if (password !== confirmPassword) {
-                alert('As senhas não coincidem!');
+                console.log("senhas erradas.")
                 return;
             }
 
-            const urlParams = new URLSearchParams(window.location.search);
-            const nutriId = urlParams.get('nutriId');
-
-            if (!nutriId) {
-                alert('Erro: ID do nutricionista não encontrado na URL.');
-                return;
-            }
+            const registerData = {
+                nutriID: nutriId,
+                name: document.getElementById('nome').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                password: password,
+            };
 
 
             const anamneseData = {
@@ -99,7 +120,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     body: JSON.stringify({
                         role: 'paciente',
                         registerData: registerData,
-                        anamneseData: anamneseData
+                        anamneseData: anamneseData,
+                        appointmentId: document.getElementById('appointmentId').value // Envia o ID do agendamento
                     })
                 });
 
@@ -108,12 +130,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (result.success) {
                     window.location.href = '/pages/paciente/dashboard.html';
                 } else {
-                    alert('Erro no cadastro: ' + result.message);
-                    console.log(result)
+                    console.log('Erro no cadastro: ' + result.message);
                 }
             } catch (error) {
                 console.error('Falha na comunicação com o servidor.', error);
-                alert('Falha na comunicação com o servidor.');
             }
         });
     }

@@ -1,10 +1,13 @@
+// nutricare-project/client/public/js/dashboard-nutricionista.js
 document.addEventListener('DOMContentLoaded', async () => {
 
-    const nutriID = await verifySession();
-    if (!nutriID) {
+    const user = await verifySession(); // Agora retorna o objeto user completo
+    if (!user) {
         window.location.href = '/pages/login.html';
         return;
     }
+    const nutriName = user.name;
+    const nutriID = user.id;
 
     if (!sessionStorage.getItem('hasAnimated')) {
         const sr = ScrollReveal({ distance: '40px', duration: 2200, delay: 200, reset: false });
@@ -16,10 +19,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (path.endsWith('/nutricionista/dashboard.html')) {
         initializeDashboardPage(nutriID);
         initializeGenerateLinkModal(nutriID);
+        // initializePendingAppointments() é chamado dentro de initializeDashboardPage com polling
     } else if (path.endsWith('/nutricionista/patientsList.html')) {
         await initializePatientList(nutriID);
     } else if (path.endsWith('/nutricionista/nutriAgenda.html')) {
-        initializeProfessionalAgenda(nutriID);
+        initializeProfessionalAgenda(nutriID, nutriName); // Passando o nome
         initializeAgendaModals(nutriID);
     } else if (path.endsWith('/nutricionista/nutriMetrics.html')) {
         initializeMetricsPage(nutriID);
@@ -42,15 +46,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         logoutButton.addEventListener('click', () => {
             modal.classList.add('is-visible');
         });
-        
+
         buttonYes.addEventListener('click', async () => {
-             await handleLogout();
+            await handleLogout();
         });
-        
+
         buttonNo.addEventListener('click', () => {
             modal.classList.remove('is-visible');
         });
-        
+
         closeLogoutModalBtn.addEventListener('click', () => {
             modal.classList.remove('is-visible');
         });
@@ -58,14 +62,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 
-
+// Retorna o objeto user completo da sessão, ou nulo se não estiver logado.
 async function verifySession() {
     try {
         const response = await fetch('/api/auth/me');
         if (response.ok) {
             const result = await response.json();
             if (result.success && result.user) {
-                return result.user.id;
+                return result.user;
             }
         }
         return null;
@@ -75,6 +79,7 @@ async function verifySession() {
     }
 }
 
+// Realiza o logout do usuário e redireciona para a página de login.
 async function handleLogout() {
     console.log("start handleLogout function")
 
@@ -87,16 +92,15 @@ async function handleLogout() {
             sessionStorage.removeItem('hasAnimated');
             setTimeout(50000)
             window.location.href = result.redirectUrl;
-        } else {
-            alert('Erro ao tentar fazer logout.');
         }
     } catch (error) {
-        console.error('Erro no processo de logout:', error);
+        console.error('Erro no logout:', error);
     }
 
 
 }
 
+// Inicializa o modal de geração de link de cadastro para novos pacientes.
 function initializeGenerateLinkModal(nutriId) {
     const modal = document.getElementById('generateLinkModal');
     const openBtn = document.getElementById('openGenerateLinkModal');
@@ -129,8 +133,146 @@ function initializeGenerateLinkModal(nutriId) {
     });
 }
 
+// ===================================================================
+// LÓGICA DE APROVAÇÃO PENDENTE
+// ===================================================================
 
-function initializeProfessionalAgenda(nutriId) {
+// Busca no backend a lista de agendamentos com status 'Pendente'.
+async function fetchPendingAppointments() {
+    try {
+        const response = await fetch('/api/auth/nutricionista/appointments/pending');
+        const result = await response.json();
+        return result.success ? result.pendingAppointments : [];
+    } catch (error) {
+        console.error('Erro ao buscar pendentes:', error);
+        return [];
+    }
+}
+
+// Envia a atualização de status (Aprovar/Rejeitar) para o backend.
+async function handleStatusUpdate(appointmentId, status) {
+    try {
+        const response = await fetch('/api/auth/nutricionista/appointments/status', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ appointmentId, status })
+        });
+        const result = await response.json();
+        if (result.success) {
+            console.log("ok")
+            initializePendingAppointments();
+        } else {
+            console.log("erro no processo de atualização de status da consulta pendente")
+        }
+    } catch (error) {
+        console.log('Erro ao atualizar status:', error);
+    }
+}
+
+// Renderiza a lista de agendamentos pendentes na interface.
+function renderPendingAppointments(appointments) {
+    const list = document.getElementById('pending-appointments-list');
+    const emptyState = document.getElementById('empty-pending-state');
+    const pendingCount = document.getElementById('pendingCount');
+
+    list.innerHTML = '';
+
+    if (!appointments || appointments.length === 0) {
+        emptyState.style.display = 'block';
+        pendingCount.textContent = '0';
+        return;
+    }
+
+    emptyState.style.display = 'none';
+    pendingCount.textContent = appointments.length;
+
+    appointments.forEach(apt => {
+        const dateBR = new Date(apt.date + 'T00:00:00').toLocaleDateString('pt-BR');
+
+        const item = document.createElement('li');
+        item.className = 'list-group-item d-flex justify-content-between align-items-center p-3';
+        item.innerHTML = `
+            <div>
+                <div class="fw-bold">${apt.patient_name} <span class="badge text-bg-warning">${apt.service_type}</span></div>
+                <div class="text-muted small">Dia: ${dateBR} às ${apt.time} (${apt.duration} min)</div>
+                <div class="text-muted small">Contato: ${apt.patient_phone || apt.patient_email}</div>
+            </div>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm btn-success btn-approve" data-id="${apt.id}"><i class="bi bi-check-lg"></i> Aprovar</button>
+                <button type="button" class="btn btn-sm btn-danger btn-reject" data-id="${apt.id}"><i class="bi bi-x-lg"></i> Rejeitar</button>
+            </div>
+        `;
+        list.appendChild(item);
+    });
+
+    // Adiciona os listeners aos botões de aprovar e rejeitar.
+    list.querySelectorAll('.btn-approve').forEach(btn => {
+        btn.addEventListener('click', () => handleStatusUpdate(btn.dataset.id, 'Confirmada'));
+    });
+    list.querySelectorAll('.btn-reject').forEach(btn => {
+        btn.addEventListener('click', () => handleStatusUpdate(btn.dataset.id, 'Rejeitada'));
+    });
+}
+
+// Função de inicialização que é chamada periodicamente (polling) para manter a lista atualizada.
+async function initializePendingAppointments() {
+    const pending = await fetchPendingAppointments();
+    renderPendingAppointments(pending);
+}
+
+// ===================================================================
+// LÓGICA DE AGENDA (COM MODAL WHATSAPP)
+// ===================================================================
+
+// Busca os agendamentos confirmados para um dia específico.
+async function getAppointmentsForDay(nutriId, dateStr) {
+    try {
+        const response = await fetch(`/api/auth/nutricionista/appointments?date=${dateStr}`);
+        if (response.ok) {
+            const result = await response.json();
+            return result.success ? result.appointments : [];
+        }
+        return [];
+    } catch (error) {
+        console.error("Erro ao buscar agendamentos do dia:", error);
+        return [];
+    }
+}
+
+// Abre o modal de contato do paciente com informações preenchidas e link para o WhatsApp.
+function openPatientContactModal(apt, date, nutriName) {
+    const modal = document.getElementById('patientContactModal');
+    const closeBtn = document.getElementById('closePatientContactModal');
+
+    // Popula os detalhes da consulta no modal.
+    document.getElementById('modalPatientName').textContent = apt.patientName;
+    document.getElementById('modalAppointmentService').textContent = apt.title;
+    document.getElementById('modalAppointmentDateTime').textContent = `${date} às ${apt.time}`;
+
+    // Popula as informações de contato do paciente.
+    document.getElementById('modalPatientPhone').textContent = apt.phone || 'N/A';
+    document.getElementById('modalPatientEmail').textContent = apt.email || 'N/A';
+
+    // Gera uma mensagem amigável e o link para o WhatsApp.
+    const patientFirstName = apt.patientName.split(' ')[0];
+    const nutriFirstName = nutriName.split(' ')[0];
+    const phone = apt.phone.replace(/\D/g, '');
+    const message = `Olá, ${patientFirstName}! Eu sou a Dra. ${nutriFirstName} do NutriCare. Vi que temos uma consulta de ${apt.title.toLowerCase()} marcada para o dia ${date} às ${apt.time}. Gostaria de confirmar se está tudo certo ou se precisa de alguma orientação prévia? Estou à disposição!`;
+
+    const wppLink = `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
+
+    const wppButton = document.getElementById('btnWppContact');
+    wppButton.href = wppLink;
+
+    // Exibe o modal.
+    modal.classList.add('is-visible');
+
+    closeBtn.onclick = () => modal.classList.remove('is-visible');
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('is-visible'); };
+}
+
+// Inicializa a visualização da agenda profissional, com navegação e renderização dos compromissos.
+function initializeProfessionalAgenda(nutriId, nutriName) {
     const header = document.getElementById('currentDayHeader');
     const prevDayBtn = document.getElementById('prevDayBtn');
     const nextDayBtn = document.getElementById('nextDayBtn');
@@ -140,26 +282,38 @@ function initializeProfessionalAgenda(nutriId) {
     const emptyState = document.getElementById('emptyAgendaState');
 
     let currentDate = new Date();
+    let pollingInterval = null; // Variável para controlar o polling
+
+    /**
+     * FUNÇÃO CORRIGIDA
+     * Formata um objeto Date para uma string 'YYYY-MM-DD' de forma segura,
+     * usando os componentes da data local (getFullYear, getMonth, getDate).
+     * Isso evita o bug de conversão de fuso horário que ocorria com .toISOString().
+     */
+    const getDateString = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const workHours = { start: 8, end: 18 };
+    const totalMinutes = (workHours.end - workHours.start) * 60;
+    const minutesPerPixel = 1;
 
     const renderDayView = async () => {
         timelineContainer.innerHTML = '';
         updateHeader();
+        const dateStr = getDateString(currentDate);
+        const readableDate = currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
 
-        const workHours = null;
-        const appointments = [];
+        const appointments = await getAppointmentsForDay(nutriId, dateStr);
 
-        if (!workHours) {
-            timelineContainer.style.display = 'none';
-            emptyState.style.display = 'flex';
-            return;
-        }
-
-        timelineContainer.style.display = 'block';
-        emptyState.style.display = 'none';
-
+        // Renderiza o grid de horários de fundo.
         for (let hour = workHours.start; hour <= workHours.end; hour++) {
             const slot = document.createElement('div');
             slot.className = 'timeline-slot';
+            slot.style.minHeight = `${60 * minutesPerPixel}px`;
             slot.innerHTML = `
                 <div class="timeline-time">${String(hour).padStart(2, '0')}:00</div>
                 <div class="timeline-line"></div>
@@ -167,24 +321,45 @@ function initializeProfessionalAgenda(nutriId) {
             timelineContainer.appendChild(slot);
         }
 
+        // Verifica se há agendamentos e os renderiza na timeline.
+        if (appointments.length === 0) {
+            timelineContainer.style.display = 'none';
+            emptyState.style.display = 'flex';
+            return;
+        }
+
+        timelineContainer.style.display = 'block';
+        timelineContainer.style.height = `${totalMinutes * minutesPerPixel + 60}px`;
+        emptyState.style.display = 'none';
+
         appointments.forEach(apt => {
             const aptBlock = document.createElement('div');
-            aptBlock.className = `appointment-block-pro type-${apt.type || 'primeira'}`;
+            const typeClass = apt.title.toLowerCase().includes('retorno') ? 'type-retorno' :
+                (apt.title.toLowerCase().includes('online') ? 'type-online' : 'type-primeira');
+
+            aptBlock.className = `appointment-block-pro ${typeClass}`;
 
             const [aptHour, aptMinute] = apt.time.split(':').map(Number);
-            const topPosition = ((aptHour - workHours.start) * 60) + aptMinute;
+            const workStartHour = workHours.start;
+
+            const topPosition = (((aptHour - workStartHour) * 60) + aptMinute) * minutesPerPixel;
             const duration = apt.duration || 60;
 
             aptBlock.style.top = `${topPosition}px`;
-            aptBlock.style.height = `${duration}px`;
+            aptBlock.style.height = `${duration * minutesPerPixel}px`;
 
             aptBlock.innerHTML = `
                 <div class="appointment-patient-name">${apt.patientName}</div>
-                <div class="appointment-details-pro">${apt.title} - ${apt.time}</div>
+                <div class="appointment-details-pro">${apt.title} - ${apt.time} (${duration} min)</div>
             `;
+
+            // Adiciona o evento de clique para abrir o modal de contato do paciente.
+            aptBlock.addEventListener('click', () => {
+                openPatientContactModal(apt, readableDate, nutriName);
+            });
+
             timelineContainer.appendChild(aptBlock);
         });
-
     };
 
     const updateHeader = () => {
@@ -197,34 +372,64 @@ function initializeProfessionalAgenda(nutriId) {
             header.textContent = currentDate.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
         }
 
-        datePicker.value = currentDate.toISOString().split('T')[0];
+        datePicker.value = getDateString(currentDate);
     };
 
+    // Inicia ou para o polling (atualização automática) da agenda.
+    const startOrStopPolling = () => {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+        }
+
+        const today = new Date();
+        const isToday = currentDate.toDateString() === today.toDateString();
+
+        // O polling só é ativado se a visualização for do dia atual.
+        if (isToday) {
+            pollingInterval = setInterval(renderDayView, 5000);
+        }
+    }
+
+    // Adiciona os listeners para os botões de navegação da agenda.
     prevDayBtn.addEventListener('click', () => {
         currentDate.setDate(currentDate.getDate() - 1);
         renderDayView();
+        startOrStopPolling();
     });
 
     nextDayBtn.addEventListener('click', () => {
         currentDate.setDate(currentDate.getDate() + 1);
         renderDayView();
+        startOrStopPolling();
     });
 
     todayBtn.addEventListener('click', () => {
         currentDate = new Date();
         renderDayView();
+        startOrStopPolling();
     });
 
     datePicker.addEventListener('change', (e) => {
-        const selectedDate = new Date(e.target.value);
-        currentDate = new Date(selectedDate.getTime() + selectedDate.getTimezoneOffset() * 60000);
+        // CORREÇÃO: O uso de 'T00:00:00' garante que a data seja interpretada no fuso horário local,
+        // evitando o bug de pular para o dia anterior em alguns fusos.
+        const selectedDate = new Date(e.target.value + 'T00:00:00');
+        currentDate = selectedDate;
         renderDayView();
+        startOrStopPolling();
     });
 
+    // Inicialização da agenda.
     renderDayView();
+    startOrStopPolling();
+
+    // Garante que o polling pare ao sair da página.
+    window.addEventListener('beforeunload', () => {
+        if (pollingInterval) clearInterval(pollingInterval);
+    });
 }
 
-
+// Inicializa os modais relacionados à configuração da agenda.
 function initializeAgendaModals(nutriId) {
     const modal = document.getElementById('scheduleSettingsModal');
     const openModalBtn = document.getElementById('openScheduleSettingsModalBtn');
@@ -243,6 +448,20 @@ function initializeAgendaModals(nutriId) {
     let calendarDate = new Date();
     let selectedDates = new Set();
 
+    const loadSelectedDates = async () => {
+        try {
+            const response = await fetch('/api/auth/nutricionista/details');
+            const result = await response.json();
+            if (result.success && result.data.availableDays) {
+                selectedDates = new Set(result.data.availableDays);
+                renderCalendar();
+            }
+        } catch (error) {
+            console.error("Erro ao carregar datas salvas:", error);
+        }
+    }
+
+
     const renderCalendar = () => {
         calendarGrid.innerHTML = '';
         const year = calendarDate.getFullYear();
@@ -250,7 +469,7 @@ function initializeAgendaModals(nutriId) {
 
         const firstDayOfMonth = new Date(year, month, 1);
         const lastDayOfMonth = new Date(year, month + 1, 0);
-        const startDayOfWeek = firstDayOfMonth.getDay();
+        let startDayOfWeek = firstDayOfMonth.getDay();
 
         const monthName = calendarDate.toLocaleString('pt-BR', { month: 'long' });
         monthDisplay.textContent = `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${year}`;
@@ -299,7 +518,15 @@ function initializeAgendaModals(nutriId) {
     };
 
     const setButtonLoading = (btn, isLoading) => {
-        btn.classList.toggle('is-loading', isLoading);
+        const btnText = btn.querySelector('.btn-text');
+        const spinner = btn.querySelector('.spinner-container');
+        if (isLoading) {
+            btnText.style.display = 'none';
+            spinner.style.display = 'inline-block';
+        } else {
+            btnText.style.display = 'inline-block';
+            spinner.style.display = 'none';
+        }
         btn.disabled = isLoading;
     };
 
@@ -314,9 +541,10 @@ function initializeAgendaModals(nutriId) {
         e.preventDefault();
         setButtonLoading(generateBtn, true);
 
+        const datesArray = Array.from(selectedDates);
+
         const formData = {
-            nutriId: nutriId,
-            dates: Array.from(selectedDates),
+            dates: datesArray,
             startTime: form.querySelector('#startTime').value,
             endTime: form.querySelector('#endTime').value,
             slotDuration: form.querySelector('input[name="slotDuration"]:checked').value
@@ -328,32 +556,35 @@ function initializeAgendaModals(nutriId) {
             return;
         }
 
-        console.log("Enviando para o backend:", formData);
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        const success = true;
-
         try {
-            axios.post('/', formData)
-        } catch {
-            console.log("error")
+            const response = await fetch('/api/auth/nutricionista/generateAgenda', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showMessage('schedule-settings-message', result.message, true);
+                setTimeout(() => {
+                    modal.classList.remove('is-visible');
+                    initializeProfessionalAgenda(nutriId);
+                }, 1500);
+            } else {
+                showMessage('schedule-settings-message', result.message, false);
+            }
+        } catch (error) {
+            showMessage('schedule-settings-message', 'Erro de comunicação ao gerar a agenda. Tente novamente.', false);
+        } finally {
+            setButtonLoading(generateBtn, false);
         }
-        if (success) {
-            showMessage('schedule-settings-message', 'Agenda gerada com sucesso!', true);
-            setTimeout(() => {
-                modal.classList.remove('is-visible');
-                initializeProfessionalAgenda(nutriId);
-            }, 1500);
-        } else {
-            showMessage('schedule-settings-message', 'Erro ao gerar a agenda. Tente novamente.', false);
-        }
-        setButtonLoading(generateBtn, false);
     };
 
     openModalBtn.addEventListener('click', () => {
         calendarDate = new Date();
         selectedDates.clear();
-        renderCalendar();
+        loadSelectedDates();
         modal.classList.add('is-visible');
     });
 
@@ -361,17 +592,22 @@ function initializeAgendaModals(nutriId) {
     prevMonthBtn.addEventListener('click', () => navigateMonth(-1));
     nextMonthBtn.addEventListener('click', () => navigateMonth(1));
     form.addEventListener('submit', handleFormSubmit);
+
+    setButtonLoading(generateBtn, false);
 }
 
-
-async function initializePatientList(id) {
+// Inicializa a página de lista de pacientes, com busca e modal de detalhes.
+async function initializePatientList(nutriId) {
     const tableBody = document.getElementById('patientTableBody');
     const searchInput = document.getElementById('patientSearchInput');
     const modal = document.getElementById('patientDetailsModal');
     const closeModalBtn = document.getElementById('closePatientModal');
     const emptyState = document.getElementById('emptyState');
+    // Referência para o novo botão de agendar retorno.
+    const btnScheduleReturn = document.getElementById('btnScheduleReturn');
 
     let allPatients = [];
+    let currentPatientId = null;
 
     const renderTable = (patientsToRender) => {
         tableBody.innerHTML = '';
@@ -390,7 +626,7 @@ async function initializePatientList(id) {
                 </div>
             </td>
             <td>${patient.phone || 'N/A'}</td>
-            <td><span class="status-badge status-active">${patient.status || 'Ativo'}</span></td>
+            <td><span class="badge rounded-pill bg-success-subtle text-success-emphasis">${patient.status || 'Ativo'}</span></td>
             <td>${patient.appointmentDate || 'N/A'}</td>
             <td class="text-end">
                 <button class="btn btn-sm btn-light me-1 btn-ver-detalhes" data-patient-id="${patient.id}"><i class="bi bi-eye"></i></button>
@@ -401,7 +637,7 @@ async function initializePatientList(id) {
         });
     };
 
-    var getPatientData = async () => {
+    const getPatientData = async () => {
         tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Carregando pacientes...</td></tr>';
         try {
             const response = await fetch(`/api/auth/patientList`);
@@ -420,37 +656,52 @@ async function initializePatientList(id) {
         }
     };
 
-    var initPatientDetails = async (id) => {
+    // Carrega e exibe todos os detalhes de um paciente no modal.
+    const initPatientDetails = async (patientId) => {
+        currentPatientId = patientId; // Armazena o ID do paciente atual.
         const loadingState = document.getElementById('modalLoadingState');
         const detailsContent = document.getElementById('modalDetailsContent');
         const planPane = document.getElementById('plan-pane');
+        const consultationFormContainer = document.getElementById('consultation-form-container');
+        const timelineContainer = document.getElementById('consultation-history-timeline');
 
         loadingState.style.display = 'block';
         detailsContent.style.display = 'none';
         planPane.innerHTML = '';
+        consultationFormContainer.innerHTML = '';
+        timelineContainer.innerHTML = '';
+
+        // Reseta para a aba de acompanhamento.
+        const followupTab = new bootstrap.Tab(document.getElementById('followup-tab'));
+        followupTab.show();
 
         try {
-            const [patientResponse, anamneseResponse, mealPlanResponse] = await Promise.all([
-                fetch(`/api/auth/patientDetails/${id}`),
-                fetch(`/api/auth/anamneseDetails/${id}`),
-                fetch(`/api/auth/mealplan/${id}`)
+            // Realiza todas as chamadas de API em paralelo para otimizar o carregamento.
+            const [patientResponse, anamneseResponse, mealPlanResponse, consultationResponse] = await Promise.all([
+                fetch(`/api/auth/patientDetails/${patientId}`),
+                fetch(`/api/auth/anamneseDetails/${patientId}`),
+                fetch(`/api/auth/mealplan/${patientId}`),
+                fetch(`/api/auth/consultations/${patientId}`)
             ]);
 
             const patientResult = await patientResponse.json();
             const anamneseResult = await anamneseResponse.json();
             const mealPlanResult = await mealPlanResponse.json();
+            const consultationResult = await consultationResponse.json();
 
-            if (patientResult.success && anamneseResult.success) {
+            if (patientResult.success && anamneseResult.success && consultationResult.success) {
                 const patient = patientResult.patients[0];
                 const anamnese = anamneseResult.patients[0];
 
+                // Preenche as abas de Detalhes e Anamnese.
                 document.getElementById('modalPatientName').textContent = patient.nome;
                 document.getElementById('modalPatientEmail').textContent = patient.email;
                 document.getElementById('patientAvatar').src = `https://api.dicebear.com/8.x/bottts/svg?seed=${patient.id}`;
                 document.getElementById('patientPhone').textContent = patient.phone || 'Não informado';
                 document.getElementById('patientBirthdate').textContent = new Date(anamnese.birthdate).toLocaleDateString('pt-BR');
                 document.getElementById('patientAppointmentDate').textContent = patient.appointmentDate || 'Nenhuma';
-                document.getElementById('patientStatus').innerHTML = `<span class="status-badge status-active">${patient.status || 'Ativo'}</span>`;
+                document.getElementById('patientStatus').innerHTML = `<span class="badge rounded-pill bg-success-subtle text-success-emphasis">${patient.status || 'Ativo'}</span>`;
+
                 document.getElementById('anamneseObjetivos').textContent = anamnese.objective;
                 document.getElementById('anamneseSaude').textContent = anamnese.health_issue;
                 document.getElementById('anamneseCirurgia').textContent = anamnese.surgerie;
@@ -463,23 +714,32 @@ async function initializePatientList(id) {
                 document.getElementById('anamneseSono').textContent = anamnese.wake_up_time;
                 document.getElementById('anamneseExpectativas').textContent = anamnese.final_question;
 
-                if (mealPlanResult.success && mealPlanResult.plan.length > 0) {
-                    planPane.innerHTML = `<div class="p-3"><h6>Plano Atual</h6><p>Aqui seriam exibidos os detalhes do plano alimentar do paciente.</p><a href="planeEditor.html?patientId=${id}" class="btn btn-primary-custom"><i class="bi bi-pencil-square"></i> Editar Plano</a></div>`;
+                // Preenche a aba de Plano Alimentar.
+                if (mealPlanResult.success && mealPlanResult.plan && mealPlanResult.plan.meals.length > 0) {
+                    planPane.innerHTML = `<div class="p-3"><h6>Plano Atual do Paciente</h6><p>Clique no botão para visualizar ou editar o plano de ${patient.nome}.</p><a href="planeEditor.html?patientId=${patientId}" class="btn btn-primary-custom"><i class="bi bi-layout-text-window-reverse"></i> Abrir Editor</a></div>`;
                 } else {
                     planPane.innerHTML = `
                     <div class="text-center p-5">
-                        <div class="empty-state-icon mx-auto mb-3" style="width: 60px; height: 60px; font-size: 2rem;">
-                            <i class="bi bi-file-earmark-plus"></i>
-                        </div>
+                        <div class="empty-state-icon mx-auto mb-3" style="width: 60px; height: 60px; font-size: 2rem;"><i class="bi bi-file-earmark-plus"></i></div>
                         <h5 class="empty-state-title">Nenhum plano alimentar por aqui!</h5>
-                        <p class="empty-state-text">
-                            Parece que ${patient.nome.split(' ')[0]} ainda não tem um plano. Que tal criar um agora para ajudar no seu progresso?
-                        </p>
-                        <a href="planeEditor.html?patientId=${id}" class="btn btn-primary-custom mt-3">
-                            <i class="bi bi-plus-circle-fill me-2"></i>Adicionar Plano Alimentar
-                        </a>
+                        <p class="empty-state-text">Parece que ${patient.nome.split(' ')[0]} ainda não tem um plano. Que tal criar um agora para ajudar no seu progresso?</p>
+                        <a href="planeEditor.html?patientId=${patientId}" class="btn btn-primary-custom mt-3"><i class="bi bi-plus-circle-fill me-2"></i>Adicionar Plano Alimentar</a>
                     </div>`;
                 }
+
+                // Renderiza a timeline de acompanhamento e o formulário.
+                renderConsultationTimeline(consultationResult.history, consultationResult.pendingAppointments, patientId);
+
+                const sortedPending = (consultationResult.pendingAppointments || []).sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
+                const itemToLoad = sortedPending.length > 0 ? sortedPending[0] : (consultationResult.history && consultationResult.history.length > 0 ? consultationResult.history[0] : null);
+
+                if (itemToLoad) {
+                    const isHistory = !sortedPending.some(p => p.id === itemToLoad.id);
+                    renderConsultationForm(itemToLoad, patientId, isHistory);
+                } else {
+                    consultationFormContainer.innerHTML = '<div class="text-center p-5 border-dashed rounded-3"><p class="text-muted">Nenhuma consulta encontrada para este paciente.</p></div>';
+                }
+
 
                 loadingState.style.display = 'none';
                 detailsContent.style.display = 'block';
@@ -492,6 +752,266 @@ async function initializePatientList(id) {
         }
     };
 
+    // Renderiza a timeline de histórico de consultas.
+    const renderConsultationTimeline = (history, pendingAppointments, patientId) => {
+        const timelineContainer = document.getElementById('consultation-history-timeline');
+        timelineContainer.innerHTML = '';
+
+        const allItems = [];
+        if (pendingAppointments && pendingAppointments.length > 0) {
+            allItems.push(...pendingAppointments.map(p => ({ ...p, isHistory: false })));
+        }
+        if (history && history.length > 0) {
+            allItems.push(...history.map(h => ({ ...h, appointment_date: h.consultation_date, isHistory: true })));
+        }
+
+        if (allItems.length === 0) {
+            timelineContainer.innerHTML = '<p class="text-muted small text-center mt-3">Nenhum histórico de consulta encontrado.</p>';
+            return;
+        }
+
+        allItems.sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
+
+        allItems.forEach(item => {
+            const itemDiv = document.createElement('div');
+            const date = new Date(item.appointment_date);
+            const isPast = date < new Date();
+
+            itemDiv.className = `timeline-item ${isPast ? 'past' : ''}`;
+            itemDiv.dataset.appointmentId = item.id;
+            itemDiv.innerHTML = `
+                <div class="timeline-icon"><i class="bi ${item.isHistory ? 'bi-check2-all' : 'bi-clock-history'}"></i></div>
+                <div class="timeline-header">
+                    <strong class="small">${item.service_type}</strong>
+                    <span class="text-muted small">${date.toLocaleDateString('pt-BR')}</span>
+                </div>
+            `;
+            timelineContainer.appendChild(itemDiv);
+
+            itemDiv.addEventListener('click', () => {
+                document.querySelectorAll('.timeline-item.active').forEach(el => el.classList.remove('active'));
+                itemDiv.classList.add('active');
+                renderConsultationForm(item, patientId, item.isHistory);
+            });
+        });
+
+        // Ativa o primeiro item da lista por padrão.
+        if (timelineContainer.firstChild.classList.contains('timeline-item')) {
+            timelineContainer.firstChild.classList.add('active');
+        }
+    };
+
+    // Renderiza o formulário de acompanhamento da consulta.
+    const renderConsultationForm = (appointment, patientId, isHistory) => {
+        const formContainer = document.getElementById('consultation-form-container');
+        const isPast = new Date(appointment.appointment_date) < new Date();
+        const isDisabled = isHistory ? 'disabled' : '';
+
+        formContainer.innerHTML = `
+            <form id="consultationForm" data-appointment-id="${appointment.id}" data-patient-id="${patientId}">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Acompanhamento da Consulta</h5>
+                    <span class="badge ${isHistory ? 'bg-secondary' : (isPast ? 'bg-warning text-dark' : 'bg-primary')}">${isHistory ? 'Realizada' : (isPast ? 'A Fazer' : 'Agendada')}</span>
+                </div>
+
+                <h6>Medidas Antropométricas</h6>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6"><label class="form-label small">Peso (kg)</label><input type="number" step="0.1" class="form-control form-control-sm" id="consultationWeight" value="${appointment.weight || ''}" ${isDisabled} required></div>
+                    <div class="col-md-6"><label class="form-label small">Altura (cm)</label><input type="number" class="form-control form-control-sm" id="consultationHeight" value="${appointment.height || ''}" ${isDisabled} required></div>
+                    <div class="col-md-6"><label class="form-label small">Cintura (cm)</label><input type="number" step="0.1" class="form-control form-control-sm" id="circum_waist" value="${appointment.circum_waist || ''}" ${isDisabled}></div>
+                    <div class="col-md-6"><label class="form-label small">Abdômen (cm)</label><input type="number" step="0.1" class="form-control form-control-sm" id="circum_abdomen" value="${appointment.circum_abdomen || ''}" ${isDisabled}></div>
+                    <div class="col-md-6"><label class="form-label small">Quadril (cm)</label><input type="number" step="0.1" class="form-control form-control-sm" id="circum_hip" value="${appointment.circum_hip || ''}" ${isDisabled}></div>
+                    <div class="col-md-6"><label class="form-label small">Braço (cm)</label><input type="number" step="0.1" class="form-control form-control-sm" id="circum_arm" value="${appointment.circum_arm || ''}" ${isDisabled}></div>
+                </div>
+                
+                <h6>Dobras Cutâneas (mm)</h6>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6"><label class="form-label small">Tríceps</label><input type="number" step="0.1" class="form-control form-control-sm" id="skinfold_triceps" value="${appointment.skinfold_triceps || ''}" ${isDisabled}></div>
+                    <div class="col-md-6"><label class="form-label small">Subescapular</label><input type="number" step="0.1" class="form-control form-control-sm" id="skinfold_subscapular" value="${appointment.skinfold_subscapular || ''}" ${isDisabled}></div>
+                    <div class="col-md-6"><label class="form-label small">Supra-ilíaca</label><input type="number" step="0.1" class="form-control form-control-sm" id="skinfold_suprailiac" value="${appointment.skinfold_suprailiac || ''}" ${isDisabled}></div>
+                    <div class="col-md-6"><label class="form-label small">Abdominal</label><input type="number" step="0.1" class="form-control form-control-sm" id="skinfold_abdominal" value="${appointment.skinfold_abdominal || ''}" ${isDisabled}></div>
+                </div>
+                
+                <div class="row g-3 mb-3">
+                     <div class="col-md-6"><label class="form-label small">Gordura Corporal (%)</label><input type="number" step="0.1" class="form-control form-control-sm" id="body_fat_percentage" value="${appointment.body_fat_percentage || ''}" ${isDisabled}></div>
+                </div>
+
+                <h6>Anotações (Método SOAP)</h6>
+                <div class="mb-2">
+                    <label for="subjective_notes" class="form-label small"><strong>S (Subjetivo):</strong> Relato do paciente</label>
+                    <textarea class="form-control" id="subjective_notes" rows="2" ${isDisabled} required>${appointment.subjective_notes || ''}</textarea>
+                </div>
+                <div class="mb-2">
+                    <label for="objective_notes" class="form-label small"><strong>O (Objetivo):</strong> Dados objetivos e medidas</label>
+                    <textarea class="form-control" id="objective_notes" rows="2" ${isDisabled} required>${appointment.objective_notes || ''}</textarea>
+                </div>
+                <div class="mb-2">
+                    <label for="assessment_notes" class="form-label small"><strong>A (Avaliação):</strong> Análise e diagnóstico nutricional</label>
+                    <textarea class="form-control" id="assessment_notes" rows="2" ${isDisabled} required>${appointment.assessment_notes || ''}</textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="plan_notes" class="form-label small"><strong>P (Plano):</strong> Conduta e plano de ação</label>
+                    <textarea class="form-control" id="plan_notes" rows="2" ${isDisabled} required>${appointment.plan_notes || ''}</textarea>
+                </div>
+                
+                <div id="consultation-message" class="form-message-container mb-3"></div>
+                
+                ${!isHistory ? `
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary-custom"><i class="bi bi-check-circle-fill me-2"></i> Salvar Acompanhamento</button>
+                    </div>`
+                : ''}
+            </form>
+        `;
+
+        // Adiciona o listener de submit apenas se o formulário não for histórico.
+        if (!isHistory) {
+            formContainer.querySelector('#consultationForm').addEventListener('submit', handleSaveConsultation);
+        }
+    };
+
+    // Lida com o salvamento dos dados da consulta.
+    const handleSaveConsultation = async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const patientId = form.dataset.patientId;
+        const messageContainer = document.getElementById('consultation-message');
+
+        const payload = {
+            appointmentId: form.dataset.appointmentId,
+            patientId: patientId,
+            weight: document.getElementById('consultationWeight').value,
+            height: document.getElementById('consultationHeight').value,
+            circum_waist: document.getElementById('circum_waist').value,
+            circum_abdomen: document.getElementById('circum_abdomen').value,
+            circum_hip: document.getElementById('circum_hip').value,
+            circum_arm: document.getElementById('circum_arm').value,
+            skinfold_triceps: document.getElementById('skinfold_triceps').value,
+            skinfold_subscapular: document.getElementById('skinfold_subscapular').value,
+            skinfold_suprailiac: document.getElementById('skinfold_suprailiac').value,
+            skinfold_abdominal: document.getElementById('skinfold_abdominal').value,
+            body_fat_percentage: document.getElementById('body_fat_percentage').value,
+            subjective_notes: document.getElementById('subjective_notes').value,
+            objective_notes: document.getElementById('objective_notes').value,
+            assessment_notes: document.getElementById('assessment_notes').value,
+            plan_notes: document.getElementById('plan_notes').value,
+        };
+
+        try {
+            const response = await fetch('/api/auth/consultations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            messageContainer.textContent = result.message;
+            messageContainer.className = `form-message-container ${result.success ? 'success' : 'error'} visible`;
+
+            if (result.success) {
+                setTimeout(() => {
+                    initPatientDetails(patientId); // Recarrega os dados do paciente
+                }, 1500);
+            }
+        } catch (error) {
+            console.error(error);
+            messageContainer.textContent = 'Erro de comunicação ao salvar.';
+            messageContainer.className = 'form-message-container error visible';
+        }
+    };
+
+    /**
+     * FUNÇÃO INDEPENDENTE PARA AGENDAMENTO DE RETORNO
+     * Abre e gerencia o modal de agendamento de retorno.
+     */
+    const openScheduleReturnModal = (patientId) => {
+        const modal = document.getElementById('scheduleReturnModal');
+        const datePickerEl = document.getElementById('returnDatePicker');
+        const patientName = document.getElementById('modalPatientName').textContent;
+        document.getElementById('returnPatientName').textContent = patientName;
+
+        let selectedDate = null;
+        let selectedTime = null;
+
+        if (window.returnDatePickerInstance) {
+            window.returnDatePickerInstance.destroy();
+        }
+
+        window.returnDatePickerInstance = new Datepicker(datePickerEl, {
+            format: 'yyyy-mm-dd',
+            language: 'pt-BR',
+            autohide: true,
+            todayHighlight: true
+        });
+
+        datePickerEl.addEventListener('changeDate', async e => {
+            selectedDate = e.detail.date.toISOString().split('T')[0];
+            document.getElementById('returnSelectedDate').textContent = `Horários para ${e.detail.date.toLocaleDateString('pt-BR')}`;
+
+            const timeSlotsList = document.getElementById('returnTimeSlots');
+            const loader = document.getElementById('return-slots-loader');
+            loader.style.display = 'block';
+            timeSlotsList.innerHTML = '';
+
+            const response = await fetch(`/api/auth/schedule/available?nutriId=${nutriId}&date=${selectedDate}`);
+            const result = await response.json();
+
+            loader.style.display = 'none';
+            if (result.success && result.availableSlots.length > 0) {
+                result.availableSlots.forEach(time => {
+                    const slot = document.createElement('div');
+                    slot.className = 'time-slot';
+                    slot.textContent = time;
+                    slot.addEventListener('click', () => {
+                        document.querySelectorAll('#returnTimeSlots .time-slot').forEach(s => s.classList.remove('selected'));
+                        slot.classList.add('selected');
+                        selectedTime = time;
+                        document.getElementById('confirmReturnScheduleBtn').disabled = false;
+                    });
+                    timeSlotsList.appendChild(slot);
+                });
+            } else {
+                timeSlotsList.innerHTML = '<p class="text-muted text-center small">Nenhum horário disponível.</p>';
+            }
+        });
+
+
+        document.getElementById('confirmReturnScheduleBtn').onclick = async () => {
+            if (!selectedDate || !selectedTime) {
+                // 
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/appointments/schedule-return', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        patientId: currentPatientId,
+                        returnDate: selectedDate,
+                        returnTime: selectedTime
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    console.log("result.success")
+                    modal.classList.remove('is-visible');
+
+                    initPatientDetails(currentPatientId);
+                }
+            } catch (error) {
+                console.log("erro no agendamento do retorno")
+                console.log(error);
+            }
+        };
+
+        const closeModalBtn = document.getElementById('closeScheduleReturnModal');
+        closeModalBtn.onclick = () => {
+            modal.classList.remove('is-visible');
+        };
+        modal.classList.add('is-visible');
+    };
 
     searchInput.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
@@ -513,6 +1033,13 @@ async function initializePatientList(id) {
 
     closeModalBtn.addEventListener('click', () => {
         modal.classList.remove('is-visible');
+    });
+
+    // Adiciona o listener para o novo botão de agendar retorno.
+    btnScheduleReturn.addEventListener('click', () => {
+        if (currentPatientId) {
+            openScheduleReturnModal(currentPatientId);
+        }
     });
 
     getPatientData();
@@ -659,7 +1186,15 @@ function initializeNutriConfigPage(nutriId) {
     };
 
     const setButtonLoading = (btn, isLoading) => {
-        btn.classList.toggle('is-loading', isLoading);
+        const btnText = btn.querySelector('.btn-text');
+        const spinner = btn.querySelector('.spinner-container');
+        if (isLoading) {
+            btnText.style.display = 'none';
+            spinner.style.display = 'inline-block';
+        } else {
+            btnText.style.display = 'inline-block';
+            spinner.style.display = 'none';
+        }
         btn.disabled = isLoading;
     };
 
@@ -787,7 +1322,15 @@ function initializeInvoicingPage(nutriId) {
     const invoiceTotalSpan = document.getElementById('invoiceTotal');
 
     const setButtonLoading = (btn, isLoading) => {
-        btn.classList.toggle('is-loading', isLoading);
+        const btnText = btn.querySelector('.btn-text');
+        const spinner = btn.querySelector('.spinner-container');
+        if (isLoading) {
+            btnText.style.display = 'none';
+            spinner.style.display = 'inline-block';
+        } else {
+            btnText.style.display = 'inline-block';
+            spinner.style.display = 'none';
+        }
         btn.disabled = isLoading;
     };
 
@@ -900,7 +1443,7 @@ function initializeInvoicingPage(nutriId) {
     loadInvoices();
 }
 
-
+// Inicializa a página principal do dashboard da nutricionista.
 async function initializeDashboardPage(nutriId) {
     const userNameSpan = document.getElementById('userName');
     const currentDateSpan = document.getElementById('currentDate');
@@ -926,32 +1469,53 @@ async function initializeDashboardPage(nutriId) {
     } catch (error) {
         console.error('Erro ao buscar dados do dashboard:', error);
     }
+
+    // Carga inicial dos agendamentos pendentes.
+    await initializePendingAppointments();
+
+    // Inicia o polling para manter a lista de pendentes atualizada a cada 5 segundos.
+    setInterval(initializePendingAppointments, 5000);
 }
 
+/**
+ * ATUALIZADO
+ * Atualiza os elementos da interface do dashboard com os dados dinâmicos vindos do backend.
+ * Garante que os agendamentos do dia e o total de pacientes ativos sejam exibidos corretamente.
+ */
 function updateDashboardUI(data) {
-
+    // Atualiza os KPIs no topo do dashboard.
     document.getElementById('kpi-today-appointments').textContent = data.kpis.todayAppointments;
     document.getElementById('kpi-active-patients').textContent = data.kpis.activePatients;
     document.getElementById('kpi-monthly-revenue').textContent = data.kpis.monthlyRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    document.getElementById('kpi-avg-score').textContent = data.kpis.avgScore ? data.kpis.avgScore.toFixed(1) : 'N/A';
+
+    // Formata a nota média para uma casa decimal ou exibe 'N/A' se não houver avaliações.
+    const avgScore = data.kpis.avgScore ? parseFloat(data.kpis.avgScore).toFixed(1) : 'N/A';
+    document.getElementById('kpi-avg-score').textContent = avgScore;
+
 
     const appointmentsList = document.getElementById('today-appointments-list');
     const emptyAppointmentsState = document.getElementById('empty-appointments-state');
     appointmentsList.innerHTML = '';
 
-    if (data.todayAppointments.length === 0) {
+    // Verifica se há agendamentos para hoje e os renderiza na lista.
+    if (!data.todayAppointments || data.todayAppointments.length === 0) {
         emptyAppointmentsState.style.display = 'block';
     } else {
         emptyAppointmentsState.style.display = 'none';
         data.todayAppointments.forEach(apt => {
             const item = document.createElement('li');
             item.className = 'list-group-item appointment-item';
+
+            const typeClass = apt.service_type.toLowerCase().includes('retorno') ? 'retorno' :
+                (apt.service_type.toLowerCase().includes('online') ? 'online' : 'primeira');
+
+
             item.innerHTML = `
                 <div class="appointment-item-time">${apt.time}</div>
-                <div class="appointment-item-divider type-${apt.type}"></div>
+                <div class="appointment-item-divider type-${typeClass}"></div>
                 <div class="appointment-item-details flex-grow-1">
-                    <div class="patient-name">${apt.patientName}</div>
-                    <div class="appointment-type">${apt.title}</div>
+                    <div class="patient-name">${apt.patient_name}</div>
+                    <div class="appointment-type">${apt.service_type}</div>
                 </div>
                 <a href="patientsList.html#${apt.patientId}" class="btn btn-sm btn-light"><i class="bi bi-person-fill"></i></a>
             `;

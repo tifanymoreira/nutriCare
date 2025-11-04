@@ -156,7 +156,7 @@ async function registerPacienteWithAnamnese(req, res) {
         await connection.rollback();
         console.log('Erro no registro do paciente com anamnese:', error);
         if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(409).json({ success: false, message: 'Este e-mail já está cadastrado.' });
+            return res.status(409).json({ success: false, message: 'Este e-mail já está cadastrado. Por favor, faça login ou use um e-mail diferente.' });
         }
         res.status(500).json({ success: false, message: 'Erro interno ao processar o cadastro.' });
     } finally {
@@ -453,17 +453,37 @@ export async function getPendingAppointments(req, res) {
 // Atualiza o status de um agendamento (Confirmada ou Rejeitada).
 export async function updateAppointmentStatus(req, res) {
     const nutriId = req.session.user.id;
-    const { appointmentId, status } = req.body;
+    // ADICIONADO: rejectionType e rejectionMessage
+    const { appointmentId, status, rejectionType, rejectionMessage } = req.body; 
 
     if (!['Confirmada', 'Rejeitada'].includes(status)) {
         return res.status(400).json({ success: false, message: 'Status inválido.' });
     }
+    
+    let query = '';
+    let values = [];
 
+    if (status === 'Confirmada') {
+        // Se APROVADA, remove quaisquer dados de rejeição antigos
+        query = 'UPDATE appointments SET status = ?, confirmation_date = ?, rejection_type = NULL, rejection_message = NULL WHERE id = ? AND nutriID = ?';
+        values = [status, new Date(), appointmentId, nutriId];
+    } else if (status === 'Rejeitada') {
+        // Validação obrigatória da justificativa para 'cancelamento'
+        if (rejectionType === 'cancelamento' && !rejectionMessage) {
+            return res.status(400).json({ success: false, message: 'A mensagem de justificativa é obrigatória para cancelamento total.' });
+        }
+        
+        // Define a mensagem: padronizada para reagendamento, ou a customizada para cancelamento
+        const finalRejectionMessage = rejectionType === 'reagendar' 
+            ? 'Horário indisponível. Por favor, reagende a consulta para outro horário disponível.' // Mensagem padrão para reagendamento
+            : rejectionMessage; // Mensagem customizada para cancelamento
+
+        query = 'UPDATE appointments SET status = ?, confirmation_date = ?, rejection_type = ?, rejection_message = ? WHERE id = ? AND nutriID = ?';
+        values = [status, new Date(), rejectionType, finalRejectionMessage, appointmentId, nutriId];
+    }
+    
     try {
-        await pool.query(
-            'UPDATE appointments SET status = ?, confirmation_date = ? WHERE id = ? AND nutriID = ?',
-            [status, new Date(), appointmentId, nutriId]
-        );
+        await pool.query(query, values);
         res.json({ success: true, message: `Consulta ${status.toLowerCase()} com sucesso!` });
     } catch (error) {
         console.error('Erro ao atualizar status da consulta:', error);
@@ -482,6 +502,8 @@ export async function getPatientNotifications(req, res) {
                 id, 
                 status, 
                 service_type,
+                rejection_type,     /* NOVO */
+                rejection_message,  /* NOVO */
                 DATE_FORMAT(appointment_date, "%d/%m/%Y") as date,
                 DATE_FORMAT(appointment_date, "%H:%i") as time
              FROM appointments 
@@ -493,17 +515,40 @@ export async function getPatientNotifications(req, res) {
         const notifications = rows.map(row => {
             let message = '';
             let type = '';
+            let action = ''; 
         
             
             if (row.status === 'Confirmada') {
                 message = `Sua consulta em ${row.date} às ${row.time} foi CONFIRMADA! `;
                 type = 'success';
+                action = 'agenda.html';
             } else if (row.status === 'Rejeitada') {
-                message = `Lamentamos, mas sua solicitação de ${row.service_type} em ${row.date} às ${row.time} foi REJEITADA. Por favor, reagende abaixo.`;
                 type = 'canceled';
+                
+                if (row.rejection_type === 'reagendar') {
+                    // Cenário 1: Reagendamento - Usa a mensagem padrão do backend
+                    message = `Lamentamos, mas sua solicitação de ${row.service_type} em ${row.date} às ${row.time} foi REJEITADA. Motivo: ${row.rejection_message || 'Horário indisponível.'}`;
+                    action = `/pages/paciente/preSchedule.html?nutriId=${req.session.user.nutriID}`; 
+                } else if (row.rejection_type === 'cancelamento') {
+                    // Cenário 2: Cancelamento Total - Usa a mensagem customizada da nutricionista
+                    message = `Sua solicitação de ${row.service_type} em ${row.date} às ${row.time} foi REJEITADA. Justificativa da Nutri: ${row.rejection_message || 'Não especificada.'}`;
+                    action = '#'; // Ação de Contato (via WhatsApp)
+                } else {
+                    // Fallback
+                     message = `Lamentamos, mas sua solicitação de ${row.service_type} em ${row.date} às ${row.time} foi REJEITADA. Por favor, reagende abaixo.`;
+                     action = `/pages/paciente/preSchedule.html?nutriId=${req.session.user.nutriID}`;
+                }
             }
 
-            return { id: row.id, message, type, status: row.status, nutriId: req.session.user.nutriID };
+            return { 
+                id: row.id, 
+                message, 
+                type, 
+                status: row.status, 
+                nutriId: req.session.user.nutriID, 
+                rejectionType: row.rejection_type, // NOVO
+                action: action // NOVO
+            };
         });
 
         res.json({ success: true, notifications });
@@ -955,7 +1000,7 @@ export async function getPatientDashboardOverview(req, res) {
 
     } catch (error) {
         console.error("Erro ao buscar dados do dashboard do paciente:", error);
-        res.status(500).json({ success: false, message: 'Erro interno no servidor.' });
+        res.status(500).json({ success: false, message: 'Erro interno ao servidor.' });
     }
 }
 

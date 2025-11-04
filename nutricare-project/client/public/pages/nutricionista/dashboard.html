@@ -168,6 +168,78 @@
         </div>
     </div>
     
+    <div class="modal-backdrop" id="pendingAppointmentDetailsModal">
+        <div class="modal-content pro-modal">
+            <button class="modal-close" id="closePendingAppointmentModal">&times;</button>
+            <div class="modal-icon" style="background-color: rgba(42, 157, 143, 0.1); color: var(--primary-green);"><i class="bi bi-person-fill-gear"></i></div>
+            <h4 class="modal-title-pro">Detalhes do Pré-Agendamento</h4>
+            <p class="modal-subtitle-pro">Verifique os dados do paciente para aprovar ou rejeitar a solicitação.</p>
+            
+            <div class="text-start p-3 bg-light rounded mb-4">
+                <h6 class="fw-bold mb-3"><i class="bi bi-calendar-check-fill me-2"></i> Informações da Consulta</h6>
+                <p class="mb-1"><strong>Serviço:</strong> <span id="modalPendingService" class="text-dark-charcoal"></span> (<span id="modalPendingDuration" class="text-dark-charcoal"></span> min)</p>
+                <p class="mb-0"><strong>Data e Hora:</strong> <span id="modalPendingDateTime" class="text-dark-charcoal"></span></p>
+            </div>
+
+            <div class="text-start p-3 bg-light rounded mb-4">
+                <h6 class="fw-bold mb-3"><i class="bi bi-person-circle me-2"></i> Dados do Solicitante</h6>
+                <p class="mb-1"><strong>Nome:</strong> <span id="modalPendingPatientName" class="text-dark-charcoal"></span></p>
+                <p class="mb-1"><strong>E-mail:</strong> <span id="modalPendingPatientEmail" class="text-dark-charcoal"></span></p>
+                <p class="mb-0"><strong>Telefone:</strong> <span id="modalPendingPatientPhone" class="text-dark-charcoal"></span></p>
+            </div>
+
+            <div class="modal-actions d-flex justify-content-center gap-3 mt-4">
+                <button id="btnRejectPending" class="btn btn-danger w-100" data-id=""><i class="bi bi-x-lg me-1"></i> Rejeitar</button>
+                <button id="btnApprovePending" class="btn btn-primary-custom w-100" data-id=""><i class="bi bi-check-lg me-1"></i> Aprovar</button>
+            </div>
+            <p class="text-muted small mt-2">Ao aprovar, o paciente será notificado e a consulta confirmada.</p>
+        </div>
+    </div>
+    
+    <div class="modal-backdrop" id="rejectActionModal">
+        <div class="modal-content pro-modal">
+            <button class="modal-close" id="closeRejectActionModal">&times;</button>
+            <div class="modal-icon" style="background-color: rgba(231, 111, 81, 0.15); color: var(--danger-red);"><i class="bi bi-calendar-x-fill"></i></div>
+            <h4 class="modal-title-pro">Rejeitar Agendamento</h4>
+            <p class="modal-subtitle-pro">Escolha o tipo de rejeição e, se necessário, adicione uma justificativa para o paciente.</p>
+            
+            <form id="rejectionForm">
+                <input type="hidden" id="rejectionAppointmentId">
+
+                <div class="mb-4 text-start">
+                    <label class="form-label fw-bold">Tipo de Rejeição:</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="rejectionType" id="typeReschedule" value="reagendar" checked>
+                        <label class="form-check-label" for="typeReschedule">
+                            Sugestão de **Reagendamento** (Horário indisponível - convida a marcar outro)
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="rejectionType" id="typeCancellation" value="cancelamento">
+                        <label class="form-check-label" for="typeCancellation">
+                            **Cancelamento Total** (Exige justificativa obrigatória)
+                        </label>
+                    </div>
+                </div>
+
+                <div id="rejectionMessageGroup" class="mb-4 text-start">
+                    <label for="rejectionMessage" class="form-label fw-bold">Justificativa para o Paciente:</label>
+                    <textarea class="form-control" id="rejectionMessage" rows="3" placeholder="Mensagem enviada é padronizada para reagendamento" disabled></textarea>
+                    <div class="form-text mt-2" id="rejectionMessageHelp">Esta mensagem será enviada ao paciente apenas no caso de Cancelamento Total.</div>
+                </div>
+
+                <div id="rejection-message-container" class="form-message-container mb-3"></div>
+                
+                <button type="submit" class="btn btn-danger w-100 position-relative" id="submitRejectionBtn">
+                    <span class="btn-text"><i class="bi bi-send-fill me-1"></i> Enviar Rejeição</span>
+                    <div class="spinner-container" style="display: none;">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    </div>
+                </button>
+            </form>
+        </div>
+    </div>
+    
     <div class="modal-backdrop" id="logoutModal">
         <div class="modal-content text-center">
             <button class="modal-close" id="closeLogoutModal">&times;</button>

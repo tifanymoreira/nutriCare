@@ -1,4 +1,10 @@
 // nutricare-project/client/public/js/dashboard-nutricionista.js
+
+/**
+ * ===================================================================
+ * ESTRUTURA PRINCIPAL (DOM LOAD, SESSION, ROUTING)
+ * ===================================================================
+ */
 document.addEventListener('DOMContentLoaded', async () => {
 
     const user = await verifySession(); // Agora retorna o objeto user completo
@@ -9,12 +15,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const nutriName = user.name;
     const nutriID = user.id;
 
+    // Configura a animação inicial (ScrollReveal)
     if (!sessionStorage.getItem('hasAnimated')) {
         const sr = ScrollReveal({ distance: '40px', duration: 2200, delay: 200, reset: false });
         sr.reveal('.stat-card, .data-card, .dashboard-content-header h1, .calendar-card-pro, .kpi-card', { origin: 'bottom', interval: 150 });
         sessionStorage.setItem('hasAnimated', 'true');
     }
 
+    // Roteamento baseado no caminho
     const path = window.location.pathname;
     if (path.endsWith('/nutricionista/dashboard.html')) {
         initializeDashboardPage(nutriID);
@@ -36,6 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
 
+    // Lógica de Logout
     const logoutButton = document.getElementById('logoutBtn');
     const modal = document.getElementById('logoutModal');
     const buttonYes = document.getElementById('btnYes');
@@ -61,6 +70,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
+
+/**
+ * ===================================================================
+ * FUNÇÕES DE AUTENTICAÇÃO
+ * ===================================================================
+ */
 
 // Retorna o objeto user completo da sessão, ou nulo se não estiver logado.
 async function verifySession() {
@@ -100,6 +115,12 @@ async function handleLogout() {
 
 }
 
+/**
+ * ===================================================================
+ * LÓGICA DE MODAL DE GERAÇÃO DE LINK
+ * ===================================================================
+ */
+
 // Inicializa o modal de geração de link de cadastro para novos pacientes.
 function initializeGenerateLinkModal(nutriId) {
     const modal = document.getElementById('generateLinkModal');
@@ -133,9 +154,13 @@ function initializeGenerateLinkModal(nutriId) {
     });
 }
 
-// ===================================================================
-// LÓGICA DE APROVAÇÃO PENDENTE
-// ===================================================================
+/**
+ * ===================================================================
+ * LÓGICA DE APROVAÇÃO DE PRÉ-AGENDAMENTO (PENDING APPOINTMENTS)
+ * ===================================================================
+ */
+
+let currentPendingAppointments = []; // Armazena os agendamentos pendentes para acesso no modal.
 
 // Busca no backend a lista de agendamentos com status 'Pendente'.
 async function fetchPendingAppointments() {
@@ -149,28 +174,44 @@ async function fetchPendingAppointments() {
     }
 }
 
-// Envia a atualização de status (Aprovar/Rejeitar) para o backend.
-async function handleStatusUpdate(appointmentId, status) {
+// Envia a atualização de status (Confirmada/Rejeitada) para o backend.
+// AGORA ACEITA TIPO E MENSAGEM DE REJEIÇÃO
+async function handleStatusUpdate(appointmentId, status, rejectionType = null, rejectionMessage = null) {
+    const modal = document.getElementById('pendingAppointmentDetailsModal');
+    if(modal) modal.classList.remove('is-visible'); // Fecha o modal de detalhes
+    
+    // Adiciona os novos parâmetros à payload
+    const payload = { 
+        appointmentId, 
+        status 
+    };
+
+    if (status === 'Rejeitada') {
+        payload.rejectionType = rejectionType;
+        payload.rejectionMessage = rejectionMessage;
+    }
+    
     try {
         const response = await fetch('/api/auth/nutricionista/appointments/status', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ appointmentId, status })
+            body: JSON.stringify(payload)
         });
         const result = await response.json();
         if (result.success) {
-            console.log("ok")
-            initializePendingAppointments();
+            await initializePendingAppointments(); 
+            // Adicionar notificação de sucesso se for o caso
         } else {
-            console.log("erro no processo de atualização de status da consulta pendente")
+            console.error("Erro no processo de atualização de status da consulta pendente:", result.message);
         }
     } catch (error) {
-        console.log('Erro ao atualizar status:', error);
+        console.error('Erro ao atualizar status:', error);
     }
 }
 
 // Renderiza a lista de agendamentos pendentes na interface.
 function renderPendingAppointments(appointments) {
+    currentPendingAppointments = appointments; // Armazena os dados brutos
     const list = document.getElementById('pending-appointments-list');
     const emptyState = document.getElementById('empty-pending-state');
     const pendingCount = document.getElementById('pendingCount');
@@ -190,28 +231,152 @@ function renderPendingAppointments(appointments) {
         const dateBR = new Date(apt.date + 'T00:00:00').toLocaleDateString('pt-BR');
 
         const item = document.createElement('li');
-        item.className = 'list-group-item d-flex justify-content-between align-items-center p-3';
+        item.className = 'list-group-item d-flex justify-content-between align-items-center p-3 list-pending-item';
+        item.dataset.appointmentId = apt.id; // Adiciona o ID para fácil referência
+        item.style.cursor = 'pointer'; // Adiciona um indicador visual de clique
+        
+        // Renderiza apenas um resumo, o clique abre os detalhes no modal
         item.innerHTML = `
             <div>
                 <div class="fw-bold">${apt.patient_name} <span class="badge text-bg-warning">${apt.service_type}</span></div>
                 <div class="text-muted small">Dia: ${dateBR} às ${apt.time} (${apt.duration} min)</div>
-                <div class="text-muted small">Contato: ${apt.patient_phone || apt.patient_email}</div>
             </div>
-            <div class="btn-group" role="group">
-                <button type="button" class="btn btn-sm btn-success btn-approve" data-id="${apt.id}"><i class="bi bi-check-lg"></i> Aprovar</button>
-                <button type="button" class="btn btn-sm btn-danger btn-reject" data-id="${apt.id}"><i class="bi bi-x-lg"></i> Rejeitar</button>
+            <div>
+                <button type="button" class="btn btn-sm btn-light btn-view-details" data-id="${apt.id}" title="Ver detalhes"><i class="bi bi-eye"></i></button>
             </div>
         `;
         list.appendChild(item);
     });
 
-    // Adiciona os listeners aos botões de aprovar e rejeitar.
-    list.querySelectorAll('.btn-approve').forEach(btn => {
-        btn.addEventListener('click', () => handleStatusUpdate(btn.dataset.id, 'Confirmada'));
+    // Adiciona o listener de clique para ABRIR O MODAL
+    list.querySelectorAll('.list-group-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            // Garante que o clique em botões dentro do item não abra o modal, caso mais ações sejam adicionadas.
+            if (e.target.closest('button')) return; 
+            
+            const appointmentId = item.dataset.appointmentId;
+            // Busca o objeto completo na lista de agendamentos pendentes
+            const appointmentData = currentPendingAppointments.find(a => a.id == appointmentId);
+            if (appointmentData) {
+                openPendingAppointmentDetailsModal(appointmentData);
+            }
+        });
     });
-    list.querySelectorAll('.btn-reject').forEach(btn => {
-        btn.addEventListener('click', () => handleStatusUpdate(btn.dataset.id, 'Rejeitada'));
+}
+
+// Abre o modal com os detalhes do pré-agendamento.
+function openPendingAppointmentDetailsModal(apt) {
+    const modal = document.getElementById('pendingAppointmentDetailsModal');
+    if (!modal) return;
+
+    // Popula os dados da consulta
+    document.getElementById('modalPendingService').textContent = apt.service_type;
+    document.getElementById('modalPendingDuration').textContent = apt.duration;
+    
+    const dateBR = new Date(apt.date + 'T00:00:00').toLocaleDateString('pt-BR');
+    document.getElementById('modalPendingDateTime').textContent = `${dateBR} às ${apt.time}`;
+
+    // Popula os dados do solicitante
+    document.getElementById('modalPendingPatientName').textContent = apt.patient_name;
+    document.getElementById('modalPendingPatientEmail').textContent = apt.patient_email;
+    document.getElementById('modalPendingPatientPhone').textContent = apt.patient_phone;
+    
+    // Configura os botões de ação
+    const btnApprove = document.getElementById('btnApprovePending');
+    const btnReject = document.getElementById('btnRejectPending');
+    const closeBtn = document.getElementById('closePendingAppointmentModal');
+
+    // Clonar e substituir botões para garantir a remoção de listeners antigos
+    const newBtnApprove = btnApprove.cloneNode(true);
+    const newBtnReject = btnReject.cloneNode(true);
+    
+    btnApprove.parentNode.replaceChild(newBtnApprove, btnApprove);
+    btnReject.parentNode.replaceChild(newBtnReject, btnReject);
+
+    // 1. APROVAR: Ação direta
+    newBtnApprove.addEventListener('click', () => handleStatusUpdate(apt.id, 'Confirmada'));
+
+    // 2. REJEITAR: Abre o modal de rejeição para escolher o tipo
+    newBtnReject.addEventListener('click', () => {
+        modal.classList.remove('is-visible'); // Fecha o modal de detalhes
+        openRejectActionModal(apt.id);        // Abre o modal de ação de rejeição
     });
+    
+    closeBtn.addEventListener('click', () => modal.classList.remove('is-visible'));
+
+    modal.classList.add('is-visible');
+}
+
+/**
+ * NOVO: Gerencia o fluxo do modal de Rejeição e Justificativa
+ */
+function openRejectActionModal(appointmentId) {
+    const modal = document.getElementById('rejectActionModal');
+    const closeBtn = document.getElementById('closeRejectActionModal');
+    const form = document.getElementById('rejectionForm');
+    const messageInput = document.getElementById('rejectionMessage');
+    const typeReschedule = document.getElementById('typeReschedule');
+    const typeCancellation = document.getElementById('typeCancellation');
+    const messageContainer = document.getElementById('rejection-message-container');
+    const defaultMessage = "Não estarei disponível na clínica nessa data, o horário foi bloqueado em minha agenda. Por favor, reagende para a próxima semana.";
+
+
+    // 1. Reset e configuração do estado inicial
+    form.reset();
+    messageContainer.classList.remove('visible', 'error', 'success');
+    document.getElementById('rejectionAppointmentId').value = appointmentId;
+    
+    // 2. Lógica de Alternância de Rádio Buttons
+    const handleRadioChange = () => {
+        messageContainer.classList.remove('visible', 'error');
+
+        if (typeCancellation.checked) {
+            // Cenário: Cancelamento Total (Justificativa obrigatória)
+            messageInput.disabled = false;
+            messageInput.setAttribute('required', 'true');
+            messageInput.placeholder = "Justificativa da Nutricionista (Obrigatória)";
+            messageInput.value = defaultMessage; // Pré-preenche a mensagem
+        } else {
+            // Cenário: Sugestão de Reagendamento (Mensagem é ignorada no backend)
+            messageInput.disabled = true;
+            messageInput.removeAttribute('required');
+            messageInput.value = '';
+            messageInput.placeholder = "Mensagem enviada é padronizada para reagendamento";
+        }
+    };
+
+    typeReschedule.addEventListener('change', handleRadioChange);
+    typeCancellation.addEventListener('change', handleRadioChange);
+
+    // Garante que o estado inicial (Reagendamento) seja carregado
+    typeReschedule.checked = true;
+    handleRadioChange(); 
+
+    // 3. Lógica de Submissão do Formulário de Rejeição
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submitRejectionBtn');
+        // setButtonLoading(btn, true); 
+
+        const rejectionType = document.querySelector('input[name="rejectionType"]:checked').value;
+        const rejectionMessage = messageInput.value.trim();
+
+        if (rejectionType === 'cancelamento' && rejectionMessage.length === 0) {
+            messageContainer.textContent = "A justificativa é obrigatória para o Cancelamento Total.";
+            messageContainer.classList.add('error', 'visible');
+            // setButtonLoading(btn, false);
+            return;
+        }
+
+        await handleStatusUpdate(appointmentId, 'Rejeitada', rejectionType, rejectionMessage);
+
+        // setButtonLoading(btn, false);
+        modal.classList.remove('is-visible');
+    };
+
+    // 4. Exibir o modal
+    closeBtn.onclick = () => modal.classList.remove('is-visible');
+    modal.classList.add('is-visible');
 }
 
 // Função de inicialização que é chamada periodicamente (polling) para manter a lista atualizada.
@@ -220,9 +385,11 @@ async function initializePendingAppointments() {
     renderPendingAppointments(pending);
 }
 
-// ===================================================================
-// LÓGICA DE AGENDA (COM MODAL WHATSAPP)
-// ===================================================================
+/**
+ * ===================================================================
+ * LÓGICA DE AGENDA (COM MODAL WHATSAPP)
+ * ===================================================================
+ */
 
 // Busca os agendamentos confirmados para um dia específico.
 async function getAppointmentsForDay(nutriId, dateStr) {
@@ -782,7 +949,7 @@ async function initializePatientList(nutriId) {
             itemDiv.innerHTML = `
                 <div class="timeline-icon"><i class="bi ${item.isHistory ? 'bi-check2-all' : 'bi-clock-history'}"></i></div>
                 <div class="timeline-header">
-                    <strong class="small">${item.service_type}</strong>
+                    <strong class="small">${item.service_type || 'Acompanhamento'}</strong>
                     <span class="text-muted small">${date.toLocaleDateString('pt-BR')}</span>
                 </div>
             `;

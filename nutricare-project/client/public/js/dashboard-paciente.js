@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- LÓGICA DO WIDGET DE WHATSAPP ---
     if (whatsappWidget && contactNutriModal) {
-        whatsappWidget.addEventListener('click', () => {
+        whatsappWidget.addEventListener('click', () => {  
             contactNutriModal.classList.add('is-visible');
         });
     }

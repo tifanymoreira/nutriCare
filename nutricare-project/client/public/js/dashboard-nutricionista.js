@@ -178,19 +178,19 @@ async function fetchPendingAppointments() {
 // AGORA ACEITA TIPO E MENSAGEM DE REJEIÇÃO
 async function handleStatusUpdate(appointmentId, status, rejectionType = null, rejectionMessage = null) {
     const modal = document.getElementById('pendingAppointmentDetailsModal');
-    if(modal) modal.classList.remove('is-visible'); // Fecha o modal de detalhes
-    
+    if (modal) modal.classList.remove('is-visible'); // Fecha o modal de detalhes
+
     // Adiciona os novos parâmetros à payload
-    const payload = { 
-        appointmentId, 
-        status 
+    const payload = {
+        appointmentId,
+        status
     };
 
     if (status === 'Rejeitada') {
         payload.rejectionType = rejectionType;
         payload.rejectionMessage = rejectionMessage;
     }
-    
+
     try {
         const response = await fetch('/api/auth/nutricionista/appointments/status', {
             method: 'PUT',
@@ -199,7 +199,7 @@ async function handleStatusUpdate(appointmentId, status, rejectionType = null, r
         });
         const result = await response.json();
         if (result.success) {
-            await initializePendingAppointments(); 
+            await initializePendingAppointments();
             // Adicionar notificação de sucesso se for o caso
         } else {
             console.error("Erro no processo de atualização de status da consulta pendente:", result.message);
@@ -234,7 +234,7 @@ function renderPendingAppointments(appointments) {
         item.className = 'list-group-item d-flex justify-content-between align-items-center p-3 list-pending-item';
         item.dataset.appointmentId = apt.id; // Adiciona o ID para fácil referência
         item.style.cursor = 'pointer'; // Adiciona um indicador visual de clique
-        
+
         // Renderiza apenas um resumo, o clique abre os detalhes no modal
         item.innerHTML = `
             <div>
@@ -252,8 +252,8 @@ function renderPendingAppointments(appointments) {
     list.querySelectorAll('.list-group-item').forEach(item => {
         item.addEventListener('click', (e) => {
             // Garante que o clique em botões dentro do item não abra o modal, caso mais ações sejam adicionadas.
-            if (e.target.closest('button')) return; 
-            
+            if (e.target.closest('button')) return;
+
             const appointmentId = item.dataset.appointmentId;
             // Busca o objeto completo na lista de agendamentos pendentes
             const appointmentData = currentPendingAppointments.find(a => a.id == appointmentId);
@@ -264,6 +264,23 @@ function renderPendingAppointments(appointments) {
     });
 }
 
+// Função helper para calcular a idade
+function calculateAge(birthDateString) {
+    if (!birthDateString) return 'Não informada';
+    try {
+        const birthDate = new Date(birthDateString);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < (birthDate.getDate() + 1))) { // Ajuste para fuso
+            age--;
+        }
+        return age + " anos";
+    } catch (e) {
+        return 'Data inválida';
+    }
+}
+
 // Abre o modal com os detalhes do pré-agendamento.
 function openPendingAppointmentDetailsModal(apt) {
     const modal = document.getElementById('pendingAppointmentDetailsModal');
@@ -272,7 +289,14 @@ function openPendingAppointmentDetailsModal(apt) {
     // Popula os dados da consulta
     document.getElementById('modalPendingService').textContent = apt.service_type;
     document.getElementById('modalPendingDuration').textContent = apt.duration;
-    
+    // Popula os dados do solicitante
+    document.getElementById('modalPendingPatientName').textContent = apt.patient_name;
+    document.getElementById('modalPendingPatientEmail').textContent = apt.patient_email;
+    document.getElementById('modalPendingPatientPhone').textContent = apt.patient_phone;
+
+    document.getElementById('modalPendingPatientAge').textContent = calculateAge(apt.birth_date);
+    document.getElementById('modalPendingObjective').textContent = apt.objective || 'Não informado';
+
     const dateBR = new Date(apt.date + 'T00:00:00').toLocaleDateString('pt-BR');
     document.getElementById('modalPendingDateTime').textContent = `${dateBR} às ${apt.time}`;
 
@@ -280,7 +304,7 @@ function openPendingAppointmentDetailsModal(apt) {
     document.getElementById('modalPendingPatientName').textContent = apt.patient_name;
     document.getElementById('modalPendingPatientEmail').textContent = apt.patient_email;
     document.getElementById('modalPendingPatientPhone').textContent = apt.patient_phone;
-    
+
     // Configura os botões de ação
     const btnApprove = document.getElementById('btnApprovePending');
     const btnReject = document.getElementById('btnRejectPending');
@@ -289,7 +313,7 @@ function openPendingAppointmentDetailsModal(apt) {
     // Clonar e substituir botões para garantir a remoção de listeners antigos
     const newBtnApprove = btnApprove.cloneNode(true);
     const newBtnReject = btnReject.cloneNode(true);
-    
+
     btnApprove.parentNode.replaceChild(newBtnApprove, btnApprove);
     btnReject.parentNode.replaceChild(newBtnReject, btnReject);
 
@@ -301,15 +325,12 @@ function openPendingAppointmentDetailsModal(apt) {
         modal.classList.remove('is-visible'); // Fecha o modal de detalhes
         openRejectActionModal(apt.id);        // Abre o modal de ação de rejeição
     });
-    
+
     closeBtn.addEventListener('click', () => modal.classList.remove('is-visible'));
 
     modal.classList.add('is-visible');
 }
 
-/**
- * NOVO: Gerencia o fluxo do modal de Rejeição e Justificativa
- */
 function openRejectActionModal(appointmentId) {
     const modal = document.getElementById('rejectActionModal');
     const closeBtn = document.getElementById('closeRejectActionModal');
@@ -319,29 +340,40 @@ function openRejectActionModal(appointmentId) {
     const typeCancellation = document.getElementById('typeCancellation');
     const messageContainer = document.getElementById('rejection-message-container');
     const defaultMessage = "Não estarei disponível na clínica nessa data, o horário foi bloqueado em minha agenda. Por favor, reagende para a próxima semana.";
+    const backBtn = document.getElementById('backToDetailsBtn');
+
+    backBtn.onclick = () => {
+        modal.classList.remove('is-visible');
+        // Reabre o modal de detalhes
+        const appointmentData = currentPendingAppointments.find(a => a.id == appointmentId);
+        if (appointmentData) {
+            openPendingAppointmentDetailsModal(appointmentData);
+        }
+    };
 
 
     // 1. Reset e configuração do estado inicial
     form.reset();
     messageContainer.classList.remove('visible', 'error', 'success');
     document.getElementById('rejectionAppointmentId').value = appointmentId;
-    
+
     // 2. Lógica de Alternância de Rádio Buttons
     const handleRadioChange = () => {
         messageContainer.classList.remove('visible', 'error');
+        
+        // Campo de texto fica HABILITADO em ambos os casos
+        messageInput.disabled = false;
+        // E a mensagem é OBRIGATÓRIA em ambos os casos
+        messageInput.setAttribute('required', 'true');
 
         if (typeCancellation.checked) {
-            // Cenário: Cancelamento Total (Justificativa obrigatória)
-            messageInput.disabled = false;
-            messageInput.setAttribute('required', 'true');
+            // Cenário: Cancelamento Total
             messageInput.placeholder = "Justificativa da Nutricionista (Obrigatória)";
-            messageInput.value = defaultMessage; // Pré-preenche a mensagem
+            messageInput.value = defaultMessage; // Mensagem padrão para cancelamento
         } else {
-            // Cenário: Sugestão de Reagendamento (Mensagem é ignorada no backend)
-            messageInput.disabled = true;
-            messageInput.removeAttribute('required');
-            messageInput.value = '';
-            messageInput.placeholder = "Mensagem enviada é padronizada para reagendamento";
+            // Cenário: Sugestão de Reagendamento
+            messageInput.placeholder = "Mensagem enviada ao paciente (editável)";
+            messageInput.value = 'Horário indisponível. Por favor, reagende a consulta para outro horário disponível.'; // Msg padrão para reagendamento
         }
     };
 
@@ -350,7 +382,7 @@ function openRejectActionModal(appointmentId) {
 
     // Garante que o estado inicial (Reagendamento) seja carregado
     typeReschedule.checked = true;
-    handleRadioChange(); 
+    handleRadioChange();
 
     // 3. Lógica de Submissão do Formulário de Rejeição
     form.onsubmit = async (e) => {
@@ -375,6 +407,7 @@ function openRejectActionModal(appointmentId) {
     };
 
     // 4. Exibir o modal
+
     closeBtn.onclick = () => modal.classList.remove('is-visible');
     modal.classList.add('is-visible');
 }

@@ -163,7 +163,16 @@ document.addEventListener("DOMContentLoaded", () => {
             phone: document.getElementById('phone').value,
         };
 
-        const payload = { ...bookingState, patientData };
+        const birthDate = document.getElementById('birthDate').value;
+        const objective = document.getElementById('objective').value;
+
+        const payload = { 
+            ...bookingState, 
+            patientData,
+            birthDate: birthDate, 
+            objective: objective  
+        };
+
 
         try {
             const response = await fetch('/api/auth/schedule/book', {

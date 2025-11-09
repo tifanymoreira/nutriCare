@@ -27,16 +27,20 @@
                         <a href="dashboard.html" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Visão Geral</a>
                     </li>
                     <li class="nav-item">
-                        <a href="patientsList.html" class="nav-link" id="patientsList"><i class="bi bi-people-fill"></i> Meus Pacientes</a>
+                        <a href="patientsList.html" class="nav-link" id="patientsList"><i class="bi bi-people-fill"></i>
+                            Meus Pacientes</a>
                     </li>
                     <li class="nav-item">
-                        <a href="nutriAgenda.html" class="nav-link"><i class="bi bi-calendar2-week-fill"></i> Minha Agenda</a>
+                        <a href="nutriAgenda.html" class="nav-link"><i class="bi bi-calendar2-week-fill"></i> Minha
+                            Agenda</a>
                     </li>
                     <li class="nav-item">
-                        <a href="nutriMetrics.html" class="nav-link"><i class="bi bi-graph-up-arrow"></i> Minhas Métricas</a>
+                        <a href="nutriMetrics.html" class="nav-link"><i class="bi bi-graph-up-arrow"></i> Minhas
+                            Métricas</a>
                     </li>
                     <li class="nav-item">
-                        <a href="nutriConfig.html" class="nav-link"><i class="bi bi-person-fill-gear"></i> Meus Detalhes</a>
+                        <a href="nutriConfig.html" class="nav-link"><i class="bi bi-person-fill-gear"></i> Meus
+                            Detalhes</a>
                     </li>
                     <li class="nav-item">
                         <a href="nutriInvoicing.html" class="nav-link"><i class="bi bi-cash-stack"></i> Faturamento</a>
@@ -57,8 +61,10 @@
                     <p class="text-muted" id="currentDate">Aqui está um resumo da sua clínica hoje.</p>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-outline-secondary" id="openGenerateLinkModal"><i class="bi bi-link-45deg"></i> Gerar Link de Cadastro</button>
-                    <a href="nutriAgenda.html" class="btn btn-primary-custom"><i class="bi bi-calendar-plus"></i> Ver Agenda</a>
+                    <button class="btn btn-outline-secondary" id="openGenerateLinkModal"><i
+                            class="bi bi-link-45deg"></i> Gerar Link de Cadastro</button>
+                    <a href="nutriAgenda.html" class="btn btn-primary-custom"><i class="bi bi-calendar-plus"></i> Ver
+                        Agenda</a>
                 </div>
             </header>
 
@@ -104,7 +110,8 @@
                     <div class="col-lg-6">
                         <div class="card data-card h-100">
                             <div class="card-header">
-                                <h5 class="card-title mb-0"><i class="bi bi-hourglass-split me-2"></i>Aprovações Pendentes <span class="badge rounded-pill bg-danger" id="pendingCount">0</span></h5>
+                                <h5 class="card-title mb-0"><i class="bi bi-hourglass-split me-2"></i>Aprovações
+                                    Pendentes <span class="badge rounded-pill bg-danger" id="pendingCount">0</span></h5>
                             </div>
                             <div class="card-body p-0">
                                 <ul class="list-group list-group-flush" id="pending-appointments-list">
@@ -126,27 +133,31 @@
                             </div>
                             <div class="card-body p-0">
                                 <ul class="list-group list-group-flush" id="today-appointments-list">
-                                    </ul>
+                                </ul>
                                 <div id="empty-appointments-state" class="empty-state-card m-3" style="display: none;">
-                                     <div class="empty-state-icon"><i class="bi bi-cup-hot"></i></div>
-                                     <h5 class="empty-state-title">Dia tranquilo pela frente!</h5>
-                                     <p class="empty-state-text">Você não possui nenhuma consulta agendada para hoje. Aproveite para planear a semana!</p>
+                                    <div class="empty-state-icon"><i class="bi bi-cup-hot"></i></div>
+                                    <h5 class="empty-state-title">Dia tranquilo pela frente!</h5>
+                                    <p class="empty-state-text">Você não possui nenhuma consulta agendada para hoje.
+                                        Aproveite para planear a semana!</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="col-lg-4 d-none"> <div class="card data-card h-100">
+                    <div class="col-lg-4 d-none">
+                        <div class="card data-card h-100">
                             <div class="card-header">
                                 <h5 class="card-title mb-0"><i class="bi bi-bell-fill me-2"></i>Requer Atenção</h5>
                             </div>
                             <div class="card-body">
                                 <ul class="list-group list-group-flush" id="attention-list">
-                                    </ul>
-                                 <div id="empty-attention-state" class="empty-state-card m-0 border-0" style="display: none; padding: 1rem 0;">
-                                     <div class="empty-state-icon"><i class="bi bi-check2-circle"></i></div>
-                                     <h5 class="empty-state-title">Tudo em ordem!</h5>
-                                     <p class="empty-state-text">Nenhum paciente precisa de atenção especial no momento.</p>
+                                </ul>
+                                <div id="empty-attention-state" class="empty-state-card m-0 border-0"
+                                    style="display: none; padding: 1rem 0;">
+                                    <div class="empty-state-icon"><i class="bi bi-check2-circle"></i></div>
+                                    <h5 class="empty-state-title">Tudo em ordem!</h5>
+                                    <p class="empty-state-text">Nenhum paciente precisa de atenção especial no momento.
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -163,59 +174,77 @@
             <p class="auth-subtitle text-center">Envie este link para seus novos pacientes se cadastrarem.</p>
             <div id="linkContainer" class="text-center">
                 <p id="generatedLink" class="bg-light p-3 rounded" style="word-break: break-all;"></p>
-                <button id="copyLinkBtn" class="btn btn-primary-custom"><i class="bi bi-clipboard"></i> Copiar Link</button>
+                <button id="copyLinkBtn" class="btn btn-primary-custom"><i class="bi bi-clipboard"></i> Copiar
+                    Link</button>
             </div>
         </div>
     </div>
-    
+
     <div class="modal-backdrop" id="pendingAppointmentDetailsModal">
         <div class="modal-content pro-modal">
             <button class="modal-close" id="closePendingAppointmentModal">&times;</button>
-            <div class="modal-icon" style="background-color: rgba(42, 157, 143, 0.1); color: var(--primary-green);"><i class="bi bi-person-fill-gear"></i></div>
+            <div class="modal-icon" style="background-color: rgba(42, 157, 143, 0.1); color: var(--primary-green);"><i
+                    class="bi bi-person-fill-gear"></i></div>
             <h4 class="modal-title-pro">Detalhes do Pré-Agendamento</h4>
             <p class="modal-subtitle-pro">Verifique os dados do paciente para aprovar ou rejeitar a solicitação.</p>
-            
+
             <div class="text-start p-3 bg-light rounded mb-4">
                 <h6 class="fw-bold mb-3"><i class="bi bi-calendar-check-fill me-2"></i> Informações da Consulta</h6>
-                <p class="mb-1"><strong>Serviço:</strong> <span id="modalPendingService" class="text-dark-charcoal"></span> (<span id="modalPendingDuration" class="text-dark-charcoal"></span> min)</p>
-                <p class="mb-0"><strong>Data e Hora:</strong> <span id="modalPendingDateTime" class="text-dark-charcoal"></span></p>
+                <p class="mb-1"><strong>Serviço:</strong> <span id="modalPendingService"
+                        class="text-dark-charcoal"></span> (<span id="modalPendingDuration"
+                        class="text-dark-charcoal"></span> min)</p>
+                <p class="mb-0"><strong>Data e Hora:</strong> <span id="modalPendingDateTime"
+                        class="text-dark-charcoal"></span></p>
             </div>
 
             <div class="text-start p-3 bg-light rounded mb-4">
                 <h6 class="fw-bold mb-3"><i class="bi bi-person-circle me-2"></i> Dados do Solicitante</h6>
-                <p class="mb-1"><strong>Nome:</strong> <span id="modalPendingPatientName" class="text-dark-charcoal"></span></p>
-                <p class="mb-1"><strong>E-mail:</strong> <span id="modalPendingPatientEmail" class="text-dark-charcoal"></span></p>
-                <p class="mb-0"><strong>Telefone:</strong> <span id="modalPendingPatientPhone" class="text-dark-charcoal"></span></p>
+                <p class="mb-1"><strong>Nome:</strong> <span id="modalPendingPatientName"
+                        class="text-dark-charcoal"></span></p>
+                <p class="mb-1"><strong>Idade:</strong> <span id="modalPendingPatientAge"
+                        class="text-dark-charcoal"></span></p>
+                <p class="mb-1"><strong>Objetivo:</strong> <span id="modalPendingObjective"
+                        class="text-dark-charcoal"></span></p>
+                <p class="mb-1"><strong>E-mail:</strong> <span id="modalPendingPatientEmail"
+                        class="text-dark-charcoal"></span></p>
+                <p class="mb-0"><strong>Telefone:</strong> <span id="modalPendingPatientPhone"
+                        class="text-dark-charcoal"></span></p>
             </div>
 
             <div class="modal-actions d-flex justify-content-center gap-3 mt-4">
-                <button id="btnRejectPending" class="btn btn-danger w-100" data-id=""><i class="bi bi-x-lg me-1"></i> Rejeitar</button>
-                <button id="btnApprovePending" class="btn btn-primary-custom w-100" data-id=""><i class="bi bi-check-lg me-1"></i> Aprovar</button>
+                <button id="btnRejectPending" class="btn btn-danger w-100" data-id=""><i class="bi bi-x-lg me-1"></i>
+                    Rejeitar</button>
+                <button id="btnApprovePending" class="btn btn-primary-custom w-100" data-id=""><i
+                        class="bi bi-check-lg me-1"></i> Aprovar</button>
             </div>
             <p class="text-muted small mt-2">Ao aprovar, o paciente será notificado e a consulta confirmada.</p>
         </div>
     </div>
-    
+
     <div class="modal-backdrop" id="rejectActionModal">
         <div class="modal-content pro-modal">
             <button class="modal-close" id="closeRejectActionModal">&times;</button>
-            <div class="modal-icon" style="background-color: rgba(231, 111, 81, 0.15); color: var(--danger-red);"><i class="bi bi-calendar-x-fill"></i></div>
+            <div class="modal-icon" style="background-color: rgba(231, 111, 81, 0.15); color: var(--danger-red);"><i
+                    class="bi bi-calendar-x-fill"></i></div>
             <h4 class="modal-title-pro">Rejeitar Agendamento</h4>
-            <p class="modal-subtitle-pro">Escolha o tipo de rejeição e, se necessário, adicione uma justificativa para o paciente.</p>
-            
+            <p class="modal-subtitle-pro">Escolha o tipo de rejeição e, se necessário, adicione uma justificativa para o
+                paciente.</p>
+
             <form id="rejectionForm">
                 <input type="hidden" id="rejectionAppointmentId">
 
                 <div class="mb-4 text-start">
                     <label class="form-label fw-bold">Tipo de Rejeição:</label>
                     <div class="form-check">
-                        <input class="form-check-input" type="radio" name="rejectionType" id="typeReschedule" value="reagendar" checked>
+                        <input class="form-check-input" type="radio" name="rejectionType" id="typeReschedule"
+                            value="reagendar" checked>
                         <label class="form-check-label" for="typeReschedule">
                             Sugestão de **Reagendamento** (Horário indisponível - convida a marcar outro)
                         </label>
                     </div>
                     <div class="form-check">
-                        <input class="form-check-input" type="radio" name="rejectionType" id="typeCancellation" value="cancelamento">
+                        <input class="form-check-input" type="radio" name="rejectionType" id="typeCancellation"
+                            value="cancelamento">
                         <label class="form-check-label" for="typeCancellation">
                             **Cancelamento Total** (Exige justificativa obrigatória)
                         </label>
@@ -224,22 +253,29 @@
 
                 <div id="rejectionMessageGroup" class="mb-4 text-start">
                     <label for="rejectionMessage" class="form-label fw-bold">Justificativa para o Paciente:</label>
-                    <textarea class="form-control" id="rejectionMessage" rows="3" placeholder="Mensagem enviada é padronizada para reagendamento" disabled></textarea>
-                    <div class="form-text mt-2" id="rejectionMessageHelp">Esta mensagem será enviada ao paciente apenas no caso de Cancelamento Total.</div>
+                    <textarea class="form-control" id="rejectionMessage" rows="3"
+                        placeholder="Mensagem enviada é padronizada para reagendamento" disabled></textarea>
+                    <div class="form-text mt-2" id="rejectionMessageHelp">Esta mensagem será enviada ao paciente apenas
+                        no caso de Cancelamento Total.</div>
                 </div>
 
                 <div id="rejection-message-container" class="form-message-container mb-3"></div>
-                
-                <button type="submit" class="btn btn-danger w-100 position-relative" id="submitRejectionBtn">
-                    <span class="btn-text"><i class="bi bi-send-fill me-1"></i> Enviar Rejeição</span>
-                    <div class="spinner-container" style="display: none;">
-                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                    </div>
-                </button>
+
+                <div class="d-flex justify-content-center gap-3">
+                    <button type="button" class="btn btn-secondary w-100" id="backToDetailsBtn">
+                        <i class="bi bi-arrow-left"></i> Voltar
+                    </button>
+                    <button type="submit" class="btn btn-danger w-100 position-relative" id="submitRejectionBtn">
+                        <span class="btn-text"><i class="bi bi-send-fill me-1"></i> Enviar Rejeição</span>
+                        <div class="spinner-container" style="display: none;">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        </div>
+                    </button>
+                </div>
             </form>
         </div>
     </div>
-    
+
     <div class="modal-backdrop" id="logoutModal">
         <div class="modal-content text-center">
             <button class="modal-close" id="closeLogoutModal">&times;</button>

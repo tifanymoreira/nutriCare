@@ -371,11 +371,11 @@ export async function getNutriSchedule(req, res) {
 
 // Cria um novo pré-agendamento (solicitação de consulta).
 export async function bookAppointment(req, res) {
-    const { nutriId, service, date, time, patientData } = req.body;
+    const { nutriId, service, date, time, patientData, birthDate, objective } = req.body;
 
     const patientID = req.session.user?.id;
 
-    if (!nutriId || !service || !date || !time || !patientData || !patientData.name || !patientData.email || !patientData.phone) {
+    if (!nutriId || !service || !date || !time || !patientData || !patientData.name || !patientData.email || !patientData.phone || !birthDate || !objective) {
         return res.status(400).json({ success: false, message: 'Dados de agendamento incompletos.' });
     }
 
@@ -384,7 +384,7 @@ export async function bookAppointment(req, res) {
     try {
         const appointmentDateTime = new Date(appointmentDateStr);
         if (appointmentDateTime < new Date()) {
-            return res.status(409).json({ success: false, message: 'Não é possível agendar uma consulta para um horário que já passou.', appointment: "not_allowed"});
+            return res.status(409).json({ success: false, message: 'Não é possível agendar uma consulta para um horário que já passou.', appointment: "not_allowed" });
         }
 
         const [checkRows] = await pool.query(
@@ -397,8 +397,8 @@ export async function bookAppointment(req, res) {
         }
 
         const [result] = await pool.query(
-            `INSERT INTO appointments (nutriID, patientID, patient_name, patient_email, patient_phone, service_type, duration, appointment_date, status) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO appointments (nutriID, patientID, patient_name, patient_email, patient_phone, service_type, duration, appointment_date, status, birth_date, objective) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 nutriId,
                 patientID,
@@ -408,7 +408,9 @@ export async function bookAppointment(req, res) {
                 service.name,
                 service.duration,
                 appointmentDateStr,
-                'Pendente'
+                'Pendente',
+                birthDate,
+                objective
             ]
         );
 
@@ -437,7 +439,9 @@ export async function getPendingAppointments(req, res) {
                 service_type, 
                 duration,
                 DATE_FORMAT(appointment_date, "%Y-%m-%d") as date,
-                DATE_FORMAT(appointment_date, "%H:%i") as time
+                DATE_FORMAT(appointment_date, "%H:%i") as time,
+                birth_date, 
+                objective   
              FROM appointments 
              WHERE nutriID = ? AND status = 'Pendente' 
              ORDER BY appointment_date ASC`,
@@ -454,12 +458,12 @@ export async function getPendingAppointments(req, res) {
 export async function updateAppointmentStatus(req, res) {
     const nutriId = req.session.user.id;
     // ADICIONADO: rejectionType e rejectionMessage
-    const { appointmentId, status, rejectionType, rejectionMessage } = req.body; 
+    const { appointmentId, status, rejectionType, rejectionMessage } = req.body;
 
     if (!['Confirmada', 'Rejeitada'].includes(status)) {
         return res.status(400).json({ success: false, message: 'Status inválido.' });
     }
-    
+
     let query = '';
     let values = [];
 
@@ -472,16 +476,16 @@ export async function updateAppointmentStatus(req, res) {
         if (rejectionType === 'cancelamento' && !rejectionMessage) {
             return res.status(400).json({ success: false, message: 'A mensagem de justificativa é obrigatória para cancelamento total.' });
         }
-        
+
         // Define a mensagem: padronizada para reagendamento, ou a customizada para cancelamento
-        const finalRejectionMessage = rejectionType === 'reagendar' 
+        const finalRejectionMessage = rejectionType === 'reagendar'
             ? 'Horário indisponível. Por favor, reagende a consulta para outro horário disponível.' // Mensagem padrão para reagendamento
             : rejectionMessage; // Mensagem customizada para cancelamento
 
         query = 'UPDATE appointments SET status = ?, confirmation_date = ?, rejection_type = ?, rejection_message = ? WHERE id = ? AND nutriID = ?';
         values = [status, new Date(), rejectionType, finalRejectionMessage, appointmentId, nutriId];
     }
-    
+
     try {
         await pool.query(query, values);
         res.json({ success: true, message: `Consulta ${status.toLowerCase()} com sucesso!` });
@@ -496,7 +500,7 @@ export async function getPatientNotifications(req, res) {
     const patientId = req.session.user.id;
 
     try {
-        
+
         const [rows] = await pool.query(
             `SELECT 
                 id, 
@@ -508,44 +512,44 @@ export async function getPatientNotifications(req, res) {
                 DATE_FORMAT(appointment_date, "%H:%i") as time
              FROM appointments 
              WHERE patientID = ? AND status != 'Pendente' 
-             ORDER BY confirmation_date DESC`, 
+             ORDER BY confirmation_date DESC`,
             [patientId]
         );
 
         const notifications = rows.map(row => {
             let message = '';
             let type = '';
-            let action = ''; 
-        
-            
+            let action = '';
+
+
             if (row.status === 'Confirmada') {
                 message = `Sua consulta em ${row.date} às ${row.time} foi CONFIRMADA! `;
                 type = 'success';
                 action = 'agenda.html';
             } else if (row.status === 'Rejeitada') {
                 type = 'canceled';
-                
+
                 if (row.rejection_type === 'reagendar') {
                     // Cenário 1: Reagendamento - Usa a mensagem padrão do backend
                     message = `Lamentamos, mas sua solicitação de ${row.service_type} em ${row.date} às ${row.time} foi REJEITADA. Motivo: ${row.rejection_message || 'Horário indisponível.'}`;
-                    action = `/pages/paciente/preSchedule.html?nutriId=${req.session.user.nutriID}`; 
+                    action = `/pages/paciente/preSchedule.html?nutriId=${req.session.user.nutriID}`;
                 } else if (row.rejection_type === 'cancelamento') {
                     // Cenário 2: Cancelamento Total - Usa a mensagem customizada da nutricionista
                     message = `Sua solicitação de ${row.service_type} em ${row.date} às ${row.time} foi REJEITADA. Justificativa da Nutri: ${row.rejection_message || 'Não especificada.'}`;
                     action = '#'; // Ação de Contato (via WhatsApp)
                 } else {
                     // Fallback
-                     message = `Lamentamos, mas sua solicitação de ${row.service_type} em ${row.date} às ${row.time} foi REJEITADA. Por favor, reagende abaixo.`;
-                     action = `/pages/paciente/preSchedule.html?nutriId=${req.session.user.nutriID}`;
+                    message = `Lamentamos, mas sua solicitação de ${row.service_type} em ${row.date} às ${row.time} foi REJEITADA. Por favor, reagende abaixo.`;
+                    action = `/pages/paciente/preSchedule.html?nutriId=${req.session.user.nutriID}`;
                 }
             }
 
-            return { 
-                id: row.id, 
-                message, 
-                type, 
-                status: row.status, 
-                nutriId: req.session.user.nutriID, 
+            return {
+                id: row.id,
+                message,
+                type,
+                status: row.status,
+                nutriId: req.session.user.nutriID,
                 rejectionType: row.rejection_type, // NOVO
                 action: action // NOVO
             };
@@ -585,8 +589,8 @@ export async function getAppointmentsForDay(req, res) {
             title: row.service_type,
             time: row.time,
             duration: row.duration,
-            phone: row.patient_phone, 
-            email: row.patient_email  
+            phone: row.patient_phone,
+            email: row.patient_email
         }));
 
         res.json({ success: true, appointments });
@@ -614,7 +618,7 @@ export async function generateLink(req, res) {
 export async function getPatientAppointments(req, res) {
     const patientID = req.session.user.id;
     const nutriID = req.session.user.nutriID;
-    
+
     try {
         const now = new Date();
         await pool.query(
@@ -637,7 +641,7 @@ export async function getPatientAppointments(req, res) {
              ORDER BY appointment_date DESC
         `;
         const [rows] = await pool.query(query, [patientID]);
-        
+
         const [nutriRows] = await pool.query(
             'SELECT name, phone FROM nutricionista WHERE id = ?',
             [nutriID]
@@ -672,18 +676,18 @@ export async function cancelAppointment(req, res) {
         if (rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Agendamento não encontrado ou não autorizado.' });
         }
-        
+
         const appointment = rows[0];
-        
+
         await pool.query('DELETE FROM appointments WHERE id = ?', [appointmentId]);
-        
+
         const date = new Date(appointment.appointment_date).toLocaleDateString('pt-BR');
         const time = new Date(appointment.appointment_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        
-        res.json({ 
-            success: true, 
+
+        res.json({
+            success: true,
             message: `O agendamento de ${appointment.service_type} em ${date} às ${time} foi cancelado com sucesso.`,
-            nutriId: appointment.nutriID 
+            nutriId: appointment.nutriID
         });
 
     } catch (error) {
@@ -924,17 +928,17 @@ export async function getPatientDashboardOverview(req, res) {
             [patientID]
         );
         const initialData = anamneseRows[0] || {};
-        
+
         const [consultationHistory] = await pool.query(
             `SELECT * FROM consultations WHERE patient_id = ? ORDER BY consultation_date ASC`,
             [patientID]
         );
-        
+
         const nextAppointment = await getNextAppointment(patientID);
 
         let currentWeight = initialData.weight || 0;
         let height = initialData.height || 0;
-        
+
         if (consultationHistory.length > 0) {
             const lastConsultation = consultationHistory[consultationHistory.length - 1];
             currentWeight = lastConsultation.weight || currentWeight;
@@ -967,13 +971,13 @@ export async function getPatientDashboardOverview(req, res) {
         }
 
         const evolutionHistoryWithInitial = [
-            { 
-              consultation_date: initialData.created_at, 
-              weight: initialData.weight, 
-              body_fat_percentage: null, 
-              circum_waist: null,
-              circum_abdomen: null,
-              circum_hip: null
+            {
+                consultation_date: initialData.created_at,
+                weight: initialData.weight,
+                body_fat_percentage: null,
+                circum_waist: null,
+                circum_abdomen: null,
+                circum_hip: null
             },
             ...consultationHistory
         ];
@@ -982,7 +986,7 @@ export async function getPatientDashboardOverview(req, res) {
         const overviewData = {
             patientName,
             nutriID,
-            nutriName, 
+            nutriName,
             nutriPhone,
             kpis: {
                 currentWeight,
@@ -1054,7 +1058,7 @@ export async function submitSurvey(req, res) {
             await connection.rollback();
             return res.status(403).json({ success: false, message: 'Consulta não encontrada, não pode ser avaliada ou já foi avaliada.' });
         }
-        
+
         const nutriID = appRows[0].nutriID;
 
         await connection.query(
@@ -1075,7 +1079,7 @@ export async function submitSurvey(req, res) {
         }
 
         await connection.query(
-            "UPDATE appointments SET is_rated = TRUE, status = 'Realizada' WHERE id = ?", 
+            "UPDATE appointments SET is_rated = TRUE, status = 'Realizada' WHERE id = ?",
             [appointmentId]
         );
 
@@ -1135,10 +1139,10 @@ export async function patientList(req, res) {
  */
 export async function createConsultation(req, res) {
     const nutriId = req.session.user.id;
-    const { 
-        appointmentId, 
-        patientId, 
-        weight, height, 
+    const {
+        appointmentId,
+        patientId,
+        weight, height,
         circum_waist, circum_abdomen, circum_hip, circum_arm,
         skinfold_triceps, skinfold_subscapular, skinfold_suprailiac, skinfold_abdominal,
         body_fat_percentage,
@@ -1156,7 +1160,7 @@ export async function createConsultation(req, res) {
 
         // Busca os dados do agendamento original para garantir a consistência.
         const [appointmentRows] = await connection.query(
-            'SELECT appointment_date FROM appointments WHERE id = ? AND nutriID = ?', 
+            'SELECT appointment_date FROM appointments WHERE id = ? AND nutriID = ?',
             [appointmentId, nutriId]
         );
 
@@ -1165,7 +1169,7 @@ export async function createConsultation(req, res) {
         }
         const appointment = appointmentRows[0];
         const bmi = calculateBMI(weight, height);
-        
+
         // Insere os dados da consulta na tabela de 'consultations'.
         const query = `
             INSERT INTO consultations (
@@ -1183,15 +1187,15 @@ export async function createConsultation(req, res) {
             body_fat_percentage || null,
             subjective_notes, objective_notes, assessment_notes, plan_notes
         ];
-        
+
         await connection.query(query, values);
-        
+
         // Atualiza o status do agendamento original para 'Realizada'.
         await connection.query(
             "UPDATE appointments SET status = 'Realizada' WHERE id = ?",
             [appointmentId]
         );
-        
+
         await connection.commit();
         res.status(201).json({ success: true, message: "Acompanhamento salvo com sucesso!" });
 
@@ -1267,7 +1271,7 @@ export async function getConsultationHistory(req, res) {
              ORDER BY c.consultation_date DESC`,
             [patientId, nutriId]
         );
-        
+
         const [pendingAppointmentsRows] = await pool.query(
             `SELECT * FROM appointments 
              WHERE patientID = ? AND nutriID = ? 
@@ -1276,10 +1280,10 @@ export async function getConsultationHistory(req, res) {
             [patientId, nutriId, patientId]
         );
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             history: historyRows,
-            pendingAppointments: pendingAppointmentsRows || [] 
+            pendingAppointments: pendingAppointmentsRows || []
         });
 
     } catch (error) {
@@ -1291,7 +1295,7 @@ export async function getConsultationHistory(req, res) {
 export async function getFoods(req, res) {
     try {
         const [rows] = await pool.query('SELECT id, name, category FROM foods ORDER BY category, name');
-        
+
         const foodLibrary = rows.reduce((acc, food) => {
             if (!acc[food.category]) {
                 acc[food.category] = [];
@@ -1408,7 +1412,7 @@ export async function getMealPlan(req, res) {
         });
 
         plan.meals = Array.from(mealsMap.values());
-        
+
         res.json({ success: true, plan });
 
     } catch (error) {

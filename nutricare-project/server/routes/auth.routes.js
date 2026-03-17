@@ -1,11 +1,12 @@
-// nutricare-project/server/routes/auth.routes.js
+const router = express.Router();
+
 import express from 'express';
-import { 
-    register, login, logout, getMe, getPatientCount, getScoreMedium, 
-    generateLink, patientDetails, anamneseDetails, sendMsg, 
-    getMetrics, getNutricionistaDetails, updateNutricionistaDetails, 
-    updateNutricionistaPassword, getInvoices, createInvoice, getDashboardOverview, 
-    generateAgenda, getNutriSchedule, bookAppointment, getAppointmentsForDay, 
+import {
+    register, login, logout, getMe, getPatientCount, getScoreMedium,
+    generateLink, patientDetails, anamneseDetails, sendMsg,
+    getMetrics, getNutricionistaDetails, updateNutricionistaDetails,
+    updateNutricionistaPassword, getInvoices, createInvoice, getDashboardOverview,
+    generateAgenda, getNutriSchedule, bookAppointment, getAppointmentsForDay,
     getPendingAppointments, updateAppointmentStatus, getPatientNotifications,
     getPatientDashboardOverview,
     getPatientAppointments, cancelAppointment,
@@ -13,75 +14,90 @@ import {
     createConsultation,
     getConsultationHistory,
     patientList,
-    getFoods, 
-    saveMealPlan, 
+    getFoods,
+    saveMealPlan,
     getMealPlan,
-    scheduleReturnAppointment // IMPORTA A NOVA FUNÇÃO
-} from '../controllers/auth.controller.js'; 
+    scheduleReturnAppointment,
+    getScheduleConfig,
+    updateScheduleConfig,
+    getTodayAppointment, saveAppointmentNotes
+} from '../controllers/auth.controller.js';
+
 import checkAuth from '../middlewares/checkAuth.js';
 import { pool } from '../config/dbConnect.js';
-const router = express.Router();
+import { saveAssessment, getAssessmentHistory } from '../controllers/anthropometry.controller.js';
 
-router.post('/register', register); 
+router.post('/save', checkAuth, saveAssessment);
+router.get('/history/:patientId', checkAuth, getAssessmentHistory); // NOVA ROTA
+
+
+router.get('/nutricionista/appointment/today/:patientId', checkAuth, getTodayAppointment);
+router.post('/nutricionista/appointment/save-notes', checkAuth, saveAppointmentNotes);
+
+// Rotas de Autenticação Básica
+router.post('/register', register);
 router.post('/login', login);
 router.post('/logout', checkAuth, logout);
 router.get('/me', checkAuth, getMe);
 
+// Rotas de Dashboard e Métricas
 router.get('/dashboard-overview', checkAuth, getDashboardOverview);
 router.get('/getPatientCount', getPatientCount);
 router.get('/getScoreMedium', getScoreMedium);
-router.get('/generateLink', checkAuth, generateLink);
+router.get('/metrics', checkAuth, getMetrics);
+
+// Rotas de Pacientes
 router.get('/patientList', checkAuth, patientList);
 router.get('/patientDetails/:id', checkAuth, patientDetails);
 router.get('/anamneseDetails/:id', checkAuth, anamneseDetails);
-router.get('/metrics', checkAuth, getMetrics);
+router.get('/generateLink', checkAuth, generateLink);
+router.get('/sendMsg/:id', sendMsg);
 
-// ROTAS DO PLANO ALIMENTAR (NOVAS E ATUALIZADAS)
+// Rotas do Plano Alimentar
 router.get('/foods', checkAuth, getFoods);
 router.post('/mealplan', checkAuth, saveMealPlan);
 router.get('/mealplan/:patientId', checkAuth, getMealPlan);
 
-// Rotas de Configuração e Agenda do Nutricionista
+// --- ROTAS DO NUTRICIONISTA (PERFIL E AGENDA) ---
 router.get('/nutricionista/details', checkAuth, getNutricionistaDetails);
 router.put('/nutricionista/details', checkAuth, updateNutricionistaDetails);
-router.put('/nutricionista/generateAgenda', checkAuth, generateAgenda);
 router.put('/nutricionista/password', checkAuth, updateNutricionistaPassword);
-router.get('/nutricionista/appointments', checkAuth, getAppointmentsForDay); 
 
-// Rotas de Acompanhamento (Consulta)
-router.post('/consultations', checkAuth, createConsultation);
-router.get('/consultations/:patientId', checkAuth, getConsultationHistory);
+// Agenda Profissional (Visualização e Geração)
+router.get('/nutricionista/appointments', checkAuth, getAppointmentsForDay);
+router.put('/nutricionista/generateAgenda', checkAuth, generateAgenda);
 
+// --- [NOVO] Configurações de Intervalos e Pausas ---
+router.get('/schedule/config', checkAuth, getScheduleConfig);
+router.post('/schedule/config/update', checkAuth, updateScheduleConfig);
 
-// Rotas de Aprovação
+// Rotas de Aprovação de Consultas
 router.get('/nutricionista/appointments/pending', checkAuth, getPendingAppointments);
 router.put('/nutricionista/appointments/status', checkAuth, updateAppointmentStatus);
 
-// ROTA ADICIONADA: Rota dedicada para agendar retornos.
+// Rotas de Consulta/Acompanhamento
+router.post('/consultations', checkAuth, createConsultation);
+router.get('/consultations/:patientId', checkAuth, getConsultationHistory);
 router.post('/appointments/schedule-return', checkAuth, scheduleReturnAppointment);
-
 
 // Rotas de Faturamento
 router.get('/invoices', checkAuth, getInvoices);
 router.post('/invoices', checkAuth, createInvoice);
 
-// Rotas de Agendamento do Paciente (Pré-Login/Público)
-router.get('/schedule/available', getNutriSchedule); 
-router.post('/schedule/book', bookAppointment); 
+// --- ROTAS PÚBLICAS/PACIENTE (AGENDAMENTO) ---
+router.get('/schedule/available', getNutriSchedule);
+router.post('/schedule/book', bookAppointment);
 
-// Rotas de Paciente
-router.get('/patient/dashboard-overview', checkAuth, getPatientDashboardOverview); 
-router.get('/patient/notifications', checkAuth, getPatientNotifications); 
-router.get('/patient/appointments', checkAuth, getPatientAppointments); 
-router.delete('/patient/appointments', checkAuth, cancelAppointment); 
+// Rotas do Painel do Paciente
+router.get('/patient/dashboard-overview', checkAuth, getPatientDashboardOverview);
+router.get('/patient/notifications', checkAuth, getPatientNotifications);
+router.get('/patient/appointments', checkAuth, getPatientAppointments);
+router.delete('/patient/appointments', checkAuth, cancelAppointment);
 router.post('/patient/submit-survey', checkAuth, submitSurvey);
-router.get('/sendMsg/:id', sendMsg);
 
-router.get('/nutricionista/:id', async (req, res) => { 
-    if (req.session.user && req.session.user.role !== 'paciente') {
-        return res.status(403).json({ success: false, message: 'Acesso não autorizado para este tipo de conta.' });
-    }
-
+// Rota auxiliar para pegar nome do Nutri na tela de agendamento público
+router.get('/nutricionista/:id', async (req, res) => {
+    // Permite acesso público para que a tela de agendamento funcione sem login
     try {
         const [rows] = await pool.query('SELECT name, phone FROM nutricionista WHERE id = ?', [req.params.id]);
         if (rows.length > 0) {

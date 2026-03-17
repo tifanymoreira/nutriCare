@@ -19,7 +19,6 @@ function generateTimeSlots(startTimeStr, endTimeStr, slotDuration) {
     return slots;
 }
 
-// Função principal de registro, que direciona para o tipo de usuário.
 export async function register(req, res) {
     const { role } = req.body;
 
@@ -33,7 +32,6 @@ export async function register(req, res) {
     return res.status(400).json({ success: false, message: 'Role (função) inválida especificada.' });
 }
 
-// Registra um novo nutricionista no sistema.
 async function registerNutricionista(req, res) {
     const { name, email, password, passwordConfirmation, phone, crn } = req.body;
     const role = 'nutricionista';
@@ -85,7 +83,6 @@ async function registerNutricionista(req, res) {
     }
 }
 
-// Registra um novo paciente juntamente com sua anamnese.
 async function registerPacienteWithAnamnese(req, res) {
     const { registerData, anamneseData, appointmentId } = req.body;
     const { name, email, password, phone, nutriID } = registerData;
@@ -164,7 +161,6 @@ async function registerPacienteWithAnamnese(req, res) {
     }
 }
 
-// Busca o número de telefone do nutricionista para contato via WhatsApp.
 export async function sendMsg(req, res) {
     const nutriId = req.params.id;
 
@@ -186,7 +182,6 @@ export async function sendMsg(req, res) {
     }
 }
 
-// Autentica o usuário e cria uma sessão.
 export async function login(req, res) {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -230,7 +225,6 @@ export async function login(req, res) {
     }
 }
 
-// Finaliza a sessão do usuário.
 export function logout(req, res) {
     req.session.destroy(err => {
         if (err) {
@@ -241,7 +235,6 @@ export function logout(req, res) {
     });
 }
 
-// Retorna os dados do usuário logado.
 export function getMe(req, res) {
     if (req.session.user) {
         res.json({ success: true, user: req.session.user });
@@ -250,7 +243,6 @@ export function getMe(req, res) {
     }
 }
 
-// Busca a contagem total de pacientes de um nutricionista.
 export async function getPatientCount(req, res) {
     const nutriId = req.session.user.id;
 
@@ -265,7 +257,6 @@ export async function getPatientCount(req, res) {
     }
 }
 
-// Busca a média de notas de um nutricionista.
 export async function getScoreMedium(req, res) {
     const nutriId = req.session.user.id;
 
@@ -280,7 +271,6 @@ export async function getScoreMedium(req, res) {
     }
 }
 
-// Gera e salva a configuração da agenda de um nutricionista.
 export async function generateAgenda(req, res) {
     const { dates, startTime, endTime, slotDuration } = req.body;
     const nutriId = req.session.user.id;
@@ -314,7 +304,6 @@ export async function generateAgenda(req, res) {
     }
 }
 
-// Retorna os horários disponíveis de um nutricionista para uma data específica.
 export async function getNutriSchedule(req, res) {
     const { nutriId, date } = req.query;
 
@@ -324,7 +313,10 @@ export async function getNutriSchedule(req, res) {
 
     try {
         const [agendaRows] = await pool.query(
-            'SELECT startTime, endTime, duration, JSON_UNQUOTE(available_days) as available_days FROM nutri_agenda WHERE nutriID = ?',
+            `SELECT startTime, endTime, duration, 
+                    buffer_time, break_times, 
+                    JSON_UNQUOTE(available_days) as available_days 
+             FROM nutri_agenda WHERE nutriID = ?`,
             [nutriId]
         );
 
@@ -332,33 +324,75 @@ export async function getNutriSchedule(req, res) {
             return res.json({ success: true, availableSlots: [], message: 'A agenda desta nutricionista ainda não foi configurada.' });
         }
 
-        const { startTime, endTime, duration: slotDuration, available_days } = agendaRows[0];
-        const scheduledDates = available_days ? JSON.parse(available_days) : [];
+        const agenda = agendaRows[0];
+        const { startTime, endTime, duration: slotDuration } = agenda;
+        const bufferTime = agenda.buffer_time || 0;
 
-        if (!scheduledDates.includes(date)) {
+        let breakTimes = [];
+        if (agenda.break_times) {
+            breakTimes = typeof agenda.break_times === 'string' ? JSON.parse(agenda.break_times) : agenda.break_times;
+        }
+
+        const availableDays = agenda.available_days ? JSON.parse(agenda.available_days) : [];
+
+        if (!availableDays.includes(date)) {
             return res.json({ success: true, availableSlots: [], message: 'Esta data não está disponível para agendamento.' });
         }
 
-        const allPossibleSlots = generateTimeSlots(startTime, endTime, slotDuration);
+        const slots = [];
+        const [startH, startM] = startTime.split(':').map(Number);
+        const [endH, endM] = endTime.split(':').map(Number);
+
+        let currentMinutes = startH * 60 + startM;
+        const endMinutes = endH * 60 + endM;
+
+        while (currentMinutes + slotDuration <= endMinutes) {
+            const h = Math.floor(currentMinutes / 60);
+            const m = currentMinutes % 60;
+            const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+
+            if (!overlapsWithBreak(timeStr, slotDuration, breakTimes)) {
+                slots.push(timeStr);
+                currentMinutes += (slotDuration + bufferTime);
+            } else {
+                currentMinutes += 5;
+            }
+        }
 
         const [appointmentRows] = await pool.query(
-            'SELECT TIME(appointment_date) as bookedTime FROM appointments WHERE nutriID = ? AND DATE(appointment_date) = ? AND status != "Rejeitada"',
+            'SELECT TIME(appointment_date) as bookedTime, duration FROM appointments WHERE nutriID = ? AND DATE(appointment_date) = ? AND status != "Rejeitada"',
             [nutriId, date]
         );
-        const bookedTimes = new Set(appointmentRows.map(row => row.bookedTime.substring(0, 5)));
 
-        let availableSlots = allPossibleSlots.filter(slot => !bookedTimes.has(slot));
+        const bookedIntervals = appointmentRows.map(row => {
+            const [bh, bm] = row.bookedTime.split(':').map(Number);
+            const startMin = bh * 60 + bm;
+            return { start: startMin, end: startMin + row.duration };
+        });
+
+        let availableSlots = slots.filter(slotTime => {
+            const [sh, sm] = slotTime.split(':').map(Number);
+            const slotStart = sh * 60 + sm;
+            const slotEnd = slotStart + slotDuration;
+
+            for (const booked of bookedIntervals) {
+                if (slotStart < booked.end && slotEnd > booked.start) {
+                    return false;
+                }
+            }
+            return true;
+        });
 
         const today = new Date();
         const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
         if (date === todayStr) {
             const now = new Date();
-            const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-            availableSlots = availableSlots.filter(slot => slot > currentTimeStr);
-        }
-
-        if (availableSlots.length === 0) {
-            return res.json({ success: true, availableSlots: [], message: 'Não há mais horários disponíveis para este dia.' });
+            const nowMin = now.getHours() * 60 + now.getMinutes();
+            availableSlots = availableSlots.filter(slot => {
+                const [h, m] = slot.split(':').map(Number);
+                return (h * 60 + m) > nowMin;
+            });
         }
 
         res.json({ success: true, availableSlots, slotDuration });
@@ -369,7 +403,6 @@ export async function getNutriSchedule(req, res) {
     }
 }
 
-// Cria um novo pré-agendamento (solicitação de consulta).
 export async function bookAppointment(req, res) {
     const { nutriId, service, date, time, patientData, birthDate, objective } = req.body;
 
@@ -426,7 +459,6 @@ export async function bookAppointment(req, res) {
     }
 }
 
-// Retorna a lista de agendamentos pendentes para o nutricionista.
 export async function getPendingAppointments(req, res) {
     const nutriId = req.session.user.id;
     try {
@@ -454,10 +486,8 @@ export async function getPendingAppointments(req, res) {
     }
 }
 
-// Atualiza o status de um agendamento (Confirmada ou Rejeitada).
 export async function updateAppointmentStatus(req, res) {
     const nutriId = req.session.user.id;
-    // ADICIONADO: rejectionType e rejectionMessage
     const { appointmentId, status, rejectionType, rejectionMessage } = req.body;
 
     if (!['Confirmada', 'Rejeitada'].includes(status)) {
@@ -468,19 +498,15 @@ export async function updateAppointmentStatus(req, res) {
     let values = [];
 
     if (status === 'Confirmada') {
-        // Se APROVADA, remove quaisquer dados de rejeição antigos
         query = 'UPDATE appointments SET status = ?, confirmation_date = ?, rejection_type = NULL, rejection_message = NULL WHERE id = ? AND nutriID = ?';
         values = [status, new Date(), appointmentId, nutriId];
     } else if (status === 'Rejeitada') {
-        // Validação obrigatória da justificativa para 'cancelamento'
         if (rejectionType === 'cancelamento' && !rejectionMessage) {
             return res.status(400).json({ success: false, message: 'A mensagem de justificativa é obrigatória para cancelamento total.' });
         }
-
-        // Define a mensagem: padronizada para reagendamento, ou a customizada para cancelamento
         const finalRejectionMessage = rejectionType === 'reagendar'
-            ? 'Horário indisponível. Por favor, reagende a consulta para outro horário disponível.' // Mensagem padrão para reagendamento
-            : rejectionMessage; // Mensagem customizada para cancelamento
+            ? 'Horário indisponível. Por favor, reagende a consulta para outro horário disponível.'
+            : rejectionMessage;
 
         query = 'UPDATE appointments SET status = ?, confirmation_date = ?, rejection_type = ?, rejection_message = ? WHERE id = ? AND nutriID = ?';
         values = [status, new Date(), rejectionType, finalRejectionMessage, appointmentId, nutriId];
@@ -495,19 +521,17 @@ export async function updateAppointmentStatus(req, res) {
     }
 }
 
-// Busca as notificações de um paciente (consultas confirmadas/rejeitadas).
 export async function getPatientNotifications(req, res) {
     const patientId = req.session.user.id;
 
     try {
-
         const [rows] = await pool.query(
             `SELECT 
                 id, 
                 status, 
                 service_type,
-                rejection_type,     /* NOVO */
-                rejection_message,  /* NOVO */
+                rejection_type,     
+                rejection_message,  
                 DATE_FORMAT(appointment_date, "%d/%m/%Y") as date,
                 DATE_FORMAT(appointment_date, "%H:%i") as time
              FROM appointments 
@@ -521,24 +545,19 @@ export async function getPatientNotifications(req, res) {
             let type = '';
             let action = '';
 
-
             if (row.status === 'Confirmada') {
                 message = `Sua consulta em ${row.date} às ${row.time} foi CONFIRMADA! `;
                 type = 'success';
                 action = 'agenda.html';
             } else if (row.status === 'Rejeitada') {
                 type = 'canceled';
-
                 if (row.rejection_type === 'reagendar') {
-                    // Cenário 1: Reagendamento - Usa a mensagem padrão do backend
                     message = `Lamentamos, mas sua solicitação de ${row.service_type} em ${row.date} às ${row.time} foi REJEITADA. Motivo: ${row.rejection_message || 'Horário indisponível.'}`;
                     action = `/pages/paciente/preSchedule.html?nutriId=${req.session.user.nutriID}`;
                 } else if (row.rejection_type === 'cancelamento') {
-                    // Cenário 2: Cancelamento Total - Usa a mensagem customizada da nutricionista
                     message = `Sua solicitação de ${row.service_type} em ${row.date} às ${row.time} foi REJEITADA. Justificativa da Nutri: ${row.rejection_message || 'Não especificada.'}`;
-                    action = '#'; // Ação de Contato (via WhatsApp)
+                    action = '#';
                 } else {
-                    // Fallback
                     message = `Lamentamos, mas sua solicitação de ${row.service_type} em ${row.date} às ${row.time} foi REJEITADA. Por favor, reagende abaixo.`;
                     action = `/pages/paciente/preSchedule.html?nutriId=${req.session.user.nutriID}`;
                 }
@@ -550,8 +569,8 @@ export async function getPatientNotifications(req, res) {
                 type,
                 status: row.status,
                 nutriId: req.session.user.nutriID,
-                rejectionType: row.rejection_type, // NOVO
-                action: action // NOVO
+                rejectionType: row.rejection_type,
+                action: action
             };
         });
 
@@ -563,7 +582,6 @@ export async function getPatientNotifications(req, res) {
     }
 }
 
-// Busca os agendamentos confirmados para um nutricionista em um dia específico.
 export async function getAppointmentsForDay(req, res) {
     const nutriId = req.session.user.id;
     const date = req.query.date || new Date().toISOString().split('T')[0];
@@ -601,10 +619,8 @@ export async function getAppointmentsForDay(req, res) {
     }
 }
 
-// Gera o link de pré-agendamento para um nutricionista.
 export async function generateLink(req, res) {
     const nutriId = req.session.user.id;
-
     try {
         const link = `http://localhost:3000/pages/paciente/preSchedule.html?nutriId=${nutriId}`;
         res.json({ success: true, link });
@@ -614,7 +630,6 @@ export async function generateLink(req, res) {
     }
 }
 
-// Busca o histórico de agendamentos de um paciente.
 export async function getPatientAppointments(req, res) {
     const patientID = req.session.user.id;
     const nutriID = req.session.user.nutriID;
@@ -656,7 +671,6 @@ export async function getPatientAppointments(req, res) {
     }
 }
 
-// Cancela um agendamento a pedido do paciente.
 export async function cancelAppointment(req, res) {
     const patientID = req.session.user.id;
     const { appointmentId } = req.body;
@@ -678,7 +692,6 @@ export async function cancelAppointment(req, res) {
         }
 
         const appointment = rows[0];
-
         await pool.query('DELETE FROM appointments WHERE id = ?', [appointmentId]);
 
         const date = new Date(appointment.appointment_date).toLocaleDateString('pt-BR');
@@ -696,52 +709,102 @@ export async function cancelAppointment(req, res) {
     }
 }
 
-// Busca os detalhes de um paciente específico.
 export async function patientDetails(req, res) {
     const nutriId = req.session.user.id;
     var patientId = req.params.id;
 
     const [rows] = await pool.query('SELECT id, nome, email, status, phone FROM pacientes WHERE nutriID = ? AND id = ?', [nutriId, patientId]);
-
     if (rows.length > 0) {
         res.json({ success: true, patients: rows });
     } else {
         res.status(404).json({ success: false, message: 'Nenhum paciente encontrado.' });
     }
-
 }
 
-// Busca os detalhes da anamnese de um paciente específico.
 export async function anamneseDetails(req, res) {
     const nutriId = req.session.user.id;
     var patientId = req.params.id;
 
     const [rows] = await pool.query('SELECT * FROM anamnese WHERE nutriID = ? AND patientID = ?', [nutriId, patientId]);
-
     if (rows.length > 0) {
         res.json({ success: true, patients: rows });
     } else {
         res.status(404).json({ success: false, message: 'Nenhuma anamnese encontrada.' });
     }
-
 }
 
-// Busca as métricas de desempenho do nutricionista.
+// -------------------------------------------------------------
+// LOGICA DE METRICAS E KPIS
+// -------------------------------------------------------------
 export async function getMetrics(req, res) {
-    const period = req.query.period || '30';
+    const period = parseInt(req.query.period) || 30;
     const nutriId = req.session.user.id;
 
-    const emptyData = {
-        kpis: { revenue: 0, patients: 0, retention: 0, avgAppointments: 0 },
-        evolution: { labels: [], revenue: [], patients: [] },
-        appointmentTypes: { labels: [], data: [] },
-        patientGoals: { labels: [], data: [] }
-    };
+    try {
+        // Consultas Gerais de KPIs
+        const [[revRow]] = await pool.query(`SELECT SUM(totalValue) as rev FROM invoices WHERE nutriID = ? AND issueDate >= DATE_SUB(CURDATE(), INTERVAL ? DAY) AND status = 'Paid'`, [nutriId, period]);
+        const [[patRow]] = await pool.query(`SELECT COUNT(*) as cnt FROM pacientes p JOIN users u ON p.id = u.id WHERE p.nutriID = ? AND u.created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)`, [nutriId, period]);
+        const [[retRow]] = await pool.query(`SELECT (SUM(CASE WHEN status = 'Ativo' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0)) * 100 as retention FROM pacientes WHERE nutriID = ?`, [nutriId]);
+        const [[avgAppRow]] = await pool.query(`SELECT COUNT(*) / NULLIF(COUNT(DISTINCT patientID), 0) as avgApp FROM appointments WHERE nutriID = ? AND status='Realizada'`, [nutriId]);
 
-    res.json({ success: true, data: emptyData });
+        // Dados para gráfico de Evolução Temporal (Faturamento vs Pacientes)
+        const [evolRows] = await pool.query(`SELECT DATE(issueDate) as date, SUM(totalValue) as rev FROM invoices WHERE nutriID = ? AND issueDate >= DATE_SUB(CURDATE(), INTERVAL ? DAY) AND status = 'Paid' GROUP BY DATE(issueDate) ORDER BY DATE(issueDate)`, [nutriId, period]);
+        const [patEvolRows] = await pool.query(`SELECT DATE(u.created_at) as date, COUNT(*) as cnt FROM pacientes p JOIN users u ON p.id = u.id WHERE p.nutriID = ? AND u.created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY) GROUP BY DATE(u.created_at) ORDER BY DATE(u.created_at)`, [nutriId, period]);
+
+        // Agrupa as datas das duas consultas
+        const dateMap = new Map();
+        evolRows.forEach(r => {
+            const dateStr = r.date instanceof Date ? r.date.toISOString().split('T')[0] : r.date;
+            if (!dateMap.has(dateStr)) dateMap.set(dateStr, { rev: 0, cnt: 0 });
+            dateMap.get(dateStr).rev = parseFloat(r.rev) || 0;
+        });
+        patEvolRows.forEach(r => {
+            const dateStr = r.date instanceof Date ? r.date.toISOString().split('T')[0] : r.date;
+            if (!dateMap.has(dateStr)) dateMap.set(dateStr, { rev: 0, cnt: 0 });
+            dateMap.get(dateStr).cnt = r.cnt || 0;
+        });
+
+        const sortedDates = Array.from(dateMap.keys()).sort();
+        const labels = sortedDates.map(d => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR'));
+        const revenue = sortedDates.map(d => dateMap.get(d).rev);
+        const patients = sortedDates.map(d => dateMap.get(d).cnt);
+
+        // Tipos de Consulta para o Doughnut
+        const [appTypes] = await pool.query(`SELECT service_type as type, COUNT(*) as cnt FROM appointments WHERE nutriID = ? AND appointment_date >= DATE_SUB(CURDATE(), INTERVAL ? DAY) GROUP BY service_type`, [nutriId, period]);
+
+        // Agrupamento de Objetivos (da Anamnese)
+        const [goals] = await pool.query(`SELECT objective as obj FROM anamnese WHERE nutriID = ?`, [nutriId]);
+        const goalCounts = {};
+        goals.forEach(g => {
+            if (!g.obj) return;
+            let objs = [];
+            try { objs = JSON.parse(g.obj); } catch (e) { objs = [g.obj]; }
+            if (!Array.isArray(objs)) objs = [objs];
+            objs.forEach(o => {
+                const clean = String(o).replace(/[\[\]"]/g, '').trim();
+                if (clean) goalCounts[clean] = (goalCounts[clean] || 0) + 1;
+            });
+        });
+
+        const data = {
+            kpis: {
+                revenue: revRow?.rev || 0,
+                patients: patRow?.cnt || 0,
+                retention: retRow?.retention ? parseFloat(retRow.retention).toFixed(1) : 0,
+                avgAppointments: avgAppRow?.avgApp ? parseFloat(avgAppRow.avgApp).toFixed(1) : 0
+            },
+            evolution: { labels, revenue, patients },
+            appointmentTypes: { labels: appTypes.map(t => t.type), data: appTypes.map(t => t.cnt) },
+            patientGoals: { labels: Object.keys(goalCounts), data: Object.values(goalCounts) }
+        };
+
+        res.json({ success: true, data });
+    } catch (err) {
+        console.error("Erro em getMetrics:", err);
+        res.status(500).json({ success: false, message: 'Erro ao buscar métricas reais.' });
+    }
 }
 
-// Busca os detalhes do perfil do nutricionista.
 export async function getNutricionistaDetails(req, res) {
     try {
         const nutriId = req.session.user.id;
@@ -769,7 +832,6 @@ export async function getNutricionistaDetails(req, res) {
     }
 }
 
-// Atualiza os detalhes do perfil do nutricionista.
 export async function updateNutricionistaDetails(req, res) {
     const { name, email, phone } = req.body;
     const nutriId = req.session.user.id;
@@ -807,7 +869,6 @@ export async function updateNutricionistaDetails(req, res) {
     }
 }
 
-// Atualiza a senha do nutricionista.
 export async function updateNutricionistaPassword(req, res) {
     const { currentPassword, newPassword } = req.body;
     const nutriId = req.session.user.id;
@@ -844,56 +905,96 @@ export async function updateNutricionistaPassword(req, res) {
     }
 }
 
-// Busca as faturas (mock).
 export async function getInvoices(req, res) {
     const nutriId = req.session.user.id;
-    res.json({ success: true, data: { invoices: [], kpis: {} } });
+    try {
+        const [invoices] = await pool.query(`
+            SELECT i.id, i.patientId, p.nome as patientName, i.issueDate, i.dueDate, i.totalValue as amount, i.status 
+            FROM invoices i 
+            JOIN pacientes p ON i.patientId = p.id 
+            WHERE i.nutriID = ? ORDER BY i.issueDate DESC
+        `, [nutriId]);
+        res.json({ success: true, data: { invoices } });
+    } catch (err) {
+        res.status(500).json({ success: false });
+    }
 }
 
-// Cria uma nova fatura (mock).
 export async function createInvoice(req, res) {
     const nutriId = req.session.user.id;
     const { patientId, issueDate, dueDate, items } = req.body;
-    res.json({ success: true, message: 'Fatura criada com sucesso!' });
+
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+        const total = items.reduce((sum, item) => sum + parseFloat(item.amount), 0);
+        const [resInvoice] = await conn.query(
+            `INSERT INTO invoices (nutriID, patientId, issueDate, dueDate, totalValue, status) VALUES (?, ?, ?, ?, ?, 'Pending')`,
+            [nutriId, patientId, issueDate, dueDate, total]
+        );
+        const invoiceId = resInvoice.insertId;
+
+        for (let item of items) {
+            await conn.query(`INSERT INTO invoice_items (invoice_id, description, amount) VALUES (?, ?, ?)`, [invoiceId, item.description, item.amount]);
+        }
+        await conn.commit();
+        res.json({ success: true, message: 'Fatura criada com sucesso!' });
+    } catch (err) {
+        await conn.rollback();
+        res.status(500).json({ success: false, message: 'Erro interno ao criar fatura.' });
+    } finally {
+        conn.release();
+    }
 }
 
-/**
- * LÓGICA CORRIGIDA E IMPLEMENTADA
- * Busca os dados de visão geral para o dashboard do nutricionista.
- * Realiza consultas ao banco de dados para obter KPIs dinâmicos.
- */
+// -------------------------------------------------------------
+// DASHBOARDS
+// -------------------------------------------------------------
 export async function getDashboardOverview(req, res) {
     const nutriId = req.session.user.id;
 
     try {
         const today = new Date().toISOString().split('T')[0];
 
-        // Executa todas as consultas de forma paralela para otimizar o tempo de resposta.
+        // Processamento paralelo para melhor performance
         const [
             [appointmentsTodayResult],
             [activePatientsResult],
             [monthlyRevenueResult],
             [avgScoreResult],
-            todayAppointmentsListResult
+            [todayAppointmentsListResult],
+            [birthdays]
         ] = await Promise.all([
             pool.query("SELECT COUNT(*) as count FROM appointments WHERE nutriID = ? AND status = 'Confirmada' AND DATE(appointment_date) = ?", [nutriId, today]),
             pool.query("SELECT COUNT(*) as count FROM pacientes WHERE nutriID = ? AND status = 'Ativo'", [nutriId]),
-            // CORREÇÃO: Usa 'totalValue' e 'issueDate' que são os nomes corretos das colunas na tabela 'invoices'.
             pool.query("SELECT SUM(totalValue) as total FROM invoices WHERE nutriID = ? AND MONTH(issueDate) = MONTH(CURDATE()) AND YEAR(issueDate) = YEAR(CURDATE()) AND status = 'Paid'", [nutriId]),
             pool.query("SELECT AVG(rating) as avgRating FROM nutri_nps WHERE nutri_id = ?", [nutriId]),
-            pool.query("SELECT patient_name, service_type, DATE_FORMAT(appointment_date, '%H:%i') as time FROM appointments WHERE nutriID = ? AND status = 'Confirmada' AND DATE(appointment_date) = ? ORDER BY appointment_date ASC", [nutriId, today])
+            pool.query("SELECT patient_name, service_type, DATE_FORMAT(appointment_date, '%H:%i') as time FROM appointments WHERE nutriID = ? AND status = 'Confirmada' AND DATE(appointment_date) = ? ORDER BY appointment_date ASC", [nutriId, today]),
+            // Aniversários da semana (cruzando pacientes ativos com a anamnese)
+            pool.query(`
+                SELECT p.id, p.nome, a.birthdate
+                FROM pacientes p
+                JOIN anamnese a ON p.id = a.patientID
+                WHERE p.nutriID = ? AND p.status = 'Ativo'
+                AND DATE_FORMAT(a.birthdate, '%m-%d') BETWEEN DATE_FORMAT(CURDATE(), '%m-%d') AND DATE_FORMAT(DATE_ADD(CURDATE(), INTERVAL 7 DAY), '%m-%d')
+            `, [nutriId])
         ]);
 
-        // Monta o objeto de resposta com os dados obtidos.
+        const attentionList = (birthdays || []).map(b => ({
+            type: 'birthday',
+            text: `Aniversário de ${b.nome}`,
+            subtext: new Date(b.birthdate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+        }));
+
         const overviewData = {
             kpis: {
-                todayAppointments: appointmentsTodayResult.count || 0,
-                activePatients: activePatientsResult.count || 0,
-                monthlyRevenue: monthlyRevenueResult.total || 0,
-                avgScore: avgScoreResult.avgRating || null
+                todayAppointments: appointmentsTodayResult[0]?.count || 0,
+                activePatients: activePatientsResult[0]?.count || 0,
+                monthlyRevenue: monthlyRevenueResult[0]?.total || 0,
+                avgScore: avgScoreResult[0]?.avgRating ? parseFloat(avgScoreResult[0].avgRating).toFixed(1) : null
             },
-            todayAppointments: todayAppointmentsListResult,
-            attentionList: [] // Mock: funcionalidade de "Requer Atenção" ainda não implementada.
+            todayAppointments: todayAppointmentsListResult || [],
+            attentionList: attentionList
         };
 
         res.json({ success: true, data: overviewData });
@@ -957,11 +1058,8 @@ export async function getPatientDashboardOverview(req, res) {
             } else if (typeof objectiveValue === 'string') {
                 const objStr = objectiveValue.trim();
                 if (objStr.startsWith('[') && objStr.endsWith(']')) {
-                    try {
-                        parsedObjective = JSON.parse(objStr);
-                    } catch (e) {
-                        parsedObjective = [objStr.replace(/[\[\]"]/g, '')];
-                    }
+                    try { parsedObjective = JSON.parse(objStr); }
+                    catch (e) { parsedObjective = [objStr.replace(/[\[\]"]/g, '')]; }
                 } else if (objStr) {
                     parsedObjective = [objStr];
                 }
@@ -981,7 +1079,6 @@ export async function getPatientDashboardOverview(req, res) {
             },
             ...consultationHistory
         ];
-
 
         const overviewData = {
             patientName,
@@ -1035,7 +1132,6 @@ async function getNextAppointment(patientID) {
     };
 }
 
-// Salva a avaliação (survey) de uma consulta.
 export async function submitSurvey(req, res) {
     const patientID = req.session.user.id;
     const { appointmentId, nutriRating, nutriComments, systemRating, systemComments, mealPlanRating, mealPlanComments } = req.body;
@@ -1095,7 +1191,6 @@ export async function submitSurvey(req, res) {
     }
 }
 
-// Busca a lista de pacientes de um nutricionista.
 export async function patientList(req, res) {
     const nutriId = req.session.user.id;
 
@@ -1132,11 +1227,6 @@ export async function patientList(req, res) {
     }
 }
 
-/**
- * Registra os dados de acompanhamento de uma consulta.
- * Esta função foi simplificada para ter uma única responsabilidade: salvar os dados da consulta.
- * A lógica de agendamento de retorno foi movida para sua própria função e rota.
- */
 export async function createConsultation(req, res) {
     const nutriId = req.session.user.id;
     const {
@@ -1149,7 +1239,6 @@ export async function createConsultation(req, res) {
         subjective_notes, objective_notes, assessment_notes, plan_notes
     } = req.body;
 
-    // Validação dos campos essenciais para o registro do acompanhamento.
     if (!appointmentId || !patientId || !weight || !height || !subjective_notes || !objective_notes || !assessment_notes || !plan_notes) {
         return res.status(400).json({ success: false, message: "Todos os campos de acompanhamento (peso, altura e anotações SOAP) são obrigatórios." });
     }
@@ -1158,7 +1247,6 @@ export async function createConsultation(req, res) {
     try {
         await connection.beginTransaction();
 
-        // Busca os dados do agendamento original para garantir a consistência.
         const [appointmentRows] = await connection.query(
             'SELECT appointment_date FROM appointments WHERE id = ? AND nutriID = ?',
             [appointmentId, nutriId]
@@ -1170,7 +1258,6 @@ export async function createConsultation(req, res) {
         const appointment = appointmentRows[0];
         const bmi = calculateBMI(weight, height);
 
-        // Insere os dados da consulta na tabela de 'consultations'.
         const query = `
             INSERT INTO consultations (
                 appointment_id, patient_id, nutri_id, consultation_date, weight, height, bmi,
@@ -1190,7 +1277,6 @@ export async function createConsultation(req, res) {
 
         await connection.query(query, values);
 
-        // Atualiza o status do agendamento original para 'Realizada'.
         await connection.query(
             "UPDATE appointments SET status = 'Realizada' WHERE id = ?",
             [appointmentId]
@@ -1208,11 +1294,6 @@ export async function createConsultation(req, res) {
     }
 }
 
-/**
- * NOVA FUNÇÃO
- * Lida com a criação de um agendamento de retorno de forma independente.
- * Recebe os dados do paciente, a data e a hora escolhidas.
- */
 export async function scheduleReturnAppointment(req, res) {
     const nutriId = req.session.user.id;
     const { patientId, returnDate, returnTime } = req.body;
@@ -1223,7 +1304,6 @@ export async function scheduleReturnAppointment(req, res) {
 
     const connection = await pool.getConnection();
     try {
-        // Busca os dados mais recentes do paciente para preencher o agendamento.
         const [patientRows] = await connection.query(
             'SELECT nome, email, phone FROM pacientes WHERE id = ? AND nutriID = ?',
             [patientId, nutriId]
@@ -1235,14 +1315,13 @@ export async function scheduleReturnAppointment(req, res) {
         const patient = patientRows[0];
         const returnDateTime = `${returnDate} ${returnTime}:00`;
 
-        // Insere o novo agendamento de retorno com status 'Confirmada'.
         await connection.query(
             `INSERT INTO appointments (nutriID, patientID, patient_name, patient_email, patient_phone, service_type, duration, appointment_date, status, confirmation_date)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 nutriId, patientId,
                 patient.nome, patient.email, patient.phone,
-                'Consulta de Retorno', 45, // Duração padrão para retorno
+                'Consulta de Retorno', 45,
                 returnDateTime, 'Confirmada', new Date()
             ]
         );
@@ -1292,24 +1371,110 @@ export async function getConsultationHistory(req, res) {
     }
 }
 
-export async function getFoods(req, res) {
+export const getTodayAppointment = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT id, name, category FROM foods ORDER BY category, name');
+        const nutriId = req.session.user.id;
+        const { patientId } = req.params;
+        const today = new Date().toISOString().split('T')[0];
 
-        const foodLibrary = rows.reduce((acc, food) => {
-            if (!acc[food.category]) {
-                acc[food.category] = [];
-            }
-            acc[food.category].push({ id: food.id, name: food.name });
+        const [rows] = await pool.query(`
+            SELECT id, subjective_notes, objective_notes, assessment_notes, plan_notes 
+            FROM appointments 
+            WHERE nutritionist_id = ? AND patient_id = ? AND appointment_date = ? 
+            LIMIT 1
+        `, [nutriId, patientId, today]);
+
+        if (rows.length > 0) {
+            return res.status(200).json({ success: true, appointment: rows[0] });
+        }
+        res.status(200).json({ success: false, message: 'Nenhuma consulta hoje.' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const saveAppointmentNotes = async (req, res) => {
+    try {
+        const { appointmentId, subjective, objective, assessment, plan } = req.body;
+
+        await pool.query(`
+            UPDATE appointments 
+            SET subjective_notes = ?, objective_notes = ?, assessment_notes = ?, plan_notes = ?, status = 'Realizada'
+            WHERE id = ?
+        `, [subjective, objective, assessment, plan, appointmentId]);
+
+        res.status(200).json({ success: true, message: 'Prontuário atualizado com sucesso!' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const getAssessmentHistory = async (req, res) => {
+    try {
+        const { patientId } = req.params;
+
+        const query = `
+            SELECT 
+                created_at as date, weight, calc_body_fat as body_fat, 
+                calc_lean_mass as lean_mass, fold_chest, fold_midaxillary, 
+                fold_triceps, fold_subscapular, fold_abdominal, 
+                fold_suprailiac, fold_thigh
+            FROM anthropometric_assessments 
+            WHERE patient_id = ? 
+            ORDER BY created_at ASC
+        `;
+
+        const [rows] = await db.execute(query, [patientId]);
+
+        res.status(200).json({
+            success: true,
+            history: rows
+        });
+
+    } catch (error) {
+        console.error('Erro ao buscar histórico antropométrico:', error);
+        res.status(500).json({ success: false, error: 'Erro ao buscar dados no servidor.' });
+    }
+};
+
+export const getFoods = async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM foods ORDER BY category, name');
+
+        const library = rows.reduce((acc, food) => {
+            const cat = food.category || 'Outros';
+            if (!acc[cat]) acc[cat] = [];
+
+            acc[cat].push({
+                id: food.id,
+                name: food.name,
+                baseUnit: food.base_qty || 100,
+                kcal: parseFloat(food.kcal) || 0,
+                carbs: parseFloat(food.carbs) || 0,
+                protein: parseFloat(food.protein) || 0,
+                fat: parseFloat(food.fat) || 0,
+                fiber: parseFloat(food.fiber) || 0,
+                sodium: parseFloat(food.sodium) || 0,
+                calcium: parseFloat(food.calcium) || 0,
+                iron: parseFloat(food.iron) || 0,
+                zinc: parseFloat(food.zinc) || 0,
+                magnesium: parseFloat(food.magnesium) || 0,
+                potassium: parseFloat(food.potassium) || 0,
+                vitA: parseFloat(food.vitA) || 0,
+                vitC: parseFloat(food.vitC) || 0,
+                vitD: parseFloat(food.vitD) || 0,
+                vitE: parseFloat(food.vitE) || 0,
+                vitB12: parseFloat(food.vitB12) || 0
+            });
             return acc;
         }, {});
 
-        res.json({ success: true, library: foodLibrary });
+        res.status(200).json({ success: true, library });
     } catch (error) {
-        console.error("Erro ao buscar biblioteca de alimentos:", error);
-        res.status(500).json({ success: false, message: 'Erro interno ao buscar alimentos.' });
+        console.error('Erro ao buscar alimentos:', error);
+        res.status(500).json({ success: false, message: 'Erro ao carregar base de dados.' });
     }
-}
+};
 
 export async function saveMealPlan(req, res) {
     const nutriId = req.session.user.id;
@@ -1418,5 +1583,101 @@ export async function getMealPlan(req, res) {
     } catch (error) {
         console.error("Erro ao buscar plano alimentar:", error);
         res.status(500).json({ success: false, message: 'Erro interno no servidor.' });
+    }
+}
+
+function isTimeInBreak(timeStr, breaks) {
+    if (!breaks || !Array.isArray(breaks) || breaks.length === 0) return false;
+    const time = parseInt(timeStr.replace(':', ''));
+
+    for (const b of breaks) {
+        const start = parseInt(b.start.replace(':', ''));
+        const end = parseInt(b.end.replace(':', ''));
+
+        if (time >= start && time < end) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function overlapsWithBreak(slotStartStr, duration, breaks) {
+    if (!breaks || breaks.length === 0) return false;
+
+    const [h, m] = slotStartStr.split(':').map(Number);
+    const slotStartMin = h * 60 + m;
+    const slotEndMin = slotStartMin + duration;
+
+    for (const b of breaks) {
+        const [sh, sm] = b.start.split(':').map(Number);
+        const [eh, em] = b.end.split(':').map(Number);
+        const breakStartMin = sh * 60 + sm;
+        const breakEndMin = eh * 60 + em;
+
+        if (slotStartMin < breakEndMin && slotEndMin > breakStartMin) {
+            return true;
+        }
+    }
+    return false;
+}
+
+export async function getScheduleConfig(req, res) {
+    const nutriId = req.session.user.id;
+    try {
+        const [rows] = await pool.query(
+            'SELECT buffer_time, break_times FROM nutri_agenda WHERE nutriID = ?',
+            [nutriId]
+        );
+
+        if (rows.length > 0) {
+            const config = rows[0];
+            if (config.break_times && typeof config.break_times === 'string') {
+                config.breakTimes = JSON.parse(config.break_times);
+            } else {
+                config.breakTimes = config.break_times || [];
+            }
+            config.bufferTime = config.buffer_time;
+            delete config.break_times;
+            delete config.buffer_time;
+
+            res.json({ success: true, config });
+        } else {
+            res.json({ success: true, config: { bufferTime: 0, breakTimes: [] } });
+        }
+    } catch (error) {
+        console.error("Erro ao buscar config agenda:", error);
+        res.status(500).json({ success: false, message: 'Erro ao buscar configurações.' });
+    }
+}
+
+export async function updateScheduleConfig(req, res) {
+    const nutriId = req.session.user.id;
+    const { bufferTime, breakTimes } = req.body;
+
+    if (typeof bufferTime !== 'number') {
+        return res.status(400).json({ success: false, message: 'Dados inválidos.' });
+    }
+
+    try {
+        const breaksJson = JSON.stringify(breakTimes || []);
+
+        const [existing] = await pool.query('SELECT nutriID FROM nutri_agenda WHERE nutriID = ?', [nutriId]);
+
+        if (existing.length > 0) {
+            await pool.query(
+                'UPDATE nutri_agenda SET buffer_time = ?, break_times = ? WHERE nutriID = ?',
+                [bufferTime, breaksJson, nutriId]
+            );
+        } else {
+            await pool.query(
+                'INSERT INTO nutri_agenda (nutriID, startTime, endTime, duration, available_days, buffer_time, break_times) VALUES (?, "09:00", "18:00", 60, "[]", ?, ?)',
+                [nutriId, bufferTime, breaksJson]
+            );
+        }
+
+        res.json({ success: true, message: 'Configurações de agenda salvas com sucesso!' });
+    } catch (error) {
+        console.error("Erro ao salvar config agenda:", error);
+        res.status(500).json({ success: false, message: 'Erro ao salvar configurações.' });
     }
 }

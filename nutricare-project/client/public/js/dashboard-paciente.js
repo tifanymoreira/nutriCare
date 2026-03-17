@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- LÓGICA DO WIDGET DE WHATSAPP ---
     if (whatsappWidget && contactNutriModal) {
-        whatsappWidget.addEventListener('click', () => {  
+        whatsappWidget.addEventListener('click', () => {
             contactNutriModal.classList.add('is-visible');
         });
     }
@@ -37,12 +37,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- LÓGICA DO SININHO (FEATURE) ---
     if (notificationBell && notificationDropdown) {
         notificationBell.addEventListener('click', (e) => {
-            e.stopPropagation(); // Evita que o clique feche o dropdown imediatamente
+            e.stopPropagation();  
             notificationDropdown.classList.toggle('is-visible');
         });
 
-        // Fechar o dropdown ao clicar fora
-        document.addEventListener('click', (e) => {
+         document.addEventListener('click', (e) => {
             if (notificationDropdown.classList.contains('is-visible') && !notificationDropdown.contains(e.target)) {
                 notificationDropdown.classList.remove('is-visible');
             }
@@ -204,43 +203,45 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (emptyMessage) emptyMessage.textContent = 'Erro ao carregar. 😵';
         }
     }
-
-    // FUNÇÃO DE CONSOLIDAÇÃO DE DADOS PARA DASHBOARD
+ 
     async function getPatientDashboardOverview(user) {
-        await fetchAndRenderNotifications(user);
+        await fetchAndRenderNotifications(user); 
 
         try {
             const response = await fetch('/api/auth/patient/dashboard-overview');
             const result = await response.json();
 
             if (result.success) {
-                renderDashboardUI(result.data);
-                renderDetailedCharts(result.data.evolutionHistory, result.data.kpis);
+                 renderDashboardUI(result.data);
 
-                if (result.data.nextAppointment) {
+                 renderDetailedCharts(result.data.evolutionHistory, result.data.kpis);
+
+                 if (result.data.nextAppointment) {
                     const viewDetailsBtn = document.getElementById('viewDetailsBtn');
                     if (viewDetailsBtn) {
-                        viewDetailsBtn.addEventListener('click', () => {
+                         const newViewDetailsBtn = viewDetailsBtn.cloneNode(true);
+                        viewDetailsBtn.parentNode.replaceChild(newViewDetailsBtn, viewDetailsBtn);
+
+                        newViewDetailsBtn.addEventListener('click', () => {
                             showAppointmentDetailsModal(result.data.nextAppointment, result.data, 'dashboard');
                         });
                     }
                 }
             } else {
-                console.error('Erro ao carregar overview:', result.message);
+                console.error('Erro ao carregar overview do paciente:', result.message);
             }
         } catch (error) {
             console.error('Falha na comunicação com o servidor ao carregar dashboard:', error);
         }
     }
 
-    // FUNÇÃO PARA RENDERIZAR OS KPIs E NEXT APPOINTMENT
-    function renderDashboardUI(data) {
+     function renderDashboardUI(data) {
         const { kpis, nextAppointment } = data;
 
         const nextAppointmentCard = document.getElementById('nextAppointmentCard');
-        if (nextAppointmentCard) {
-            const emptyNextAppointmentCard = document.getElementById('emptyNextAppointmentCard');
+        const emptyNextAppointmentCard = document.getElementById('emptyNextAppointmentCard');
 
+        if (nextAppointmentCard) {
             if (nextAppointment) {
                 document.getElementById('nextAppointmentService').textContent = nextAppointment.service;
                 document.getElementById('nextAppointmentDate').textContent = nextAppointment.date;
@@ -252,19 +253,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (emptyNextAppointmentCard) emptyNextAppointmentCard.style.display = 'block';
             }
 
-            if (document.getElementById('currentWeight')) document.getElementById('currentWeight').textContent = `${kpis.currentWeight || '--'} kg`;
+             if (document.getElementById('currentWeight')) {
+                document.getElementById('currentWeight').textContent = kpis.currentWeight ? `${kpis.currentWeight} kg` : '-- kg';
+            }
 
             if (document.getElementById('currentBmi')) {
                 document.getElementById('currentBmi').textContent = kpis.bmi ? kpis.bmi : '--';
             }
 
-            const weightDifferenceElement = document.getElementById('weightDifference');
+             const weightDifferenceElement = document.getElementById('weightDifference');
             if (weightDifferenceElement) {
                 if (kpis.weightDifference !== null && kpis.weightDifference !== undefined) {
                     const diff = parseFloat(kpis.weightDifference);
                     const sign = diff > 0 ? '+' : '';
                     const icon = diff > 0 ? 'bi-arrow-up-right' : (diff < 0 ? 'bi-arrow-down-right' : 'bi-arrow-right');
-                    const colorClass = diff > 0 ? 'text-danger-red' : (diff < 0 ? 'text-primary-green' : 'text-muted');
+
+                     const colorClass = diff > 0 ? 'text-danger-red' : (diff < 0 ? 'text-primary-green' : 'text-muted');
 
                     weightDifferenceElement.innerHTML = `<i class="bi ${icon} me-1 ${colorClass}"></i> ${sign}${diff.toFixed(1)} kg`;
                 } else {
@@ -274,36 +278,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // FUNÇÃO PARA RENDERIZAR OS GRÁFICOS DETALHADOS
-    function renderDetailedCharts(evolutionHistory, kpis) {
+     function renderDetailedCharts(evolutionHistory, kpis) {
         const emptyChartState = document.getElementById('emptyChartState');
         const tabsContent = document.getElementById('evolutionTabsContent');
 
-        const fullHistory = [];
-        if (kpis.initialWeight) {
-            fullHistory.push({ consultation_date: new Date().toISOString(), weight: kpis.initialWeight });
-        }
-        fullHistory.push(...evolutionHistory);
-
-        const uniqueHistory = Array.from(new Set(fullHistory.map(a => a.consultation_date)))
-            .map(date => {
-                return fullHistory.find(a => a.consultation_date === date)
-            })
-            .sort((a, b) => new Date(a.consultation_date) - new Date(b.consultation_date));
-
-
-        if (uniqueHistory.length < 2) {
-            emptyChartState.style.display = 'block';
-            tabsContent.style.display = 'none';
+         if (!evolutionHistory || evolutionHistory.length < 2) {
+            if (emptyChartState) emptyChartState.style.display = 'block';
+            if (tabsContent) tabsContent.style.display = 'none';
             return;
         }
 
-        emptyChartState.style.display = 'none';
-        tabsContent.style.display = 'block';
+        if (emptyChartState) emptyChartState.style.display = 'none';
+        if (tabsContent) tabsContent.style.display = 'block';
 
-        const labels = uniqueHistory.map(item => new Date(item.consultation_date).toLocaleDateString('pt-BR'));
+         const uniqueHistory = evolutionHistory.sort((a, b) => new Date(a.consultation_date) - new Date(b.consultation_date));
 
-        const weightData = uniqueHistory.map(item => item.weight);
+         const labels = uniqueHistory.map(item => new Date(item.consultation_date).toLocaleDateString('pt-BR'));
+
+         const weightData = uniqueHistory.map(item => item.weight);
         const weightCtx = document.getElementById('weightChart').getContext('2d');
         if (window.myWeightChart) window.myWeightChart.destroy();
         window.myWeightChart = new Chart(weightCtx, {
@@ -314,15 +306,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                     label: 'Peso (kg)',
                     data: weightData,
                     borderColor: '#2a9d8f',
-                    backgroundColor: 'rgba(42, 157, 143, 0.1)',
+                    backgroundColor: 'rgba(42, 157, 143, 0.2)',
                     fill: true,
-                    tension: 0.3
+                    tension: 0.4,  
+                    pointRadius: 5,
+                    pointBackgroundColor: '#2a9d8f'
                 }]
             },
             options: { responsive: true, maintainAspectRatio: false }
         });
 
-        const fatData = uniqueHistory.map(item => item.body_fat_percentage);
+         const fatData = uniqueHistory.map(item => item.body_fat_percentage || null); // Usa null para não quebrar a linha se não houver medição
         const fatCtx = document.getElementById('fatChart').getContext('2d');
         if (window.myFatChart) window.myFatChart.destroy();
         window.myFatChart = new Chart(fatCtx, {
@@ -333,18 +327,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                     label: '% de Gordura',
                     data: fatData,
                     borderColor: '#f4a261',
-                    backgroundColor: 'rgba(244, 162, 97, 0.1)',
+                    backgroundColor: 'rgba(244, 162, 97, 0.2)',
                     fill: true,
-                    tension: 0.3
+                    tension: 0.4,
+                    spanGaps: true  
                 }]
             },
             options: { responsive: true, maintainAspectRatio: false }
         });
 
-        const measuresData = {
-            waist: uniqueHistory.map(item => item.circum_waist),
-            abdomen: uniqueHistory.map(item => item.circum_abdomen),
-            hip: uniqueHistory.map(item => item.circum_hip),
+         const measuresData = {
+            waist: uniqueHistory.map(item => item.circum_waist || null),
+            abdomen: uniqueHistory.map(item => item.circum_abdomen || null),
+            hip: uniqueHistory.map(item => item.circum_hip || null),
         };
         const measuresCtx = document.getElementById('measuresChart').getContext('2d');
         if (window.myMeasuresChart) window.myMeasuresChart.destroy();
@@ -357,19 +352,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                         label: 'Cintura (cm)',
                         data: measuresData.waist,
                         borderColor: '#e76f51',
-                        tension: 0.3
+                        tension: 0.4,
+                        spanGaps: true
                     },
                     {
-                        label: 'Abdômen (cm)',
+                        label: 'Abdómen (cm)',
                         data: measuresData.abdomen,
                         borderColor: '#264653',
-                        tension: 0.3
+                        tension: 0.4,
+                        spanGaps: true
                     },
                     {
-                        label: 'Quadril (cm)',
+                        label: 'Anca/Quadril (cm)',
                         data: measuresData.hip,
                         borderColor: '#e9c46a',
-                        tension: 0.3
+                        tension: 0.4,
+                        spanGaps: true
                     }
                 ]
             },

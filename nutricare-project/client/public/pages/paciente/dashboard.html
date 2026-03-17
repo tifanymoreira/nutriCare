@@ -61,7 +61,6 @@
             </header>
 
             <div class="row g-4">
-
                 <div class="col-lg-12">
                     <div id="nextAppointmentCard" class="card data-card next-appointment-card" style="display: none;">
                         <div class="card-body d-flex align-items-center justify-content-between p-4">
@@ -204,6 +203,19 @@
                     Cancelar</button>
                 <button id="modalRescheduleBtn" class="btn btn-primary-custom w-100"><i
                         class="bi bi-arrow-repeat me-1"></i> Reagendar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="actionConfirmModal">
+        <div class="modal-content pro-modal text-center">
+            <button class="modal-close" id="closeActionConfirmModal">&times;</button>
+            <div class="modal-icon" style="background-color: rgba(231, 111, 81, 0.1); color: var(--danger-red);"><i class="bi bi-exclamation-triangle-fill"></i></div>
+            <h4 class="modal-title-pro" id="modalActionTitle">Confirmar Ação</h4>
+            <p class="modal-subtitle-pro" id="modalActionMessage">Tem certeza?</p>
+            <div class="d-flex justify-content-center gap-3 mt-4">
+                <button id="btnCancelAction" class="btn btn-secondary w-100">Não, voltar</button>
+                <button id="btnConfirmAction" class="btn btn-primary-custom w-100">Sim, confirmar</button>
             </div>
         </div>
     </div>

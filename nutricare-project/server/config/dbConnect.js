@@ -15,7 +15,7 @@ const dbConfig = {
 
 const pool = mysql.createPool(dbConfig);
 
-async function testConnection() {
+async function db() {
   let connection;
   try {
     connection = await pool.getConnection();
@@ -28,4 +28,4 @@ async function testConnection() {
   }
 }
 
-export { pool, testConnection };
+export { pool, db };

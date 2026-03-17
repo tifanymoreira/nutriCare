@@ -1,146 +1,179 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minhas Métricas - NutriCare</title>
+    <title>Métricas - NutriCare Premium</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="../../css/style.css">
+
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #f8f9fa; }
+        .metrics-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        
+        /* Filtro de Período Premium */
+        .period-filters { background: #fff; padding: 0.35rem; border-radius: 50rem; box-shadow: 0 2px 10px rgba(0,0,0,0.03); display: inline-flex; border: 1px solid #e9ecef; }
+        .period-filters button { background: transparent; border: none; color: #6c757d; font-weight: 600; font-size: 0.85rem; padding: 0.5rem 1.25rem; border-radius: 50rem; transition: all 0.3s ease; }
+        .period-filters button:hover { color: var(--primary-color, #2a9d8f); }
+        .period-filters button.active { background: var(--primary-color, #2a9d8f); color: #fff; box-shadow: 0 4px 8px rgba(42, 157, 143, 0.25); }
+
+        /* KPI Cards */
+        .kpi-card-pro { background: #fff; border-radius: 16px; padding: 1.5rem; border: 1px solid #e9ecef; box-shadow: 0 4px 15px rgba(0,0,0,0.02); display: flex; align-items: flex-start; justify-content: space-between; transition: transform 0.3s ease; }
+        .kpi-card-pro:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.05); }
+        .kpi-info h6 { color: #868e96; font-size: 0.85rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 0.5rem; }
+        .kpi-info h3 { color: #212529; font-weight: 700; font-size: 1.8rem; margin-bottom: 0.5rem; }
+        .kpi-trend { font-size: 0.8rem; font-weight: 600; padding: 0.25rem 0.5rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem; }
+        .trend-up { background: rgba(32, 201, 151, 0.1); color: #20c997; }
+        .trend-down { background: rgba(220, 53, 69, 0.1); color: #dc3545; }
+        
+        .kpi-icon-wrapper { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+        .icon-revenue { background: rgba(42, 157, 143, 0.1); color: #2a9d8f; }
+        .icon-patients { background: rgba(244, 162, 97, 0.1); color: #f4a261; }
+        .icon-retention { background: rgba(233, 196, 106, 0.1); color: #e9c46a; }
+        .icon-appointments { background: rgba(38, 70, 83, 0.1); color: #264653; }
+
+        /* Chart Cards */
+        .chart-card-pro { background: #fff; border-radius: 16px; padding: 1.5rem; border: 1px solid #e9ecef; box-shadow: 0 4px 15px rgba(0,0,0,0.02); height: 100%; display: flex; flex-direction: column; }
+        .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .chart-title { font-weight: 700; color: #343a40; margin: 0; font-size: 1.1rem; }
+        .chart-container { flex: 1; position: relative; min-height: 250px; width: 100%; }
+        .main-chart-container { min-height: 350px; }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
     <div class="dashboard-wrapper">
         <aside class="dashboard-sidebar">
-            <div class="sidebar-header">
-                <a class="navbar-brand" href="#">
-                    <i class="bi bi-heart-pulse-fill"></i> NutriCare
-                </a>
-            </div>
+            <div class="sidebar-header"><a class="navbar-brand" href="#"><i class="bi bi-heart-pulse-fill"></i> NutriCare</a></div>
             <nav class="sidebar-nav">
                 <ul class="list-unstyled">
-                    <li class="nav-item">
-                        <a href="dashboard.html" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Visão Geral</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="patientsList.html" class="nav-link"><i class="bi bi-people-fill"></i> Meus Pacientes</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="nutriAgenda.html" class="nav-link"><i class="bi bi-calendar2-week-fill"></i> Minha Agenda</a>
-                    </li>
-                    <li class="nav-item active">
-                        <a href="nutriMetrics.html" class="nav-link"><i class="bi bi-graph-up-arrow"></i> Minhas Métricas</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="nutriConfig.html" class="nav-link"><i class="bi bi-person-fill-gear"></i> Meus Detalhes</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="nutriInvoicing.html" class="nav-link"><i class="bi bi-cash-stack"></i> Faturamento</a>
-                    </li>
+                    <li class="nav-item"><a href="dashboard.html" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Visão Geral</a></li>
+                    <li class="nav-item"><a href="patientsList.html" class="nav-link"><i class="bi bi-people-fill"></i> Meus Pacientes</a></li>
+                    <li class="nav-item"><a href="nutriAgenda.html" class="nav-link"><i class="bi bi-calendar2-week-fill"></i> Minha Agenda</a></li>
+                    <li class="nav-item active"><a href="nutriMetrics.html" class="nav-link"><i class="bi bi-graph-up-arrow"></i> Minhas Métricas</a></li>
+                    <li class="nav-item"><a href="nutriConfig.html" class="nav-link"><i class="bi bi-person-fill-gear"></i> Meus Detalhes</a></li>
+                    <li class="nav-item"><a href="nutriInvoicing.html" class="nav-link"><i class="bi bi-cash-stack"></i> Faturamento</a></li>
                 </ul>
             </nav>
-            <div class="sidebar-footer">
-                <button id="logoutBtn" class="btn btn-logout w-100">
-                    <i class="bi bi-box-arrow-left"></i> Sair
-                </button>
-            </div>
+            <div class="sidebar-footer"><button id="logoutBtn" class="btn btn-logout w-100"><i class="bi bi-box-arrow-left"></i> Sair</button></div>
         </aside>
 
-        <main class="dashboard-main">
-            <header class="dashboard-content-header">
-                <h1>Minhas Métricas</h1>
-                <div class="btn-group filter-buttons" id="time-filter-buttons" role="group">
-                    <button type="button" class="btn btn-outline-secondary active" data-period="30">Últimos 30 dias</button>
-                    <button type="button" class="btn btn-outline-secondary" data-period="180">Últimos 6 meses</button>
-                    <button type="button" class="btn btn-outline-secondary" data-period="365">Este Ano</button>
+        <main class="dashboard-main p-4 p-md-5">
+            
+            <div class="metrics-header">
+                <div>
+                    <h1 class="fw-bold text-dark mb-1">Métricas de Desempenho</h1>
+                    <p class="text-muted mb-0">Acompanhe a saúde financeira e a retenção do seu consultório.</p>
                 </div>
-            </header>
+                
+                <div class="period-filters" id="time-filter-buttons">
+                    <button data-period="7">7 dias</button>
+                    <button data-period="30" class="active">30 dias</button>
+                    <button data-period="180">6 meses</button>
+                    <button data-period="365">1 ano</button>
+                </div>
+            </div>
 
-            <div class="row g-4">
-                <div class="col-lg-3 col-md-6">
-                    <div class="kpi-card">
-                        <div class="kpi-icon icon-revenue"><i class="bi bi-cash-stack"></i></div>
-                        <div class="kpi-info">
-                            <span class="kpi-value" id="kpi-revenue">R$ 0,00</span>
-                            <span class="kpi-label">Faturamento Total</span>
+            <div id="metricsLoading" class="text-center py-5" style="display: none;">
+                <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+                <p class="mt-3 text-muted fw-medium">Analisando dados...</p>
+            </div>
+
+            <div id="metricsContent">
+                <div class="row g-4 mb-4">
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="kpi-card-pro">
+                            <div class="kpi-info">
+                                <h6>Faturamento Bruto</h6>
+                                <h3 id="kpi-revenue">R$ 0,00</h3>
+                                <span class="kpi-trend trend-up"><i class="bi bi-arrow-up-right"></i> +12% vs anterior</span>
+                            </div>
+                            <div class="kpi-icon-wrapper icon-revenue"><i class="bi bi-currency-dollar"></i></div>
                         </div>
                     </div>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="kpi-card">
-                        <div class="kpi-icon icon-patients"><i class="bi bi-people-fill"></i></div>
-                        <div class="kpi-info">
-                            <span class="kpi-value" id="kpi-patients">0</span>
-                            <span class="kpi-label">Pacientes Ativos</span>
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="kpi-card-pro">
+                            <div class="kpi-info">
+                                <h6>Pacientes Atendidos</h6>
+                                <h3 id="kpi-patients">0</h3>
+                                <span class="kpi-trend trend-up"><i class="bi bi-arrow-up-right"></i> +5% vs anterior</span>
+                            </div>
+                            <div class="kpi-icon-wrapper icon-patients"><i class="bi bi-people-fill"></i></div>
                         </div>
                     </div>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="kpi-card">
-                        <div class="kpi-icon icon-rating"><i class="bi bi-arrow-repeat"></i></div>
-                        <div class="kpi-info">
-                            <span class="kpi-value" id="kpi-retention">0%</span>
-                            <span class="kpi-label">Taxa de Retenção</span>
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="kpi-card-pro">
+                            <div class="kpi-info">
+                                <h6>Taxa de Retenção</h6>
+                                <h3 id="kpi-retention">0%</h3>
+                                <span class="kpi-trend trend-up"><i class="bi bi-arrow-up-right"></i> +2% vs anterior</span>
+                            </div>
+                            <div class="kpi-icon-wrapper icon-retention"><i class="bi bi-arrow-repeat"></i></div>
                         </div>
                     </div>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="kpi-card">
-                        <div class="kpi-icon icon-appointments"><i class="bi bi-calendar-check-fill"></i></div>
-                        <div class="kpi-info">
-                            <span class="kpi-value" id="kpi-avg-appointments">0</span>
-                            <span class="kpi-label">Média Consultas/Mês</span>
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="kpi-card-pro">
+                            <div class="kpi-info">
+                                <h6>Total de Consultas</h6>
+                                <h3 id="kpi-avg-appointments">0</h3>
+                                <span class="kpi-trend trend-down"><i class="bi bi-arrow-down-right"></i> -1% vs anterior</span>
+                            </div>
+                            <div class="kpi-icon-wrapper icon-appointments"><i class="bi bi-calendar-check-fill"></i></div>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-lg-8">
-                    <div class="card data-card h-100">
-                        <div class="card-header">
-                            <h5 class="card-title">Evolução de Faturamento e Pacientes</h5>
-                        </div>
-                        <div class="card-body">
-                           <canvas id="revenuePatientsChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-4">
-                    <div class="card data-card h-100">
-                        <div class="card-header">
-                            <h5 class="card-title">Distribuição de Consultas</h5>
-                        </div>
-                        <div class="card-body d-flex align-items-center justify-content-center">
-                            <canvas id="appointmentsTypeChart"></canvas>
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="chart-card-pro">
+                            <div class="chart-header">
+                                <h5 class="chart-title"><i class="bi bi-graph-up text-primary me-2"></i> Evolução de Faturamento e Pacientes</h5>
+                                <button class="btn btn-sm btn-outline-light text-muted border"><i class="bi bi-download"></i> Relatório</button>
+                            </div>
+                            <div class="chart-container main-chart-container">
+                                <canvas id="revenuePatientsChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
-                 <div class="col-12">
-                    <div class="card data-card">
-                        <div class="card-header">
-                            <h5 class="card-title">Principais Objetivos dos Pacientes</h5>
+
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="chart-card-pro">
+                            <div class="chart-header">
+                                <h5 class="chart-title"><i class="bi bi-pie-chart-fill text-warning me-2"></i> Distribuição de Consultas</h5>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="appointmentsTypeChart"></canvas>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <canvas id="patientGoalsChart"></canvas>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="chart-card-pro">
+                            <div class="chart-header">
+                                <h5 class="chart-title"><i class="bi bi-bar-chart-fill text-info me-2"></i> Principais Objetivos (Anamnese)</h5>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="patientGoalsChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+            
+            <div class="modal-backdrop" id="logoutModal"><div class="modal-content text-center"><button class="modal-close" id="closeLogoutModal">&times;</button><h2 class="auth-title">Sair do sistema?</h2><div class="modal-actions d-flex justify-content-center gap-3 mt-4"><button id="btnNo" class="btn btn-secondary w-100">Não</button><button id="btnYes" class="btn btn-primary-custom w-100">Sim</button></div></div></div>
+
         </main>
     </div>
-    
-    <div class="modal-backdrop" id="logoutModal">
-        <div class="modal-content text-center">
-            <button class="modal-close" id="closeLogoutModal">&times;</button>
-            <h2 class="auth-title">Tem certeza que deseja sair?</h2>
-            <div class="modal-actions d-flex justify-content-center gap-3 mt-4">
-                <button id="btnNo" class="btn btn-secondary w-100">Não</button>
-                <button id="btnYes" class="btn btn-primary-custom w-100">Sim</button>
-            </div>
-        </div>
-    </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/scrollreveal"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module" src="../../js/dashboard-nutricionista.js"></script>
 </body>
+
 </html>

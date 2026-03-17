@@ -72,6 +72,21 @@ body {
     gap: 8px;
 }
 
+.nutriConfig {
+    background: linear-gradient(45deg, var(--secondary-orange), var(--danger-red));
+    border: none;
+    padding: 12px 30px;
+    font-weight: 600;
+    color: var(--white);
+    border-radius: 50px;
+    transition: var(--transition);
+    box-shadow: 0 4px 15px rgba(244, 162, 97, 0.4);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 2.5cm;
+}
+
 .btn-primary-custom:hover,
 .btn-primary-custom:focus {
     transform: translateY(-5px);
@@ -334,7 +349,8 @@ body {
     display: flex;
     width: 100%;
     height: 100vh;
-    overflow: hidden; /* Garante que não haja rolagem na página inteira */
+    overflow: hidden;
+    /* Garante que não haja rolagem na página inteira */
 }
 
 .auth-branding-column {
@@ -355,7 +371,8 @@ body {
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    overflow: hidden; /* Garante que a coluna do formulário não tenha rolagem */
+    overflow: hidden;
+    /* Garante que a coluna do formulário não tenha rolagem */
 }
 
 .auth-branding-column .navbar-brand {
@@ -414,23 +431,29 @@ body {
 .auth-title {
     font-weight: 700;
     color: var(--dark-charcoal);
-    font-size: 1.6rem; /* Reduzido */
-    margin-bottom: 0.25rem; /* Reduzido */
+    font-size: 1.6rem;
+    /* Reduzido */
+    margin-bottom: 0.25rem;
+    /* Reduzido */
 }
 
 .auth-subtitle {
     color: #6c757d;
-    margin-bottom: 1.25rem; /* Reduzido */
-    font-size: 0.9rem; /* Reduzido */
+    margin-bottom: 1.25rem;
+    /* Reduzido */
+    font-size: 0.9rem;
+    /* Reduzido */
 }
 
 .form-control {
     background-color: #f1f5f9;
     border: 2px solid transparent;
     border-radius: var(--border-radius);
-    padding: 0.6rem 1rem; /* Reduzido */
+    padding: 0.6rem 1rem;
+    /* Reduzido */
     transition: var(--transition);
-    font-size: 0.9rem; /* Reduzido */
+    font-size: 0.9rem;
+    /* Reduzido */
 }
 
 .form-control:focus {
@@ -440,17 +463,22 @@ body {
 }
 
 .auth-card-back .form-label {
-    margin-bottom: 0.2rem; /* Reduzido */
-    font-size: 0.85rem; /* Reduzido */
+    margin-bottom: 0.2rem;
+    /* Reduzido */
+    font-size: 0.85rem;
+    /* Reduzido */
 }
 
 .auth-card-back .mb-3 {
-    margin-bottom: 0.75rem !important; /* Reduzido */
+    margin-bottom: 0.75rem !important;
+    /* Reduzido */
 }
 
 #registerForm .btn-primary-custom {
-    padding: 10px 30px; /* Reduzido */
-    margin-top: 0.5rem; /* Adicionado */
+    padding: 10px 30px;
+    /* Reduzido */
+    margin-top: 0.5rem;
+    /* Adicionado */
 }
 
 .form-switch-link {
@@ -465,15 +493,18 @@ body {
 }
 
 .form-switch-text {
-    margin-top: 1rem !important; /* Reduzido */
+    margin-top: 1rem !important;
+    /* Reduzido */
 }
 
 .form-message-container {
     padding: 0.75rem 1.25rem;
     border-radius: var(--border-radius);
-    font-size: 0.85rem; /* Reduzido */
+    font-size: 0.85rem;
+    /* Reduzido */
     font-weight: 500;
-    min-height: 45px; /* Reduzido */
+    min-height: 45px;
+    /* Reduzido */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -504,9 +535,11 @@ body {
 
 #password-requirements .requirement {
     color: var(--danger-red);
-    font-size: 0.75rem; /* Reduzido */
+    font-size: 0.75rem;
+    /* Reduzido */
     transition: color 0.3s ease;
-    line-height: 1.3; /* Reduzido */
+    line-height: 1.3;
+    /* Reduzido */
 }
 
 #password-requirements .requirement.valid {
@@ -514,7 +547,8 @@ body {
 }
 
 #password-requirements .requirement i {
-    margin-right: 0.4rem; /* Reduzido */
+    margin-right: 0.4rem;
+    /* Reduzido */
 }
 
 
@@ -776,6 +810,7 @@ body {
     justify-content: center;
     margin-bottom: 1rem;
 }
+
 .month-display {
     font-weight: 600;
     font-size: 1.1rem;
@@ -783,6 +818,7 @@ body {
     text-align: center;
     flex-grow: 1;
 }
+
 .month-navigator-btn {
     background: #f1f5f9;
     border-radius: 50%;
@@ -791,24 +827,29 @@ body {
     border: none;
     transition: var(--transition);
 }
+
 .month-navigator-btn:hover {
     background-color: #e2e8f0;
 }
 
-.calendar-pro-weekdays, .calendar-pro-grid {
+.calendar-pro-weekdays,
+.calendar-pro-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     text-align: center;
 }
+
 .calendar-pro-weekdays {
     font-weight: 600;
     font-size: 0.8rem;
     color: var(--text-secondary);
     margin-bottom: 0.5rem;
 }
+
 .calendar-pro-grid {
     gap: 0.5rem;
 }
+
 .calendar-pro-day {
     padding: 0.5rem 0;
     border-radius: var(--border-radius);
@@ -816,48 +857,60 @@ body {
     transition: var(--transition);
     border: 2px solid transparent;
 }
+
 .calendar-pro-day:not(.other-month):hover {
     background-color: #e9f9f7;
 }
+
 .calendar-pro-day.other-month {
     color: #cbd5e1;
     cursor: not-allowed;
 }
+
 .calendar-pro-day.is-today {
     font-weight: 700;
     color: var(--primary-green);
     border-color: var(--primary-green);
 }
+
 .calendar-pro-day.selected {
     background-color: var(--primary-green);
     color: var(--white) !important;
     font-weight: 700;
     box-shadow: var(--shadow-sm);
 }
+
 .pro-settings-panel {
     background-color: #f8f9fa;
     padding: 1.5rem;
     border-radius: var(--border-radius);
     height: 100%;
 }
+
 .pro-form-label {
     font-weight: 600;
     color: var(--dark-charcoal);
     margin-bottom: 1rem;
     display: block;
 }
+
 .form-label-sm {
     font-size: 0.85rem;
     margin-bottom: 0.25rem !important;
     color: var(--text-secondary);
 }
+
 .duration-selector {
     display: flex;
     background-color: #e9ecef;
     border-radius: 50px;
     padding: 4px;
 }
-.duration-selector input { display: none; }
+
+.duration-selector input {
+    display: none;
+}
+
 .duration-selector label {
     flex: 1;
     text-align: center;
@@ -867,6 +920,7 @@ body {
     font-weight: 500;
     transition: var(--transition);
 }
+
 .duration-selector input:checked+label {
     background-color: var(--white);
     color: var(--primary-green);
@@ -922,7 +976,8 @@ body {
 .timeline-slot {
     display: flex;
     position: relative;
-    min-height: 60px; /* 1 hora = 60px */
+    min-height: 60px;
+    /* 1 hora = 60px */
 }
 
 .timeline-time {
@@ -933,7 +988,8 @@ body {
     font-size: 0.8rem;
     color: var(--text-secondary);
     position: relative;
-    top: -8px; /* Alinha o texto com a linha */
+    top: -8px;
+    /* Alinha o texto com a linha */
 }
 
 .timeline-line {
@@ -953,7 +1009,7 @@ body {
     box-shadow: var(--shadow-sm);
     transition: var(--transition);
     cursor: pointer;
-    
+
     /* Novo: Flex container para alinhar nome e ações */
     display: flex;
     justify-content: space-between;
@@ -969,6 +1025,7 @@ body {
     font-weight: 600;
     color: var(--dark-charcoal);
 }
+
 .appointment-details-pro {
     font-size: 0.85rem;
     color: var(--text-secondary);
@@ -994,6 +1051,7 @@ body {
 .appointment-actions-pro .btn-icon:hover {
     background-color: #e2e8f0;
 }
+
 /* Estilo específico para o ícone do WhatsApp */
 .appointment-actions-pro .text-success {
     color: #25D366 !important;
@@ -1012,6 +1070,7 @@ body {
     gap: 1.5rem;
     transition: var(--transition);
 }
+
 .kpi-card:hover {
     transform: translateY(-5px);
     box-shadow: var(--shadow-md);
@@ -1036,6 +1095,7 @@ body {
     display: block;
     line-height: 1.2;
 }
+
 .kpi-info .kpi-label {
     font-size: 0.85rem;
     color: #64748b;
@@ -1054,9 +1114,18 @@ body {
     letter-spacing: 0.5px;
     color: var(--white);
 }
-.status-paid { background-color: var(--primary-green); }
-.status-pending { background-color: var(--secondary-orange); }
-.status-overdue { background-color: var(--danger-red); }
+
+.status-paid {
+    background-color: var(--primary-green);
+}
+
+.status-pending {
+    background-color: var(--secondary-orange);
+}
+
+.status-overdue {
+    background-color: var(--danger-red);
+}
 
 #invoiceItemsContainer .invoice-item {
     display: flex;
@@ -1064,6 +1133,7 @@ body {
     align-items: center;
     margin-bottom: 1rem;
 }
+
 #invoiceItemsContainer .invoice-item .form-control {
     background-color: var(--white);
 }
@@ -1079,28 +1149,41 @@ body {
     gap: 1.5rem;
     transition: background-color 0.2s;
 }
+
 .appointment-item:hover {
     background-color: #f8f9fa;
 }
+
 .appointment-item-time {
     font-weight: 600;
     font-size: 1.1rem;
     color: var(--dark-charcoal);
     flex-basis: 80px;
 }
+
 .appointment-item-divider {
     width: 4px;
     height: 40px;
     border-radius: 2px;
 }
-.appointment-item-divider.type-primeira { background-color: var(--primary-green); }
-.appointment-item-divider.type-retorno { background-color: var(--secondary-orange); }
-.appointment-item-divider.type-online { background-color: var(--danger-red); }
+
+.appointment-item-divider.type-primeira {
+    background-color: var(--primary-green);
+}
+
+.appointment-item-divider.type-retorno {
+    background-color: var(--secondary-orange);
+}
+
+.appointment-item-divider.type-online {
+    background-color: var(--danger-red);
+}
 
 .appointment-item-details .patient-name {
     font-weight: 500;
     color: var(--dark-charcoal);
 }
+
 .appointment-item-details .appointment-type {
     font-size: 0.85rem;
     color: var(--text-secondary);
@@ -1113,9 +1196,11 @@ body {
     padding: 0.75rem;
     border-radius: var(--border-radius);
 }
+
 .attention-item:hover {
     background-color: #f8f9fa;
 }
+
 .attention-icon {
     width: 38px;
     height: 38px;
@@ -1127,14 +1212,21 @@ body {
     color: var(--white);
     flex-shrink: 0;
 }
-.attention-icon.icon-birthday { background-color: #fdc23e; }
-.attention-icon.icon-return { background-color: var(--danger-red); }
+
+.attention-icon.icon-birthday {
+    background-color: #fdc23e;
+}
+
+.attention-icon.icon-return {
+    background-color: var(--danger-red);
+}
 
 .attention-details .attention-text {
     font-size: 0.9rem;
     color: var(--dark-charcoal);
     line-height: 1.4;
 }
+
 .attention-details .attention-subtext {
     font-size: 0.8rem;
     color: var(--text-secondary);
@@ -1179,7 +1271,8 @@ body {
 
 .editor-container {
     display: flex;
-    height: calc(100vh - 4rem); /* Altura total menos o padding do main */
+    height: calc(100vh - 4rem);
+    /* Altura total menos o padding do main */
     padding: 0;
     gap: 1.5rem;
     overflow: hidden;
@@ -1251,15 +1344,26 @@ body {
     font-weight: 600;
 }
 
-.template-list { padding: 1rem; }
+.template-list {
+    padding: 1rem;
+}
+
 .template-item {
     padding: 1rem;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     margin-bottom: 1rem;
 }
-.template-item h6 { font-weight: 700; }
-.template-item p { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem; }
+
+.template-item h6 {
+    font-weight: 700;
+}
+
+.template-item p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+}
 
 
 .editor-main {
@@ -1276,8 +1380,16 @@ body {
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
 }
-.editor-header h1 { font-size: 1.5rem; margin-bottom: 0; font-weight: 700; }
-.editor-header strong { color: var(--secondary-orange); }
+
+.editor-header h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0;
+    font-weight: 700;
+}
+
+.editor-header strong {
+    color: var(--secondary-orange);
+}
 
 .meal-plan-canvas {
     flex-grow: 1;
@@ -1293,6 +1405,7 @@ body {
     margin-bottom: 1.5rem;
     transition: var(--transition);
 }
+
 .meal-card.drag-over {
     border: 2px dashed var(--primary-green);
     box-shadow: var(--shadow-md);
@@ -1306,12 +1419,16 @@ body {
     border-bottom: 1px solid var(--border-color);
     background-color: #f8f9fa;
 }
+
 .meal-card-header .meal-title {
     font-weight: 700;
     color: var(--dark-charcoal);
     cursor: text;
 }
-.meal-card-header .meal-title:focus { outline: none; }
+
+.meal-card-header .meal-title:focus {
+    outline: none;
+}
 
 .meal-card-body {
     padding: 1.25rem;
@@ -1328,7 +1445,10 @@ body {
     background-color: #f8f9fa;
 }
 
-.meal-food-item .food-name { font-weight: 500; }
+.meal-food-item .food-name {
+    font-weight: 500;
+}
+
 .meal-food-item .food-quantity input {
     width: 80px;
     text-align: right;
@@ -1336,6 +1456,7 @@ body {
     border-radius: 6px;
     padding: 0.25rem 0.5rem;
 }
+
 /* =================================================================== */
 /* ======================== DASH PACIENTE ====================== */
 /* =================================================================== */
@@ -1515,13 +1636,15 @@ body {
 
 .agenda-container {
     display: flex;
-    min-height: 100vh; /* Alterado de height para min-height */
+    min-height: 100vh;
+    /* Alterado de height para min-height */
     background-color: var(--agenda-bg);
 }
 
 .agenda-sidebar {
     width: 320px;
-    flex-shrink: 0; /* Impede que a sidebar encolha */
+    flex-shrink: 0;
+    /* Impede que a sidebar encolha */
     background: transparent;
     padding: 1.5rem;
     display: flex;
@@ -1534,7 +1657,8 @@ body {
     padding: 1.5rem 2rem;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Evita que o conteúdo principal cause scroll na página inteira */
+    overflow: hidden;
+    /* Evita que o conteúdo principal cause scroll na página inteira */
 }
 
 .card-elevated {
@@ -1685,7 +1809,8 @@ body {
     border-radius: var(--border-radius);
     box-shadow: var(--card-shadow);
     overflow-y: auto;
-    flex-grow: 1; /* Permite que o conteúdo principal ocupe o espaço restante */
+    flex-grow: 1;
+    /* Permite que o conteúdo principal ocupe o espaço restante */
 }
 
 .day-view-timeline {
@@ -2010,6 +2135,7 @@ body {
     border-right: 1px solid var(--border-color);
     position: relative;
 }
+
 .day-column:last-child {
     border-right: none;
 }
@@ -2020,18 +2146,22 @@ body {
     padding: 0.5rem;
     border-bottom: 1px solid var(--border-color);
 }
+
 .day-header.today {
     background-color: var(--pro-primary-light);
 }
+
 .day-header .day-name {
     font-size: 0.7rem;
     text-transform: uppercase;
     color: var(--text-secondary);
 }
+
 .day-header .day-number {
     font-weight: 600;
     color: var(--pro-text-primary);
 }
+
 .day-header.today .day-number {
     background-color: var(--pro-primary);
     color: var(--white);
@@ -2061,6 +2191,7 @@ body {
     cursor: pointer;
     transition: var(--pro-transition);
 }
+
 .appointment-block:hover {
     background-color: var(--pro-primary);
     color: white;
@@ -2068,8 +2199,13 @@ body {
     z-index: 10;
 }
 
-.appointment-title { font-weight: 600; }
-.appointment-time { font-size: 0.75rem; }
+.appointment-title {
+    font-weight: 600;
+}
+
+.appointment-time {
+    font-size: 0.75rem;
+}
 
 /* =================================================================== */
 /* ============= ESTILOS ADICIONAIS PARA DASHBOARD PACIENTE ========== */
@@ -2079,13 +2215,16 @@ body {
 .text-danger-red {
     color: var(--danger-red) !important;
 }
+
 .text-primary-green {
     color: var(--primary-green) !important;
 }
+
 .text-primary-custom {
     /* Usando a cor de destaque da marca (o secundário laranja/vermelho do botão) para ícones */
     color: var(--secondary-orange) !important;
 }
+
 .text-secondary-orange {
     color: var(--secondary-orange) !important;
 }
@@ -2094,20 +2233,23 @@ body {
 /* Destaque para a próxima consulta */
 .next-appointment-card {
     border-left: none;
-    background: linear-gradient(90deg, #e9f9f7 0%, var(--white) 30%); /* Fundo mais suave */
+    background: linear-gradient(90deg, #e9f9f7 0%, var(--white) 30%);
+    /* Fundo mais suave */
     border: 1px solid rgba(42, 157, 143, 0.2);
     box-shadow: 0 4px 20px rgba(42, 157, 143, 0.1);
 }
 
 .next-appointment-card:hover {
-    transform: none; /* Não desliza para evitar distração no destaque */
+    transform: none;
+    /* Não desliza para evitar distração no destaque */
     box-shadow: 0 4px 25px rgba(42, 157, 143, 0.2);
 }
 
 /* Ajuste no stat-card para melhor leitura da diferença de peso */
 .stat-card .stat-number.text-danger-red,
 .stat-card .stat-number.text-primary-green {
-    font-size: 1.7rem; /* Levemente menor para caber melhor o texto com ícone */
+    font-size: 1.7rem;
+    /* Levemente menor para caber melhor o texto com ícone */
 }
 
 /* Estilo para o ícone de diferença de peso no KPI */
@@ -2123,7 +2265,8 @@ body {
     justify-content: center;
     gap: 8px;
 
-    background-color: #25D366; /* Cor oficial do WhatsApp */
+    background-color: #25D366;
+    /* Cor oficial do WhatsApp */
     color: white;
 
     font-size: 1.1rem;
@@ -2183,7 +2326,8 @@ body {
     min-width: 20px;
     text-align: center;
     line-height: 1;
-    border: 2px solid var(--light-bg); /* Contraste com o fundo */
+    border: 2px solid var(--light-bg);
+    /* Contraste com o fundo */
 }
 
 .notification-dropdown {
@@ -2245,8 +2389,13 @@ body {
     line-height: 1.4;
 }
 
-.status-approved { color: var(--primary-green); }
-.status-rejected { color: var(--danger-red); }
+.status-approved {
+    color: var(--primary-green);
+}
+
+.status-rejected {
+    color: var(--danger-red);
+}
 
 /* ------------------------------------------------------------------ */
 /* ----------- Aprimoramento UX/UI: Agenda do Paciente -------------- */
@@ -2255,9 +2404,11 @@ body {
 .appointment-card.type-retorno {
     border-left-color: var(--secondary-orange);
 }
+
 .appointment-card.type-online {
     border-left-color: var(--danger-red);
 }
+
 .appointment-card.type-primeira {
     border-left-color: var(--primary-green);
 }
@@ -2265,11 +2416,13 @@ body {
 .appointment-card .appointment-icon.type-retorno {
     color: var(--secondary-orange);
 }
+
 .appointment-card .appointment-icon.type-online {
     color: var(--danger-red);
 }
+
 .appointment-card .appointment-icon.type-primeira {
-     color: var(--primary-green);
+    color: var(--primary-green);
 }
 
 /* Estilo para o botão de ação Remarcar */
@@ -2278,6 +2431,7 @@ body {
     border-color: var(--secondary-orange);
     font-weight: 500;
 }
+
 .appointment-card .btn-outline-primary:hover {
     background-color: var(--secondary-orange);
     color: var(--white);
@@ -2296,24 +2450,29 @@ body {
     align-items: center;
     justify-content: space-between;
 }
+
 .highlight-appointment-card:hover {
     transform: none;
     box-shadow: 0 4px 25px rgba(42, 157, 143, 0.2);
 }
+
 .highlight-details i {
     font-size: 2.2rem;
     color: var(--primary-green);
     margin-right: 1.5rem;
 }
+
 .highlight-details {
     display: flex;
     align-items: center;
 }
+
 .highlight-title {
     font-weight: 700;
     color: var(--dark-charcoal);
     margin-bottom: 0.25rem;
 }
+
 .highlight-info {
     font-size: 0.95rem;
     color: var(--text-secondary);
@@ -2323,23 +2482,27 @@ body {
 #appointmentsListContainer .appointment-card {
     margin-bottom: 0;
     border-radius: 0;
-    border-left: 5px solid transparent !important; /* Reseta o estilo base */
+    border-left: 5px solid transparent !important;
+    /* Reseta o estilo base */
     border-right: none;
     box-shadow: none;
     border-top: 1px solid #f1f3f5;
     animation: none;
     opacity: 1;
     transform: none;
-    flex-wrap: wrap; /* Permite quebrar no mobile */
+    flex-wrap: wrap;
+    /* Permite quebrar no mobile */
 }
 
 /* Re-aplica a borda lateral de cor do serviço na lista (o !important é para sobrescrever) */
 #appointmentsListContainer .appointment-card.type-retorno {
     border-left: 5px solid var(--secondary-orange) !important;
 }
+
 #appointmentsListContainer .appointment-card.type-online {
     border-left: 5px solid var(--danger-red) !important;
 }
+
 #appointmentsListContainer .appointment-card.type-primeira {
     border-left: 5px solid var(--primary-green) !important;
 }
@@ -2349,9 +2512,11 @@ body {
     background-color: #f8f9fa;
     transform: none;
 }
+
 #appointmentsListContainer .appointment-card:last-child {
     border-bottom: 1px solid #f1f3f5;
 }
+
 #appointmentsListContainer .d-flex.gap-2.align-items-center {
     margin-left: auto;
     flex-shrink: 0;
@@ -2363,10 +2528,12 @@ body {
     border-color: var(--danger-red);
     font-weight: 600;
 }
+
 #actionConfirmModal .btn-danger:hover {
     background-color: #c95138;
     border-color: #c95138;
 }
+
 #actionConfirmModal .btn-primary-custom {
     font-weight: 600;
 }
@@ -2377,13 +2544,16 @@ body {
         flex-direction: column;
         align-items: flex-start;
     }
+
     #appointmentsListContainer .d-flex.gap-2.align-items-center {
         margin-left: 0;
         margin-top: 1rem;
     }
+
     #appointmentsListContainer .appointment-details {
-         padding-left: 0;
+        padding-left: 0;
     }
+
     #appointmentsListContainer .appointment-icon {
         width: auto;
         margin-bottom: 0.5rem;
@@ -2399,7 +2569,7 @@ body {
     bottom: 25px;
     left: 50%;
     /* Inicia fora da tela e centralizado horizontalmente */
-    transform: translateX(-50%) translateY(100px); 
+    transform: translateX(-50%) translateY(100px);
     z-index: 1100;
     padding: 1rem 1.5rem;
     border-radius: 50px;
@@ -2411,7 +2581,7 @@ body {
     opacity: 0;
     visibility: hidden;
     /* Animação com um pequeno 'bounce' */
-    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55); 
+    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
     max-width: 90%;
 }
 
@@ -2468,6 +2638,7 @@ body {
 .rating-stars .bi-star {
     transition: transform 0.2s;
 }
+
 .rating-stars .bi-star:hover {
     transform: scale(1.2);
 }
@@ -2509,13 +2680,17 @@ body {
 /* =================================================================== */
 
 #patientDetailsModal .modal-body {
-    min-height: 60vh; /* Define uma altura mínima para o corpo do modal */
-    max-height: 60vh; /* Define uma altura máxima para o corpo do modal */
-    overflow-y: auto; /* Adiciona scroll se o conteúdo ultrapassar a altura */
+    min-height: 60vh;
+    /* Define uma altura mínima para o corpo do modal */
+    max-height: 60vh;
+    /* Define uma altura máxima para o corpo do modal */
+    overflow-y: auto;
+    /* Adiciona scroll se o conteúdo ultrapassar a altura */
 }
 
 #patientDetailsModal .tab-content {
-    min-height: 55vh; /* Garante que a área da aba também tenha uma altura mínima */
+    min-height: 55vh;
+    /* Garante que a área da aba também tenha uma altura mínima */
 }
 
 /* =================================================================== */
@@ -2572,7 +2747,8 @@ body {
     border-radius: 8px;
 }
 
-.timeline-item:hover, .timeline-item.active {
+.timeline-item:hover,
+.timeline-item.active {
     background-color: #e9ecef;
 }
 
@@ -2660,7 +2836,8 @@ body {
 
 /* Força o Datepicker a ficar visível */
 .datepicker {
-    z-index: 1060 !important; /* Maior que o z-index do modal */
+    z-index: 1060 !important;
+    /* Maior que o z-index do modal */
 }
 
 /* =================================================================== */
@@ -2671,10 +2848,12 @@ body {
 .booking-step {
     display: none;
 }
+
 .booking-step.active {
     display: block;
     animation: fadeIn 0.5s ease-in-out;
 }
+
 .step-title {
     font-weight: 700;
     color: var(--dark-charcoal);
@@ -2687,6 +2866,7 @@ body {
     flex-direction: column;
     gap: 1rem;
 }
+
 .service-item {
     display: flex;
     align-items: center;
@@ -2697,35 +2877,42 @@ body {
     cursor: pointer;
     transition: var(--transition);
 }
+
 .service-item:hover {
     border-color: var(--primary-green);
     background-color: #f8f9fa;
     transform: translateY(-3px);
     box-shadow: var(--shadow-sm);
 }
+
 .service-icon {
     font-size: 1.8rem;
     color: var(--primary-green);
 }
+
 .service-details h5 {
     font-weight: 600;
     margin-bottom: 0.25rem;
 }
+
 .service-details p {
     color: var(--text-secondary);
     font-size: 0.9rem;
     margin-bottom: 0;
 }
+
 .service-meta {
     margin-left: auto;
     text-align: right;
     flex-shrink: 0;
 }
+
 .service-meta span {
     display: block;
     font-size: 0.85rem;
     color: var(--text-secondary);
 }
+
 .service-meta strong {
     font-weight: 700;
     color: var(--primary-green);
@@ -2737,16 +2924,23 @@ body {
     border-radius: var(--border-radius);
     padding: 0.5rem;
 }
+
 .datepicker-picker {
     box-shadow: var(--shadow-md);
 }
-.datepicker-controls .btn, .datepicker-view .dow, .datepicker-view span {
+
+.datepicker-controls .btn,
+.datepicker-view .dow,
+.datepicker-view span {
     font-weight: 500;
 }
-.datepicker-view .day.selected, .datepicker-view .day.selected:hover {
+
+.datepicker-view .day.selected,
+.datepicker-view .day.selected:hover {
     background-color: var(--primary-green);
     text-shadow: none;
 }
+
 #time-slots-container {
     background-color: #f8f9fa;
     padding: 1rem;
@@ -2755,11 +2949,13 @@ body {
     max-height: 300px;
     overflow-y: auto;
 }
+
 .time-slots-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
     gap: 0.5rem;
 }
+
 .time-slot {
     padding: 0.5rem;
     border: 1px solid #dee2e6;
@@ -2770,10 +2966,12 @@ body {
     transition: all 0.2s ease-in-out;
     font-weight: 500;
 }
+
 .time-slot:hover {
     border-color: var(--primary-green);
     color: var(--primary-green);
 }
+
 .time-slot.selected {
     background-color: var(--primary-green);
     color: var(--white);
@@ -2788,10 +2986,12 @@ body {
     border-radius: var(--border-radius);
     margin-bottom: 2rem;
 }
+
 .booking-summary p {
     font-size: 1rem;
     margin-bottom: 0.75rem;
 }
+
 .booking-summary i {
     color: var(--primary-green);
     margin-right: 0.75rem;
@@ -2811,6 +3011,222 @@ body {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* =================================================================== */
+/* ============= CONFIGURAÇÕES (NOVO LAYOUT HUB) ===================== */
+/* =================================================================== */
+
+/* Container que gerencia as views (Menu vs Formulários) */
+.settings-container {
+    position: relative;
+    overflow: hidden;
+    min-height: 600px;
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+}
+
+/* O Menu Principal de Configurações */
+.settings-menu-view {
+    padding: 2rem;
+    transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease;
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 10;
+}
+
+.settings-menu-view.hidden {
+    transform: translateX(-100%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Cards de Navegação (Pastas) */
+.config-nav-card {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.config-nav-card:hover {
+    background-color: var(--white);
+    border-color: var(--primary-green);
+    box-shadow: 0 10px 25px rgba(42, 157, 143, 0.15);
+    transform: translateY(-5px);
+}
+
+.config-icon-wrapper {
+    width: 70px;
+    height: 70px;
+    background-color: rgba(42, 157, 143, 0.1);
+    color: var(--primary-green);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.config-nav-card:hover .config-icon-wrapper {
+    background-color: var(--primary-green);
+    color: var(--white);
+    transform: scale(1.1);
+}
+
+.config-card-title {
+    font-weight: 700;
+    color: var(--dark-charcoal);
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.config-card-desc {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+/* Área de Conteúdo (Os Formulários) */
+.settings-content-view {
+    position: absolute;
+    top: 0;
+    left: 100%;
+    /* Começa fora da tela à direita */
+    width: 100%;
+    height: 100%;
+    background-color: var(--white);
+    transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    display: flex;
+    flex-direction: column;
+    z-index: 20;
+}
+
+.settings-content-view.active {
+    transform: translateX(-100%);
+    /* Desliza para a tela */
+}
+
+/* Header da Seção Interna */
+.section-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #f1f3f5;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background-color: var(--white);
+}
+
+.btn-back {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid #e9ecef;
+    background: white;
+    color: var(--dark-charcoal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.btn-back:hover {
+    background-color: #f1f3f5;
+    transform: translateX(-3px);
+}
+
+.section-body {
+    padding: 1rem;
+    max-height: 500px;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+/* Estilo dos Itens de Pausa */
+.break-list-item {
+    background-color: #fff;
+    border: 1px solid #e9ecef;
+    border-left: 4px solid var(--secondary-orange);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+    animation: slideIn 0.3s ease-out;
+}
+
+.break-list-item:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.break-info h6 {
+    margin: 0;
+    font-weight: 600;
+    color: var(--dark-charcoal);
+}
+
+.break-info span {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* =================================================================== */
+/* ============= MODAL BACKDROP (Fundo Escuro e Desfocado) =========== */
+/* =================================================================== */
+
+/* Forçamos a cor e o desfoque diretamente na classe padrão do Bootstrap */
+.modal-backdrop {
+    background-color: #264653 !important;
+    /* opacity: 0.8 !important; */
+    z-index: 1040 !important;
+    
+    /* Variáveis BS para compatibilidade */
+    --bs-backdrop-bg: #264653;
+    --bs-backdrop-opacity: 0.8;
+}
+
+.modal-backdrop.show {
+    opacity: 0.8 !important; /* Força a opacidade */
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+}
+.line {
+    color: #20b85500
 }

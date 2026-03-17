@@ -4,52 +4,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meus Pacientes - NutriCare</title>
+    <title>Meus Pacientes - NutriCare Premium</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.4/dist/css/datepicker-bs5.min.css">
     <link rel="stylesheet" href="../../css/style.css">
+    
+    <style>
+        .modal-xl-custom { max-width: 1200px; }
+        .prontuario-header { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 12px 12px 0 0; padding: 1.5rem 2rem; border-bottom: 1px solid #dee2e6; }
+        .patient-avatar-large { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background-color: #fff; }
+        .nav-pills-custom .nav-link { color: #6c757d; font-weight: 600; padding: 0.75rem 1.5rem; border-radius: 8px; margin-right: 0.5rem; transition: all 0.3s ease; }
+        .nav-pills-custom .nav-link:hover { background-color: #f1f3f5; }
+        .nav-pills-custom .nav-link.active { background-color: var(--primary-color, #2a9d8f); color: #fff; box-shadow: 0 4px 6px rgba(42, 157, 143, 0.2); }
+        .anamnese-card { background: #fff; border: 1px solid #e9ecef; border-radius: 12px; padding: 1.5rem; height: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .anamnese-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; margin-bottom: 1rem; }
+        .timeline-modern { padding-left: 1.5rem; border-left: 2px solid #e9ecef; position: relative; }
+        .timeline-modern-item { position: relative; padding-bottom: 1.5rem; cursor: pointer; transition: all 0.2s ease; padding-left: 1rem; }
+        .timeline-modern-item::before { content: ''; position: absolute; left: -1.85rem; top: 0; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid #ced4da; transition: all 0.3s ease; z-index: 2; }
+        .timeline-modern-item:hover::before { border-color: var(--primary-color, #2a9d8f); }
+        .timeline-modern-item.active::before { background: var(--primary-color, #2a9d8f); border-color: var(--primary-color, #2a9d8f); box-shadow: 0 0 0 4px rgba(42, 157, 143, 0.2); }
+        .timeline-modern-item .date-badge { font-size: 0.75rem; font-weight: 700; color: #adb5bd; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; display: block; }
+        .timeline-modern-item .service-title { font-weight: 600; color: #343a40; margin-bottom: 0; }
+        .timeline-modern-item.active .service-title { color: var(--primary-color, #2a9d8f); }
+        .timeline-modern-item .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+        .soap-section { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
+        .soap-section-title { font-size: 0.85rem; font-weight: 700; color: #495057; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .form-control-soap { background-color: #fff; border: 1px solid #ced4da; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02); }
+        .form-control-soap:focus { border-color: var(--primary-color, #2a9d8f); box-shadow: 0 0 0 0.25rem rgba(42, 157, 143, 0.2); }
+        .info-pill { display: inline-flex; align-items: center; padding: 0.35rem 0.75rem; background: #fff; border: 1px solid #dee2e6; border-radius: 50rem; font-size: 0.85rem; color: #495057; font-weight: 500; }
+        .info-pill i { color: var(--primary-color, #2a9d8f); margin-right: 0.4rem; }
+        
+        .insight-card-premium { border-left: 4px solid; transition: transform 0.2s ease; }
+        .insight-card-premium:hover { transform: scale(1.01); }
+        .kpi-analytics-value { font-size: 1.75rem; font-weight: 800; color: #264653; }
+        
+        /* Estilos Leitura Prontuário */
+        .read-only-box { background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; margin-bottom: 15px; font-size: 0.95rem; color: #495057; line-height: 1.6; }
+        .file-card { transition: all 0.2s ease; cursor: pointer; }
+        .file-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important; border-color: var(--primary-color, #2a9d8f) !important; }
+    </style>
 </head>
 
 <body>
     <div class="dashboard-wrapper">
         <aside class="dashboard-sidebar">
             <div class="sidebar-header">
-                <a class="navbar-brand" href="#">
-                    <i class="bi bi-heart-pulse-fill"></i> NutriCare
-                </a>
+                <a class="navbar-brand" href="#"><i class="bi bi-heart-pulse-fill"></i> NutriCare</a>
             </div>
             <nav class="sidebar-nav">
                 <ul class="list-unstyled">
-                    <li class="nav-item">
-                        <a href="dashboard.html" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Visão Geral</a>
-                    </li>
-                    <li class="nav-item active">
-                        <a href="patientsList.html" class="nav-link"><i class="bi bi-people-fill"></i> Meus
-                            Pacientes</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="nutriAgenda.html" class="nav-link"><i class="bi bi-calendar2-week-fill"></i> Minha
-                            Agenda</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="nutriMetrics.html" class="nav-link"><i class="bi bi-graph-up-arrow"></i> Minhas
-                            Métricas</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="nutriConfig.html" class="nav-link"><i class="bi bi-person-fill-gear"></i> Meus
-                            Detalhes</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="nutriInvoicing.html" class="nav-link"><i class="bi bi-cash-stack"></i> Faturamento</a>
-                    </li>
+                    <li class="nav-item"><a href="dashboard.html" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Visão Geral</a></li>
+                    <li class="nav-item active"><a href="patientsList.html" class="nav-link"><i class="bi bi-people-fill"></i> Meus Pacientes</a></li>
+                    <li class="nav-item"><a href="nutriAgenda.html" class="nav-link"><i class="bi bi-calendar2-week-fill"></i> Minha Agenda</a></li>
+                    <li class="nav-item"><a href="nutriMetrics.html" class="nav-link"><i class="bi bi-graph-up-arrow"></i> Minhas Métricas</a></li>
+                    <li class="nav-item"><a href="nutriConfig.html" class="nav-link"><i class="bi bi-person-fill-gear"></i> Meus Detalhes</a></li>
+                    <li class="nav-item"><a href="nutriInvoicing.html" class="nav-link"><i class="bi bi-cash-stack"></i> Faturamento</a></li>
                 </ul>
             </nav>
             <div class="sidebar-footer">
-                <button id="logoutBtn" class="btn btn-logout w-100">
-                    <i class="bi bi-box-arrow-left"></i> Sair
-                </button>
+                <button id="logoutBtn" class="btn btn-logout w-100"><i class="bi bi-box-arrow-left"></i> Sair</button>
             </div>
         </aside>
 
@@ -58,175 +73,324 @@
                 <h1>Meus Pacientes</h1>
             </header>
 
-            <div class="card data-card">
-                 <div class="card-header patient-list-header">
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="text" class="form-control" id="patientSearchInput" placeholder="Buscar por nome ou e-mail...">
+            <div class="card data-card border-0 shadow-sm">
+                 <div class="card-header patient-list-header bg-white border-bottom-0 pt-4 pb-0">
+                    <div class="input-group input-group-lg shadow-sm rounded">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control border-start-0 ps-0" id="patientSearchInput" placeholder="Buscar paciente por nome ou e-mail...">
                     </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead>
+                        <table class="table table-hover align-middle mt-3">
+                            <thead class="table-light">
                                 <tr>
-                                    <th>Paciente</th>
-                                    <th>Contato</th>
-                                    <th>Status</th>
-                                    <th>Próxima Consulta</th>
-                                    <th class="text-end">Ações</th>
+                                    <th class="text-secondary fw-semibold">Paciente</th>
+                                    <th class="text-secondary fw-semibold">Contato</th>
+                                    <th class="text-secondary fw-semibold">Status</th>
+                                    <th class="text-secondary fw-semibold">Próxima Consulta</th>
+                                    <th class="text-end text-secondary fw-semibold">Ações</th>
                                 </tr>
                             </thead>
-                            <tbody id="patientTableBody">
-                                </tbody>
+                            <tbody id="patientTableBody"></tbody>
                         </table>
                     </div>
                     <div id="emptyState" class="empty-state-card" style="display: none;">
                         <div class="empty-state-icon"><i class="bi bi-person-x"></i></div>
                         <h5 class="empty-state-title">Nenhum paciente encontrado</h5>
-                        <p class="empty-state-text">
-                           Você ainda não possui pacientes cadastrados ou nenhum corresponde à sua busca.
-                        </p>
+                        <p class="empty-state-text">Você ainda não possui pacientes cadastrados ou nenhum corresponde à sua busca.</p>
                     </div>
                 </div>
             </div>
 
-            <div class="modal-backdrop" id="patientDetailsModal">
-                <div class="modal-content modal-xl">
-                    <button type="button" class="modal-close" id="closePatientModal">&times;</button>
-                    <div class="modal-header d-flex align-items-center">
-                        <img id="patientAvatar" src="" alt="Avatar do Paciente" class="avatar me-3">
-                        <div>
-                            <h5 class="modal-title mb-0" id="modalPatientName"></h5>
-                            <span class="text-muted" id="modalPatientEmail"></span>
+            <div class="modal-backdrop" id="patientDetailsModal" style="z-index: 1045;">
+                <div class="modal-content modal-xl-custom p-0" style="max-height: 95vh; overflow: hidden; display: flex; flex-direction: column;">
+                    
+                    <div class="prontuario-header position-relative">
+                        <button type="button" class="btn-close position-absolute top-0 end-0 m-3" id="closePatientModal" aria-label="Close"></button>
+                        <div class="d-flex align-items-center gap-4">
+                            <img id="patientAvatar" src="" alt="Avatar" class="patient-avatar-large">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center gap-3 mb-2">
+                                    <h3 class="mb-0 fw-bold text-dark" id="modalPatientName">Carregando...</h3>
+                                    <span id="patientStatusBadge"></span>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <div class="info-pill"><i class="bi bi-envelope"></i> <span id="modalPatientEmail"></span></div>
+                                    <div class="info-pill"><i class="bi bi-telephone"></i> <span id="patientPhone"></span></div>
+                                    <div class="info-pill"><i class="bi bi-calendar-event"></i> Nascimento: <span id="patientBirthdate"></span> (<span id="patientAge"></span> anos)</div>
+                                </div>
+                            </div>
+                            <div class="text-end d-none d-lg-block">
+                                <p class="text-muted small mb-1 fw-bold text-uppercase">Próxima Consulta</p>
+                                <div class="fs-5 fw-bold text-primary" id="patientAppointmentDate"></div>
+                                <button class="btn btn-sm btn-outline-primary mt-2 rounded-pill fw-semibold shadow-sm" id="btnScheduleReturn">
+                                    <i class="bi bi-calendar-plus me-1"></i> Agendar Retorno
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="modal-body">
-                         <div class="text-center" id="modalLoadingState">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                            <p class="mt-2">Carregando detalhes...</p>
+                    <div class="bg-white px-4 pt-3 border-bottom">
+                        <ul class="nav nav-pills-custom d-flex gap-2 flex-nowrap overflow-auto pb-1" id="patientTab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="followup-tab" data-bs-toggle="tab" data-bs-target="#followup-pane" type="button" role="tab"><i class="bi bi-clipboard2-pulse me-2"></i>Acompanhamento</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="records-tab" data-bs-toggle="tab" data-bs-target="#records-pane" type="button" role="tab"><i class="bi bi-folder2-open me-2"></i>Ficheiros & Exportação</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="anamnese-tab" data-bs-toggle="tab" data-bs-target="#anamnese-pane" type="button" role="tab"><i class="bi bi-file-medical me-2"></i>Anamnese Base</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="analytics-tab" data-bs-toggle="tab" data-bs-target="#analytics-pane" type="button" role="tab"><i class="bi bi-graph-up me-2"></i>Analytics</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="plan-tab" data-bs-toggle="tab" data-bs-target="#plan-pane" type="button" role="tab"><i class="bi bi-apple me-2"></i>Plano Alimentar</button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="modal-body bg-light p-4" style="overflow-y: auto; flex: 1;">
+                         <div class="text-center py-5" id="modalLoadingState">
+                            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+                            <p class="mt-3 fw-semibold text-muted">Sincronizando prontuário...</p>
                         </div>
+
                         <div id="modalDetailsContent" style="display: none;">
-                            <ul class="nav nav-tabs" id="patientTab" role="tablist">
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link" id="details-tab" data-bs-toggle="tab" data-bs-target="#details-pane" type="button" role="tab">Detalhes</button>
-                                </li>
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link" id="anamnese-tab" data-bs-toggle="tab" data-bs-target="#anamnese-pane" type="button" role="tab">Anamnese</button>
-                                </li>
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link active" id="followup-tab" data-bs-toggle="tab" data-bs-target="#followup-pane" type="button" role="tab">Acompanhamento</button>
-                                </li>
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link" id="plan-tab" data-bs-toggle="tab" data-bs-target="#plan-pane" type="button" role="tab">Plano Alimentar</button>
-                                </li>
-                            </ul>
                             <div class="tab-content" id="patientTabContent">
-                                <div class="tab-pane fade" id="details-pane" role="tabpanel">
-                                    <div class="row pt-3">
-                                        <div class="col-md-6">
-                                            <h6>Informações Pessoais</h6>
-                                            <p><strong>Telefone:</strong> <span id="patientPhone" class="text-muted"></span></p>
-                                            <p><strong>Nascimento:</strong> <span id="patientBirthdate" class="text-muted"></span></p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <h6>Consulta</h6>
-                                            <p><strong>Próxima consulta:</strong> <span id="patientAppointmentDate" class="text-muted"></span></p>
-                                            <p><strong>Status do Paciente:</strong> <span id="patientStatus" class="text-muted"></span></p>
-                                        </div>
-                                        <div class="col-12 mt-4">
-                                            <button class="btn btn-primary-custom" id="btnScheduleReturn"><i class="bi bi-calendar-plus-fill me-2"></i>Agendar Retorno</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="tab-pane fade" id="anamnese-pane" role="tabpanel">
-                                    <div class="anamnese-details-grid pt-3">
-                                        <div class="anamnese-item"><strong>Objetivo(s)</strong><p id="anamneseObjetivos"></p></div>
-                                        <div class="anamnese-item"><strong>Problemas de Saúde</strong><p id="anamneseSaude"></p></div>
-                                        <div class="anamnese-item"><strong>Cirurgias</strong><p id="anamneseCirurgia"></p></div>
-                                        <div class="anamnese-item"><strong>Alergias</strong><p id="anamneseAlergias"></p></div>
-                                        <div class="anamnese-item"><strong>Medicamentos</strong><p id="anamneseMedicacao"></p></div>
-                                        <div class="anamnese-item"><strong>Atividade Física</strong><p id="anamneseAtividade"></p></div>
-                                        <div class="anamnese-item"><strong>Ingestão de Álcool</strong><p id="anamneseAlcool"></p></div>
-                                        <div class="anamnese-item"><strong>Digestão</strong><p id="anamneseDigestao"></p></div>
-                                        <div class="anamnese-item"><strong>Intestino</strong><p id="anamneseIntestino"></p></div>
-                                        <div class="anamnese-item"><strong>Qualidade do Sono</strong><p id="anamneseSono"></p></div>
-                                        <div class="anamnese-item col-span-2"><strong>Expectativas</strong><p id="anamneseExpectativas"></p></div>
-                                    </div>
-                                </div>
+                                
                                 <div class="tab-pane fade show active" id="followup-pane" role="tabpanel">
-                                    <div class="row pt-3 gx-4">
-                                        <div class="col-lg-7">
-                                            <div id="consultation-form-container">
-                                                </div>
+                                    <div class="row g-4 h-100">
+                                        <div class="col-lg-4 col-xl-3 border-end">
+                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                <h6 class="fw-bold text-secondary mb-0"><i class="bi bi-clock-history me-2"></i>Histórico</h6>
+                                            </div>
+                                            <div class="timeline-modern pe-2" id="consultation-history-timeline" style="max-height: 60vh; overflow-y: auto;">
+                                            </div>
                                         </div>
-                                        <div class="col-lg-5">
-                                            <div class="history-container">
-                                                <h6 class="mb-3"><i class="bi bi-clock-history me-2"></i> Histórico de Consultas</h6>
-                                                <div id="consultation-history-timeline">
-                                                    </div>
+                                        <div class="col-lg-8 col-xl-9">
+                                            <div id="consultation-form-container" class="bg-white p-4 rounded-4 shadow-sm border border-light">
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="tab-pane fade" id="plan-pane" role="tabpanel">
+
+                                <div class="tab-pane fade" id="records-pane" role="tabpanel">
+                                    <div class="d-flex justify-content-between align-items-center mb-4">
+                                        <div>
+                                            <h4 class="fw-bold text-dark m-0"><i class="bi bi-journals text-primary me-2"></i> Prontuários do Paciente</h4>
+                                            <p class="text-muted small m-0">Gere relatórios em PDF para impressão ou envio a outros profissionais.</p>
+                                        </div>
                                     </div>
+                                    <div id="records-container" class="row g-4">
+                                        </div>
+                                </div>
+
+                                <div class="tab-pane fade" id="anamnese-pane" role="tabpanel">
+                                    <div class="row g-4">
+                                        <div class="col-12 col-xl-8">
+                                            <div class="anamnese-card">
+                                                <div class="d-flex align-items-center gap-3 mb-4">
+                                                    <div class="anamnese-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-bullseye"></i></div>
+                                                    <h5 class="fw-bold mb-0">Objetivos e Expectativas</h5>
+                                                </div>
+                                                <div class="mb-4">
+                                                    <h6 class="text-muted small fw-bold text-uppercase">Principal Objetivo</h6>
+                                                    <p class="fs-6 text-dark bg-light p-3 rounded" id="anamneseObjetivos">--</p>
+                                                </div>
+                                                <div>
+                                                    <h6 class="text-muted small fw-bold text-uppercase">Expectativas com o Acompanhamento</h6>
+                                                    <p class="fs-6 text-dark bg-light p-3 rounded" id="anamneseExpectativas">--</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-xl-4">
+                                            <div class="anamnese-card">
+                                                <div class="d-flex align-items-center gap-3 mb-4">
+                                                    <div class="anamnese-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-bandaid"></i></div>
+                                                    <h5 class="fw-bold mb-0">Gastrointestinal</h5>
+                                                </div>
+                                                <div class="mb-4">
+                                                    <h6 class="text-muted small fw-bold text-uppercase">Digestão</h6>
+                                                    <p class="text-dark fw-medium" id="anamneseDigestao">--</p>
+                                                </div>
+                                                <div>
+                                                    <h6 class="text-muted small fw-bold text-uppercase">Funcionamento Intestinal</h6>
+                                                    <p class="text-dark fw-medium" id="anamneseIntestino">--</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-xl-6">
+                                            <div class="anamnese-card">
+                                                <div class="d-flex align-items-center gap-3 mb-4">
+                                                    <div class="anamnese-icon bg-danger bg-opacity-10 text-danger"><i class="bi bi-heart-pulse"></i></div>
+                                                    <h5 class="fw-bold mb-0">Histórico Clínico</h5>
+                                                </div>
+                                                <div class="row g-3">
+                                                    <div class="col-sm-6">
+                                                        <h6 class="text-muted small fw-bold text-uppercase">Patologias (Doenças)</h6>
+                                                        <p class="text-dark fw-medium" id="anamneseSaude">--</p>
+                                                    </div>
+                                                    <div class="col-sm-6">
+                                                        <h6 class="text-muted small fw-bold text-uppercase">Alergias / Intolerâncias</h6>
+                                                        <p class="text-dark fw-medium" id="anamneseAlergias">--</p>
+                                                    </div>
+                                                    <div class="col-sm-6">
+                                                        <h6 class="text-muted small fw-bold text-uppercase">Cirurgias Anteriores</h6>
+                                                        <p class="text-dark fw-medium" id="anamneseCirurgia">--</p>
+                                                    </div>
+                                                    <div class="col-sm-6">
+                                                        <h6 class="text-muted small fw-bold text-uppercase">Uso de Medicamentos</h6>
+                                                        <p class="text-dark fw-medium" id="anamneseMedicacao">--</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-xl-6">
+                                            <div class="anamnese-card">
+                                                <div class="d-flex align-items-center gap-3 mb-4">
+                                                    <div class="anamnese-icon bg-success bg-opacity-10 text-success"><i class="bi bi-bicycle"></i></div>
+                                                    <h5 class="fw-bold mb-0">Estilo de Vida e Hábitos</h5>
+                                                </div>
+                                                <div class="row g-3">
+                                                    <div class="col-sm-6">
+                                                        <h6 class="text-muted small fw-bold text-uppercase">Atividade Física</h6>
+                                                        <p class="text-dark fw-medium" id="anamneseAtividade">--</p>
+                                                    </div>
+                                                    <div class="col-sm-6">
+                                                        <h6 class="text-muted small fw-bold text-uppercase">Qualidade do Sono</h6>
+                                                        <p class="text-dark fw-medium" id="anamneseSono">--</p>
+                                                    </div>
+                                                    <div class="col-sm-12">
+                                                        <h6 class="text-muted small fw-bold text-uppercase">Consumo de Álcool / Tabagismo</h6>
+                                                        <p class="text-dark fw-medium" id="anamneseAlcool">--</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="tab-pane fade" id="analytics-pane" role="tabpanel">
+                                    <div class="row g-4">
+                                        <div class="col-12">
+                                            <div class="row g-3" id="analytics-kpi-container"></div>
+                                        </div>
+                                        <div class="col-xl-8">
+                                            <div class="anamnese-card p-4">
+                                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                                    <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-activity text-primary me-2"></i>Evolução de Composição</h5>
+                                                    <span class="badge bg-light text-muted border px-3 py-2 rounded-pill small">Últimas Avaliações</span>
+                                                </div>
+                                                <div style="height: 380px;">
+                                                    <canvas id="evolutionChart"></canvas>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-xl-4">
+                                            <div class="anamnese-card bg-light border-0 shadow-sm border-top border-primary border-4">
+                                                <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-robot text-primary me-2"></i>Insights Clínicos</h5>
+                                                <div id="clinical-insights-content" class="pe-2" style="max-height: 400px; overflow-y: auto;">
+                                                    <div class="text-center py-4 opacity-50">
+                                                        <div class="spinner-border text-primary spinner-border-sm mb-2"></div>
+                                                        <p class="small">Processando tendências...</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="anamnese-card">
+                                                <h5 class="fw-bold mb-4"><i class="bi bi-radar me-2 text-primary"></i>Distribuição de Gordura</h5>
+                                                <div style="height: 320px;">
+                                                    <canvas id="skinfoldRadarChart"></canvas>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="anamnese-card">
+                                                <h5 class="fw-bold mb-4"><i class="bi bi-table me-2 text-primary"></i>Histórico de Medidas</h5>
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm align-middle text-center table-hover border-top">
+                                                        <thead class="bg-light">
+                                                            <tr class="small text-uppercase text-secondary">
+                                                                <th class="py-2">Data</th>
+                                                                <th>Peso</th>
+                                                                <th>% Gord</th>
+                                                                <th>M. Magra</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="analytics-history-table" class="small"></tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="tab-pane fade" id="plan-pane" role="tabpanel"></div>
+
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-backdrop" id="anthropometryModal" style="z-index: 1060;">
+                <div class="modal-content modal-lg" style="max-height: 90vh; overflow-y: auto;">
+                    <button type="button" class="modal-close" id="closeAnthropometryModal">&times;</button>
+                    <div class="d-flex align-items-center border-bottom pb-3 mb-4">
+                        <div class="me-3 d-flex align-items-center justify-content-center bg-info bg-opacity-10 text-info rounded-circle" style="width: 50px; height: 50px; font-size: 1.5rem;"><i class="bi bi-clipboard-pulse"></i></div>
+                        <div>
+                            <h4 class="mb-0 fw-bold text-dark">Calculadora Científica</h4>
+                            <p class="text-muted small mb-0">Protocolo de Pollock 7 dobras e Mifflin-St Jeor</p>
+                        </div>
+                    </div>
+                    <form id="anthropometryForm">
+                        <input type="hidden" id="anthro_patient_id">
+                        <h6 class="text-primary fw-bold mb-3"><i class="bi bi-1-circle"></i> Dados Básicos</h6>
+                        <div class="row g-3 mb-4 bg-light p-3 rounded border">
+                            <div class="col-md-4"><label class="form-label small fw-bold">Idade</label><input type="number" class="form-control" id="anthro_age" required min="1"></div>
+                            <div class="col-md-4"><label class="form-label small fw-bold">Sexo</label><select class="form-select" id="anthro_gender" required><option value="M">Masculino</option><option value="F">Feminino</option></select></div>
+                            <div class="col-md-4"><label class="form-label small fw-bold">Atividade (NAF)</label><select class="form-select" id="anthro_activity_level" required><option value="1.2">Sedentário (1.2)</option><option value="1.375">Leve (1.375)</option><option value="1.55">Moderado (1.55)</option><option value="1.725">Intenso (1.725)</option><option value="1.9">M. Intenso (1.9)</option></select></div>
+                            <div class="col-md-6"><label class="form-label small fw-bold">Peso (kg)</label><input type="number" step="0.1" class="form-control" id="anthro_weight" required></div>
+                            <div class="col-md-6"><label class="form-label small fw-bold">Altura (cm)</label><input type="number" class="form-control" id="anthro_height" required></div>
+                        </div>
+                        <h6 class="text-primary fw-bold mb-3"><i class="bi bi-2-circle"></i> Dobras Cutâneas (mm)</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4"><label class="form-label small">Peitoral</label><input type="number" step="0.1" class="form-control" id="anthro_fold_chest" value="0"></div>
+                            <div class="col-md-4"><label class="form-label small">Axilar Média</label><input type="number" step="0.1" class="form-control" id="anthro_fold_midaxillary" value="0"></div>
+                            <div class="col-md-4"><label class="form-label small">Tríceps</label><input type="number" step="0.1" class="form-control" id="anthro_fold_triceps" value="0"></div>
+                            <div class="col-md-4"><label class="form-label small">Subescapular</label><input type="number" step="0.1" class="form-control" id="anthro_fold_subscapular" value="0"></div>
+                            <div class="col-md-4"><label class="form-label small">Abdominal</label><input type="number" step="0.1" class="form-control" id="anthro_fold_abdominal" value="0"></div>
+                            <div class="col-md-4"><label class="form-label small">Suprailíaca</label><input type="number" step="0.1" class="form-control" id="anthro_fold_suprailiac" value="0"></div>
+                            <div class="col-md-4"><label class="form-label small">Coxa</label><input type="number" step="0.1" class="form-control" id="anthro_fold_thigh" value="0"></div>
+                        </div>
+                        <button type="submit" class="btn btn-info text-white w-100 fw-bold py-2 shadow-sm" id="btnSubmitAnthro"><i class="bi bi-magic me-2"></i> Calcular e Arquivar Resultados</button>
+                    </form>
+                    <div class="mt-4 p-4 rounded bg-success bg-opacity-10 border border-success border-opacity-25" id="anthroResultsBox" style="display: none;">
+                        <h5 class="text-success fw-bold mb-3"><i class="bi bi-check-circle-fill me-2"></i> Resultados Processados</h5>
+                        <div class="row g-3 text-center">
+                            <div class="col-4"><div class="p-2 bg-white rounded shadow-sm"><div class="small text-muted mb-1">IMC</div><div class="fs-4 fw-bold text-dark"><span id="res_bmi">--</span></div></div></div>
+                            <div class="col-4"><div class="p-2 bg-white rounded shadow-sm"><div class="small text-muted mb-1">% Gordura</div><div class="fs-4 fw-bold text-dark"><span id="res_bf">--</span>%</div></div></div>
+                            <div class="col-4"><div class="p-2 bg-white rounded shadow-sm"><div class="small text-muted mb-1">Massa Magra</div><div class="fs-4 fw-bold text-dark"><span id="res_lm">--</span>kg</div></div></div>
+                            <div class="col-6"><div class="p-2 bg-white rounded shadow-sm border border-success"><div class="small text-success fw-bold mb-1">TMB (Basal)</div><div class="fs-4 fw-bold text-success"><span id="res_bmr">--</span> kcal</div></div></div>
+                            <div class="col-6"><div class="p-2 bg-white rounded shadow-sm border border-success"><div class="small text-success fw-bold mb-1">Gasto Total (GET)</div><div class="fs-4 fw-bold text-success"><span id="res_tdee">--</span> kcal</div></div></div>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <div class="modal-backdrop" id="scheduleReturnModal">
-                <div class="modal-content pro-modal modal-lg">
-                    <button class="modal-close" id="closeScheduleReturnModal">&times;</button>
-                    <div class="modal-icon"><i class="bi bi-calendar2-plus"></i></div>
-                    <h4 class="modal-title-pro">Agendar Consulta de Retorno</h4>
-                    <p class="modal-subtitle-pro">Selecione um horário disponível para <strong id="returnPatientName"></strong>.</p>
-                    
-                    <div id="return-schedule-flow">
-                        <div id="return-schedule-alert" class="alert alert-warning" style="display: none;"></div>
-                        <div class="row gx-4">
-                            <div class="col-md-6">
-                                <div id="returnDatePicker" class="mb-4"></div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="time-slots-container">
-                                    <h6 class="text-center mb-3" id="returnSelectedDate">Escolha uma data no calendário</h6>
-                                    <div class="time-slots-list" id="returnTimeSlots"></div>
-                                    <div id="return-slots-loader" class="text-center mt-3" style="display: none;">
-                                        <span class="spinner-border spinner-border-sm text-primary"></span> Carregando...
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-end mt-3">
-                             <button type="button" class="btn btn-primary-custom" id="confirmReturnScheduleBtn" disabled>
-                                <i class="bi bi-check-circle-fill me-2"></i> Confirmar Agendamento
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <div class="modal-backdrop" id="scheduleReturnModal"><div class="modal-content pro-modal modal-lg"><button class="modal-close" id="closeScheduleReturnModal">&times;</button><div class="modal-icon"><i class="bi bi-calendar2-plus"></i></div><h4 class="modal-title-pro">Agendar Retorno</h4><div id="return-schedule-flow"><div class="row gx-4"><div class="col-md-6"><div id="returnDatePicker" class="mb-4"></div></div><div class="col-md-6"><div class="time-slots-container"><h6 class="text-center mb-3" id="returnSelectedDate">Escolha uma data</h6><div class="time-slots-list" id="returnTimeSlots"></div><div id="return-slots-loader" class="text-center mt-3" style="display: none;"><span class="spinner-border spinner-border-sm text-primary"></span></div></div></div></div><div class="d-flex justify-content-end mt-3"><button type="button" class="btn btn-primary-custom" id="confirmReturnScheduleBtn" disabled><i class="bi bi-check-circle-fill me-2"></i> Confirmar</button></div></div></div></div>
+            <div class="modal-backdrop" id="logoutModal"><div class="modal-content text-center"><button class="modal-close" id="closeLogoutModal">&times;</button><h2 class="auth-title">Sair do sistema?</h2><div class="modal-actions d-flex justify-content-center gap-3 mt-4"><button id="btnNo" class="btn btn-secondary w-100">Não</button><button id="btnYes" class="btn btn-primary-custom w-100">Sim</button></div></div></div>
+
         </main>
-    </div>
-    
-    <div class="modal-backdrop" id="logoutModal">
-        <div class="modal-content text-center">
-            <button class="modal-close" id="closeLogoutModal">&times;</button>
-            <h2 class="auth-title">Tem certeza que deseja sair?</h2>
-            <div class="modal-actions d-flex justify-content-center gap-3 mt-4">
-                <button id="btnNo" class="btn btn-secondary w-100">Não</button>
-                <button id="btnYes" class="btn btn-primary-custom w-100">Sim</button>
-            </div>
-        </div>
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.4/dist/js/datepicker-full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://unpkg.com/scrollreveal"></script>
     <script type="module" src="../../js/dashboard-nutricionista.js"></script>
 </body>

@@ -209,7 +209,7 @@ document.addEventListener("DOMContentLoaded", () => {
             bookingState.service = {
                 name: item.querySelector('h5').textContent,
                 duration: parseInt(item.dataset.duration, 10),
-                price: item.querySelector('strong').textContent
+                // price: item.querySelector('strong').textContent
             };
 
             elements.summaryService.textContent = bookingState.service.name;

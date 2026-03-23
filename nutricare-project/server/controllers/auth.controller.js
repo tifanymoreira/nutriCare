@@ -243,6 +243,53 @@ export function getMe(req, res) {
     }
 }
 
+export const getPatientInvoices = async (req, res) => {
+    try {
+        const userId = req.params.userId;
+
+        if (req.session.user.id !== parseInt(userId) && req.session.user.role !== 'nutricionista') {
+            return res.status(403).json({ success: false, message: 'Acesso negado.' });
+        }
+
+        const [invoices] = await db.query(
+            `SELECT id, amount, status, due_date, issue_date 
+             FROM invoices 
+             WHERE patient_id = ? 
+             ORDER BY due_date DESC`,
+            [userId]
+        );
+
+        res.status(200).json({ success: true, invoices });
+    } catch (error) {
+        console.error('Erro ao buscar faturas do paciente:', error);
+        res.status(500).json({ success: false, message: 'Erro ao buscar faturas.' });
+    }
+};
+
+export const getPatientDocuments = async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        const docType = req.query.type;
+
+        if (req.session.user.id !== parseInt(userId) && req.session.user.role !== 'nutricionista') {
+            return res.status(403).json({ success: false, message: 'Acesso negado.' });
+        }
+
+        const [documents] = await db.query(
+            `SELECT id, title, type, file_url, created_at 
+             FROM documents 
+             WHERE patient_id = ? AND type = ? 
+             ORDER BY created_at DESC`,
+            [userId, docType]
+        );
+
+        res.status(200).json({ success: true, documents });
+    } catch (error) {
+        console.error('Erro ao buscar documentos do paciente:', error);
+        res.status(500).json({ success: false, message: 'Erro ao buscar documentos.' });
+    }
+};
+
 export async function getPatientCount(req, res) {
     const nutriId = req.session.user.id;
 
@@ -809,7 +856,7 @@ export async function getNutricionistaDetails(req, res) {
     try {
         const nutriId = req.session.user.id;
         const [rows] = await pool.query(
-            'SELECT name, email, phone FROM nutricionista WHERE id = ?',
+            'SELECT name, email, phone, crn FROM nutricionista WHERE id = ?',
             [nutriId]
         );
         if (rows.length > 0) {

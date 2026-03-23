@@ -20,7 +20,7 @@ import {
     scheduleReturnAppointment,
     getScheduleConfig,
     updateScheduleConfig,
-    getTodayAppointment, saveAppointmentNotes
+    getTodayAppointment, saveAppointmentNotes, getPatientInvoices, getPatientDocuments
 } from '../controllers/auth.controller.js';
 
 import checkAuth from '../middlewares/checkAuth.js';
@@ -30,6 +30,8 @@ import { saveAssessment, getAssessmentHistory } from '../controllers/anthropomet
 router.post('/save', checkAuth, saveAssessment);
 router.get('/history/:patientId', checkAuth, getAssessmentHistory); // NOVA ROTA
 
+router.get('/patient/:userId/invoices', checkAuth, getPatientInvoices);
+router.get('/patient/:userId/documents', checkAuth, getPatientDocuments);
 
 router.get('/nutricionista/appointment/today/:patientId', checkAuth, getTodayAppointment);
 router.post('/nutricionista/appointment/save-notes', checkAuth, saveAppointmentNotes);
@@ -99,7 +101,7 @@ router.post('/patient/submit-survey', checkAuth, submitSurvey);
 router.get('/nutricionista/:id', async (req, res) => {
     // Permite acesso público para que a tela de agendamento funcione sem login
     try {
-        const [rows] = await pool.query('SELECT name, phone FROM nutricionista WHERE id = ?', [req.params.id]);
+        const [rows] = await pool.query('SELECT name, phone, crnCode FROM nutricionista WHERE id = ?', [req.params.id]);
         if (rows.length > 0) {
             res.json({ success: true, nutricionista: rows[0] });
         } else {

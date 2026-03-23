@@ -1,3 +1,5 @@
+// import { getNutricionistaDetails } from "../../../server/controllers/auth.controller";
+
 // nutricare-project/client/public/js/dashboard-paciente.js
 document.addEventListener('DOMContentLoaded', async () => {
     const user = await verifySession();
@@ -5,6 +7,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     checkRole();
 
     window.user = user;
+
+    // window.nutriNameFull = 'Sua Nutricionista';
 
     const whatsappWidget = document.getElementById("whatsapp-widget");
     const contactNutriModal = document.getElementById("contactNutriModal");
@@ -14,7 +18,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const notificationDropdown = document.getElementById('notificationDropdown');
     const logoutButton = document.getElementById('logoutBtn');
 
-    // --- LÓGICA DO WIDGET DE WHATSAPP ---
+    // ==========================================
+    // WIDGET DE WHATSAPP
+    // ==========================================
     if (whatsappWidget && contactNutriModal) {
         whatsappWidget.addEventListener('click', () => {
             contactNutriModal.classList.add('is-visible');
@@ -34,140 +40,137 @@ document.addEventListener('DOMContentLoaded', async () => {
         sendTextBtn.addEventListener('click', () => sendWhatsAppMsg(user));
     }
 
-    // --- LÓGICA DO SININHO (FEATURE) ---
+    // ==========================================
+    // NOTIFICAÇÕES (SININHO)
+    // ==========================================
     if (notificationBell && notificationDropdown) {
         notificationBell.addEventListener('click', (e) => {
-            e.stopPropagation();  
+            e.stopPropagation();
             notificationDropdown.classList.toggle('is-visible');
         });
 
-         document.addEventListener('click', (e) => {
+        document.addEventListener('click', (e) => {
             if (notificationDropdown.classList.contains('is-visible') && !notificationDropdown.contains(e.target)) {
                 notificationDropdown.classList.remove('is-visible');
             }
         });
-
-        // CRON JOB PARA ATUALIZAÇÃO DE NOTIFICAÇÕES (A CADA 5 SEGUNDOS)
         setInterval(() => fetchAndRenderNotifications(user), 5000);
     }
 
-
-    // --- FUNÇÕES PRINCIPAIS ---
-
+    // ==========================================
+    // AUTENTICAÇÃO E DADOS GERAIS
+    // ==========================================
     async function verifySession() {
         try {
             const response = await fetch('/api/auth/me');
             if (response.ok) {
                 const result = await response.json();
-                if (result.success && result.user) {
-                    return result.user;
-                }
+                if (result.success && result.user) return result.user;
             }
             window.location.href = '/pages/login.html';
             return null;
         } catch (error) {
-            console.log('Não foi possível verificar o status de autenticação. [ERROR] = ', error);
+            console.log('Não foi possível verificar o status de autenticação.', error);
             window.location.href = '/pages/login.html';
             return null;
         }
     }
 
+    function checkRole() {
+        if (user.role !== "paciente") window.location.href = '/pages/login.html';
+    }
+
     async function fetchUserData(user) {
+        console.log("start fetchUserData | user data")
+        console.log(user)
         const userNameSpan = document.getElementById('userName');
-        if (userNameSpan) {
-            userNameSpan.textContent = user.name.split(' ')[0];
-        }
+        if (userNameSpan) userNameSpan.textContent = user.name.split(' ')[0];
 
         const nutriNameSpan = document.getElementById('nutriName');
         if (user.nutriID && nutriNameSpan) {
+            console.log("entrou aqui")
             try {
                 const response = await fetch(`/api/auth/nutricionista/${user.nutriID}`);
                 const result = await response.json();
                 if (result.success) {
                     nutriNameSpan.textContent = result.nutricionista.name;
+                    window.nutriCRN = result.nutricionista.crn || 'Não informado';
+                    window.nutriNameFull = result.nutricionista.name;
                 }
             } catch (error) {
-                console.error('Erro ao buscar dados do nutricionista:', error);
+                console.error('Erro ao buscar dados da nutricionista:', error);
+            }
+        }
+    }
+
+    async function fetchNutriData(user) {
+        console.log("start fetchNutriData | user data")
+        console.log(user)
+        const userNameSpan = document.getElementById('userName');
+        if (userNameSpan) userNameSpan.textContent = user.name.split(' ')[0];
+
+        if (user.nutriID) {
+            console.log("entrou aqui")
+            try {
+                const response = await fetch(`/api/auth/nutricionista/${user.nutriID}`);
+                const result = await response.json();
+                console.log("fetchNutriData | result")
+                console.log(result)
+                if (result.success) {
+                    window.nutriCRN = result.nutricionista.crnCode;
+                    window.nutriNameFull = result.nutricionista.name;
+                }
+            } catch (error) {
+                console.error('Erro ao buscar dados da nutricionista:', error);
             }
         }
     }
 
     async function sendWhatsAppMsg(user) {
         try {
-            const response = await fetch(`/api/auth/sendMsg/${user.nutriID}`, {
-                method: 'GET'
-            });
+            const response = await fetch(`/api/auth/sendMsg/${user.nutriID}`, { method: 'GET' });
             const result = await response.json();
-            if (result.success) {
-                window.open(`https://wa.me/${result.number}`, '_blank');
-            } else {
-                console.log('Erro ao tentar enviar mensagem.');
-            }
+            if (result.success) window.open(`https://wa.me/${result.number}`, '_blank');
         } catch (error) {
-            console.log('Erro ao tentar enviar mensagem: ', error);
+            console.log('Erro ao enviar mensagem: ', error);
         }
     }
 
     async function handleLogout() {
         try {
-            const response = await fetch('/api/auth/logout', {
-                method: 'POST'
-            });
+            const response = await fetch('/api/auth/logout', { method: 'POST' });
             const result = await response.json();
-            if (result.success) {
-                window.location.href = result.redirectUrl;
-            } else {
-                console.log('Erro ao tentar fazer logout.');
-            }
+            if (result.success) window.location.href = result.redirectUrl;
         } catch (error) {
             console.log('Erro no processo de logout:', error);
         }
     }
 
-    // LÓGICA DE NOTIFICAÇÃO 
     async function fetchAndRenderNotifications(user) {
         const listContainer = document.getElementById('notificationList');
         const countBadge = document.getElementById('notificationCount');
         const emptyMessage = document.getElementById('noNotificationsMessage');
 
         if (!listContainer) return;
-
         let notificationCount = 0;
 
         try {
             const response = await fetch('/api/auth/patient/notifications');
             const result = await response.json();
-
             let newHtml = '';
 
             if (result.success && result.notifications.length > 0) {
-                console.log("result")
-                console.log(result)
-
-                console.log("patient id = ", user)
                 result.notifications.forEach(notif => {
-                    if (notif.status !== 'Pendente') {
-                        notificationCount++;
-                    }
+                    if (notif.status !== 'Pendente') notificationCount++;
 
-                    let iconClass = '',
-                        statusClass = '',
-                        messageText = '',
-                        actionText = '';
-
+                    let iconClass = '', statusClass = '', messageText = '', actionText = '';
                     if (notif.status === 'Confirmada') {
-                        statusClass = 'status-approved';
-                        iconClass = 'bi-calendar-check-fill';
-                        messageText = `🎉 Aí sim! ${notif.message}`;
-                        actionText = `Ver Agenda`;
+                        statusClass = 'status-approved'; iconClass = 'bi-calendar-check-fill';
+                        messageText = `🎉 Aí sim! ${notif.message}`; actionText = `Ver Agenda`;
                     } else if (notif.status === 'Rejeitada') {
-                        statusClass = 'status-rejected';
-                        iconClass = 'bi-calendar-x-fill';
-                        messageText = `😔 Poxa! ${notif.message}.`;
-                        actionText = `Reagendar`;
-                    } else {
-                        return;
-                    }
+                        statusClass = 'status-rejected'; iconClass = 'bi-calendar-x-fill';
+                        messageText = `😔 Poxa! ${notif.message}.`; actionText = `Reagendar`;
+                    } else { return; }
 
                     newHtml += `
                         <div class="notification-item">
@@ -184,60 +187,50 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (notificationCount > 0) {
-                if (countBadge) {
-                    countBadge.textContent = notificationCount;
-                    countBadge.style.display = 'inline-block';
-                }
+                if (countBadge) { countBadge.textContent = notificationCount; countBadge.style.display = 'inline-block'; }
                 if (emptyMessage) emptyMessage.style.display = 'none';
                 listContainer.innerHTML = newHtml;
             } else {
                 if (countBadge) countBadge.style.display = 'none';
-                listContainer.innerHTML = ''; // Limpa antes de adicionar a msg
-                if (emptyMessage) {
-                    listContainer.appendChild(emptyMessage);
-                    emptyMessage.style.display = 'block';
-                }
+                listContainer.innerHTML = '';
+                if (emptyMessage) { listContainer.appendChild(emptyMessage); emptyMessage.style.display = 'block'; }
             }
         } catch (error) {
-            console.error('Erro ao carregar notificações:', error);
-            if (emptyMessage) emptyMessage.textContent = 'Erro ao carregar. 😵';
+            if (emptyMessage) emptyMessage.textContent = 'Erro ao carregar notificações.';
         }
     }
- 
-    async function getPatientDashboardOverview(user) {
-        await fetchAndRenderNotifications(user); 
 
+    // ==========================================
+    // HOME DASHBOARD (RESUMO)
+    // ==========================================
+    async function getPatientDashboardOverview(user) {
+        await fetchAndRenderNotifications(user);
         try {
             const response = await fetch('/api/auth/patient/dashboard-overview');
             const result = await response.json();
 
             if (result.success) {
-                 renderDashboardUI(result.data);
+                renderDashboardUI(result.data);
+                renderDetailedCharts(result.data.evolutionHistory, result.data.kpis);
 
-                 renderDetailedCharts(result.data.evolutionHistory, result.data.kpis);
-
-                 if (result.data.nextAppointment) {
+                if (result.data.nextAppointment) {
                     const viewDetailsBtn = document.getElementById('viewDetailsBtn');
                     if (viewDetailsBtn) {
-                         const newViewDetailsBtn = viewDetailsBtn.cloneNode(true);
+                        const newViewDetailsBtn = viewDetailsBtn.cloneNode(true);
                         viewDetailsBtn.parentNode.replaceChild(newViewDetailsBtn, viewDetailsBtn);
-
                         newViewDetailsBtn.addEventListener('click', () => {
                             showAppointmentDetailsModal(result.data.nextAppointment, result.data, 'dashboard');
                         });
                     }
                 }
-            } else {
-                console.error('Erro ao carregar overview do paciente:', result.message);
             }
         } catch (error) {
             console.error('Falha na comunicação com o servidor ao carregar dashboard:', error);
         }
     }
 
-     function renderDashboardUI(data) {
+    function renderDashboardUI(data) {
         const { kpis, nextAppointment } = data;
-
         const nextAppointmentCard = document.getElementById('nextAppointmentCard');
         const emptyNextAppointmentCard = document.getElementById('emptyNextAppointmentCard');
 
@@ -253,36 +246,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (emptyNextAppointmentCard) emptyNextAppointmentCard.style.display = 'block';
             }
 
-             if (document.getElementById('currentWeight')) {
-                document.getElementById('currentWeight').textContent = kpis.currentWeight ? `${kpis.currentWeight} kg` : '-- kg';
-            }
+            if (document.getElementById('currentWeight')) document.getElementById('currentWeight').textContent = kpis.currentWeight ? `${kpis.currentWeight} kg` : '-- kg';
+            if (document.getElementById('currentBmi')) document.getElementById('currentBmi').textContent = kpis.bmi ? kpis.bmi : '--';
 
-            if (document.getElementById('currentBmi')) {
-                document.getElementById('currentBmi').textContent = kpis.bmi ? kpis.bmi : '--';
-            }
-
-             const weightDifferenceElement = document.getElementById('weightDifference');
-            if (weightDifferenceElement) {
+            const diffEl = document.getElementById('weightDifference');
+            if (diffEl) {
                 if (kpis.weightDifference !== null && kpis.weightDifference !== undefined) {
                     const diff = parseFloat(kpis.weightDifference);
                     const sign = diff > 0 ? '+' : '';
                     const icon = diff > 0 ? 'bi-arrow-up-right' : (diff < 0 ? 'bi-arrow-down-right' : 'bi-arrow-right');
-
-                     const colorClass = diff > 0 ? 'text-danger-red' : (diff < 0 ? 'text-primary-green' : 'text-muted');
-
-                    weightDifferenceElement.innerHTML = `<i class="bi ${icon} me-1 ${colorClass}"></i> ${sign}${diff.toFixed(1)} kg`;
+                    const colorClass = diff > 0 ? 'text-danger-red' : (diff < 0 ? 'text-primary-green' : 'text-muted');
+                    diffEl.innerHTML = `<i class="bi ${icon} me-1 ${colorClass}"></i> ${sign}${diff.toFixed(1)} kg`;
                 } else {
-                    weightDifferenceElement.textContent = '-- kg';
+                    diffEl.textContent = '-- kg';
                 }
             }
         }
     }
 
-     function renderDetailedCharts(evolutionHistory, kpis) {
+    function renderDetailedCharts(evolutionHistory, kpis) {
         const emptyChartState = document.getElementById('emptyChartState');
         const tabsContent = document.getElementById('evolutionTabsContent');
 
-         if (!evolutionHistory || evolutionHistory.length < 2) {
+        if (!evolutionHistory || evolutionHistory.length < 2) {
             if (emptyChartState) emptyChartState.style.display = 'block';
             if (tabsContent) tabsContent.style.display = 'none';
             return;
@@ -291,52 +277,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (emptyChartState) emptyChartState.style.display = 'none';
         if (tabsContent) tabsContent.style.display = 'block';
 
-         const uniqueHistory = evolutionHistory.sort((a, b) => new Date(a.consultation_date) - new Date(b.consultation_date));
+        const uniqueHistory = evolutionHistory.sort((a, b) => new Date(a.consultation_date) - new Date(b.consultation_date));
+        const labels = uniqueHistory.map(item => new Date(item.consultation_date).toLocaleDateString('pt-BR'));
 
-         const labels = uniqueHistory.map(item => new Date(item.consultation_date).toLocaleDateString('pt-BR'));
-
-         const weightData = uniqueHistory.map(item => item.weight);
+        const weightData = uniqueHistory.map(item => item.weight);
         const weightCtx = document.getElementById('weightChart').getContext('2d');
         if (window.myWeightChart) window.myWeightChart.destroy();
         window.myWeightChart = new Chart(weightCtx, {
             type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Peso (kg)',
-                    data: weightData,
-                    borderColor: '#2a9d8f',
-                    backgroundColor: 'rgba(42, 157, 143, 0.2)',
-                    fill: true,
-                    tension: 0.4,  
-                    pointRadius: 5,
-                    pointBackgroundColor: '#2a9d8f'
-                }]
-            },
+            data: { labels: labels, datasets: [{ label: 'Peso (kg)', data: weightData, borderColor: '#2a9d8f', backgroundColor: 'rgba(42, 157, 143, 0.2)', fill: true, tension: 0.4, pointRadius: 5, pointBackgroundColor: '#2a9d8f' }] },
             options: { responsive: true, maintainAspectRatio: false }
         });
 
-         const fatData = uniqueHistory.map(item => item.body_fat_percentage || null); // Usa null para não quebrar a linha se não houver medição
+        const fatData = uniqueHistory.map(item => item.body_fat_percentage || null);
         const fatCtx = document.getElementById('fatChart').getContext('2d');
         if (window.myFatChart) window.myFatChart.destroy();
         window.myFatChart = new Chart(fatCtx, {
             type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: '% de Gordura',
-                    data: fatData,
-                    borderColor: '#f4a261',
-                    backgroundColor: 'rgba(244, 162, 97, 0.2)',
-                    fill: true,
-                    tension: 0.4,
-                    spanGaps: true  
-                }]
-            },
+            data: { labels: labels, datasets: [{ label: '% de Gordura', data: fatData, borderColor: '#f4a261', backgroundColor: 'rgba(244, 162, 97, 0.2)', fill: true, tension: 0.4, spanGaps: true }] },
             options: { responsive: true, maintainAspectRatio: false }
         });
 
-         const measuresData = {
+        const measuresData = {
             waist: uniqueHistory.map(item => item.circum_waist || null),
             abdomen: uniqueHistory.map(item => item.circum_abdomen || null),
             hip: uniqueHistory.map(item => item.circum_hip || null),
@@ -348,97 +310,93 @@ document.addEventListener('DOMContentLoaded', async () => {
             data: {
                 labels: labels,
                 datasets: [
-                    {
-                        label: 'Cintura (cm)',
-                        data: measuresData.waist,
-                        borderColor: '#e76f51',
-                        tension: 0.4,
-                        spanGaps: true
-                    },
-                    {
-                        label: 'Abdómen (cm)',
-                        data: measuresData.abdomen,
-                        borderColor: '#264653',
-                        tension: 0.4,
-                        spanGaps: true
-                    },
-                    {
-                        label: 'Anca/Quadril (cm)',
-                        data: measuresData.hip,
-                        borderColor: '#e9c46a',
-                        tension: 0.4,
-                        spanGaps: true
-                    }
+                    { label: 'Cintura (cm)', data: measuresData.waist, borderColor: '#e76f51', tension: 0.4, spanGaps: true },
+                    { label: 'Abdómen (cm)', data: measuresData.abdomen, borderColor: '#264653', tension: 0.4, spanGaps: true },
+                    { label: 'Anca/Quadril (cm)', data: measuresData.hip, borderColor: '#e9c46a', tension: 0.4, spanGaps: true }
                 ]
             },
             options: { responsive: true, maintainAspectRatio: false }
         });
     }
 
-    async function getMealPlanData(userId) {
-        const container = document.getElementById('mealPlanContainer');
+    // ==========================================
+    // PLANO ALIMENTAR (ABAS + MOTOR DE PDF)
+    // ==========================================
+    async function getMealPlanData(userId, userAll) {
+        const screenContainer = document.getElementById('mealPlanScreenContainer');
         const emptyState = document.getElementById('emptyPlanState');
-        if (!container || !emptyState) return;
+        const btnPdf = document.getElementById('btnExportPDF');
 
-        container.innerHTML = '<div class="text-center p-5"><span class="spinner-border"></span></div>';
+        if (!screenContainer || !emptyState) return;
+
+        screenContainer.innerHTML = `
+            <div class="d-flex flex-column justify-content-center align-items-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status"></div>
+                <h6 class="text-muted">Processando seu cardápio...</h6>
+            </div>`;
 
         try {
             const response = await fetch(`/api/auth/mealplan/${userId}`);
             const result = await response.json();
 
-            if (!result.success || !result.plan) {
-                container.style.display = 'none';
+            if (!result.success || !result.plan || !result.plan.meals || result.plan.meals.length === 0) {
+                screenContainer.style.display = 'none';
                 emptyState.style.display = 'block';
                 return;
             }
 
-            container.style.display = 'block';
+            screenContainer.style.display = 'block';
             emptyState.style.display = 'none';
-            renderMealPlan(result.plan);
+            if (btnPdf) btnPdf.style.display = 'inline-flex';
+
+            if (document.getElementById('headerCalories') && result.plan.totalCalories) {
+                document.getElementById('headerCalories').innerHTML = `Sua meta calórica: <strong class="text-dark-charcoal">${result.plan.totalCalories} kcal</strong> diárias.`;
+            }
+
+            renderMealPlanTabs(result.plan);
+            renderA4DocumentForPDF(result.plan, userAll);
 
         } catch (error) {
             console.error("Erro ao carregar o plano alimentar:", error);
-            container.style.display = 'none';
+            screenContainer.style.display = 'none';
             emptyState.style.display = 'block';
         }
     }
 
-    function renderMealPlan(plan) {
-        const container = document.getElementById('mealPlanContainer');
+    function renderMealPlanTabs(plan) {
+        const container = document.getElementById('mealPlanScreenContainer');
         container.innerHTML = '';
 
-        if (!plan.meals || plan.meals.length === 0) {
-            container.style.display = 'none';
-            document.getElementById('emptyPlanState').style.display = 'block';
-            return;
-        }
-
         const tabsNav = document.createElement('ul');
-        tabsNav.className = 'nav nav-pills mb-4 meal-plan-tabs';
+        tabsNav.className = 'nav nav-pills custom-pills';
         tabsNav.id = 'mealPlanTab';
         tabsNav.role = 'tablist';
 
         const tabContent = document.createElement('div');
-        tabContent.className = 'tab-content';
+        tabContent.className = 'tab-content mt-4';
         tabContent.id = 'mealPlanTabContent';
 
         plan.meals.forEach((meal, index) => {
-            const tabId = `meal-tab-${meal.id}`;
-            const paneId = `meal-pane-${meal.id}`;
+            const tabId = `meal-tab-${meal.id || index}`;
+            const paneId = `meal-pane-${meal.id || index}`;
 
+            // Aba
             const navItem = document.createElement('li');
             navItem.className = 'nav-item';
-            navItem.innerHTML = `<button class="nav-link ${index === 0 ? 'active' : ''}" id="${tabId}" data-bs-toggle="pill" data-bs-target="#${paneId}" type="button">${meal.name}</button>`;
+            navItem.innerHTML = `<button class="nav-link ${index === 0 ? 'active' : ''}" id="${tabId}" data-bs-toggle="pill" data-bs-target="#${paneId}" type="button" role="tab"><i class="bi bi-clock me-2"></i>${meal.name}</button>`;
             tabsNav.appendChild(navItem);
 
-            let itemsHtml = '<p class="text-muted">Nenhum item cadastrado para esta refeição.</p>';
+            // Conteúdo
+            let itemsHtml = '<div class="text-center p-5 text-muted"><i class="bi bi-emoji-smile fs-1 d-block mb-3"></i>Refeição livre ou sem itens cadastrados.</div>';
+
             if (meal.items && meal.items.length > 0) {
                 itemsHtml = meal.items.map(item => `
-                    <div class="meal-item">
-                        <div class="meal-item-details">
-                            <div class="food-name">${item.foodName}</div>
-                            <div class="food-quantity">${item.quantity}</div>
+                    <div class="food-item-card">
+                        <div>
+                            <p class="food-name">${item.foodName}</p>
+                            <p class="food-measure"><i class="bi bi-info-circle me-1"></i> ${item.measure || 'Medida Padrão'}</p>
                         </div>
+                        <div class="food-quantity-badge">${item.quantity}</div>
                     </div>
                 `).join('');
             }
@@ -446,23 +404,147 @@ document.addEventListener('DOMContentLoaded', async () => {
             const pane = document.createElement('div');
             pane.className = `tab-pane fade ${index === 0 ? 'show active' : ''}`;
             pane.id = paneId;
+            pane.role = 'tabpanel';
             pane.innerHTML = itemsHtml;
             tabContent.appendChild(pane);
         });
 
         container.appendChild(tabsNav);
         container.appendChild(tabContent);
+
+        const btnPdf = document.getElementById('btnExportPDF');
+        if (btnPdf) {
+            const newBtn = btnPdf.cloneNode(true);
+            btnPdf.parentNode.replaceChild(newBtn, btnPdf);
+            newBtn.addEventListener('click', generatePDF);
+        }
     }
 
+    async function renderA4DocumentForPDF(plan, user) {
+        console.log("renderA4DocumentForPDF infos")
+        console.log(user)
+        await fetchNutriData(user);
+        const pdfContainer = document.getElementById('pdf-export-container');
+        const pacienteNome = window.user ? window.user.name : 'Paciente';
+        const nutriNome = window.nutriNameFull;
+        const nutriCRN = window.nutriCRN;
+        const dataHoje = new Date().toLocaleDateString('pt-BR');
+
+        let a4Html = `
+            <div style="background-color: #ffffff; padding: 0 10px;">
+                
+                <div style="border-bottom: 2px solid #2a9d8f; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-start; font-family: Helvetica, Arial, sans-serif;">
+                    <div>
+                        <h1 style="color: #2a9d8f; font-size: 24px; margin: 0 0 12px 0; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">Plano Alimentar Individualizado</h1>
+                        <p style="margin: 4px 0; font-size: 14px; color: #333;">Paciente: <strong>${pacienteNome}</strong></p>
+                        <p style="margin: 4px 0; font-size: 14px; color: #333;"><strong>Dra. ${nutriNome}</strong></p>
+                        <p style="margin: 4px 0; font-size: 14px; color: #333;">CRN: <strong>${nutriCRN}</strong></p>
+                        <p style="margin: 4px 0; font-size: 14px; color: #333;">Prescrição elaborada em: <strong>${dataHoje}</strong></p>
+                    </div>
+                </div>
+                `;
+
+        plan.meals.forEach((meal) => {
+            a4Html += `
+            <div style="margin-bottom: 25px; page-break-inside: avoid; font-family: Helvetica, Arial, sans-serif;">
+                
+                <div style="background-color: #2a9d8f; color: #ffffff; padding: 10px 15px; border-radius: 8px 8px 0 0;">
+                    <h3 style="margin: 0; font-size: 15px; font-weight: bold; letter-spacing: 1px;">${meal.name.toUpperCase()}</h3>
+                </div>
+                
+                <div style="border: 1px solid #e0e6ed; border-top: none; border-radius: 0 0 8px 8px; padding: 10px 15px; background-color: #ffffff;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tbody>
+            `;
+
+            if (meal.items && meal.items.length > 0) {
+                meal.items.forEach((item, idx) => {
+                    const isLast = idx === meal.items.length - 1;
+                    const borderStyle = isLast ? 'none' : '1px solid #f0f4f8';
+
+                    a4Html += `
+                        <tr>
+                            <td style="padding: 12px 5px; border-bottom: ${borderStyle}; width: 75%;">
+                                <div style="color: #2b2d42; font-size: 14px; font-weight: bold; margin-bottom: 3px;">${item.foodName}</div>
+                                <div style="color: #8d99ae; font-size: 12px;">Medida: ${item.measure || 'Padrão'}</div>
+                            </td>
+                            <td style="padding: 12px 5px; border-bottom: ${borderStyle}; text-align: right; width: 25%;">
+                                <span style="background-color: #f4f7f6; border: 1px solid #e9ecef; color: #e76f51; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 6px; display: inline-block;">
+                                    ${item.quantity}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } else {
+                a4Html += `<tr><td colspan="2" style="padding: 15px; font-size: 13px; color: #8d99ae; text-align: center; font-style: italic;">Nenhum item específico prescrito.</td></tr>`;
+            }
+
+            a4Html += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            `;
+        });
+
+        // Rodapé de Assinatura
+        a4Html += `
+                <div style="margin-top: 50px; text-align: center; page-break-inside: avoid; font-family: Helvetica, Arial, sans-serif;">
+                    <div style="width: 300px; border-bottom: 1px solid #333; margin: 0 auto 10px auto;"></div>
+                    <p style="margin: 0; font-size: 14px; color: #2b2d42; font-weight: bold;">Dra. ${nutriNome}</p>
+                    <p style="margin: 3px 0 0 0; font-size: 12px; color: #555;">CRN: ${nutriCRN}</p>
+                    <p style="margin: 25px 0 0 0; font-size: 11px; color: #999;">Este documento é de uso pessoal e intransferível. Gerado por <strong>NutriCare Software</strong>.</p>
+                </div>
+            </div>
+        `;
+
+        pdfContainer.innerHTML = a4Html;
+    }
+
+    function generatePDF() {
+        const btn = document.getElementById('btnExportPDF');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processando...';
+        btn.disabled = true;
+
+        const element = document.getElementById('pdf-export-container');
+        const pacienteNome = window.user ? window.user.name : 'Paciente';
+
+        // Torna o elemento visível apenas para o motor ler (ele está fora da tela visualmente)
+        element.style.display = 'block';
+
+        const opt = {
+            margin: 15, // Margens de 15mm para as bordas do PDF ficarem como uma folha real
+            filename: `Cardapio_${pacienteNome.replace(/\s+/g, '_')}.pdf`,
+            image: { type: 'jpeg', quality: 1 },
+            html2canvas: { scale: 3, useCORS: true, logging: false }, // Scale 3 = Alta Resolução
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            element.style.display = 'none';
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            showCustomToast("PDF Profissional gerado com sucesso!", true);
+        }).catch(err => {
+            console.error("Erro ao gerar PDF:", err);
+            element.style.display = 'none';
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            showCustomToast("Erro ao gerar PDF. Tente novamente.", false);
+        });
+    }
+
+    // ==========================================
+    // AGENDA E CONSULTAS
+    // ==========================================
     async function getAppointmentsData(user) {
         const listContainer = document.getElementById('appointmentsListContainer');
         const emptyState = document.getElementById('emptyAgendaState');
         const highlightContainer = document.getElementById('nextAppointmentHighlight');
 
-        if (!listContainer || !emptyState || !highlightContainer) {
-            console.error("Elementos essenciais da página de agenda não foram encontrados.");
-            return;
-        }
+        if (!listContainer || !emptyState || !highlightContainer) return;
 
         listContainer.innerHTML = '';
         highlightContainer.innerHTML = '';
@@ -491,7 +573,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 .filter(app => !upcomingAppointments.some(up => up.id === app.id))
                 .sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
 
-
             if (appointments.length === 0) {
                 emptyState.style.display = 'block';
                 highlightContainer.style.display = 'none';
@@ -513,33 +594,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 renderAppointmentCard(app, nutriData, listContainer);
             });
 
-
         } catch (error) {
             console.error("Erro ao carregar agendamentos:", error);
-            if (emptyState) {
-                emptyState.style.display = 'block';
-            }
+            if (emptyState) emptyState.style.display = 'block';
         }
     }
 
     function renderHighlight(app, nutriData) {
         const highlightContainer = document.getElementById('nextAppointmentHighlight');
         const date = new Date(app.appointment_date);
-        const formattedDate = date.toLocaleDateString('pt-BR', {
-            day: '2-digit',
-            month: 'long'
-        });
-        const formattedTime = date.toLocaleTimeString('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        const formattedDate = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
+        const formattedTime = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
         highlightContainer.innerHTML = `
-            <div class="card data-card highlight-appointment-card">
-                <div class="highlight-details">
+            <div class="card data-card highlight-appointment-card border-0 shadow-sm p-3">
+                <div class="highlight-details d-flex align-items-center mb-3">
                     <i class="bi bi-calendar-check-fill me-4 display-6 text-primary-green"></i>
                     <div>
-                        <h5 class="highlight-title">Próxima Consulta: ${app.service_type}</h5>
+                        <h5 class="highlight-title fw-bold text-dark-charcoal">${app.service_type}</h5>
                         <p class="highlight-info mb-0">
                             Em <strong class="text-secondary-orange">${formattedDate}</strong> às 
                             <strong class="text-secondary-orange">${formattedTime}</strong> (${app.duration} min)
@@ -548,78 +620,74 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
                 <div class="d-flex gap-2">
                     <button class="btn btn-sm btn-outline-secondary btn-cancel-appointment" data-id="${app.id}"><i class="bi bi-x-circle me-1"></i> Cancelar</button>
-                    <button class="btn btn-sm btn-primary-custom btn-reschedule-appointment" data-id="${app.id}">Remarcar</button>
+                    <button class="btn btn-sm btn-primary-custom btn-reschedule-appointment" data-id="${app.id}"><i class="bi bi-arrow-repeat me-1"></i> Remarcar</button>
                 </div>
             </div>`;
 
         highlightContainer.querySelector('.btn-cancel-appointment').addEventListener('click', (e) => {
             e.stopPropagation();
-            showActionConfirmModal(app.id, 'cancelar', {
-                type: app.service_type,
-                date: formattedDate,
-                time: formattedTime
-            });
+            showActionConfirmModal(app.id, 'cancelar', { type: app.service_type, date: formattedDate, time: formattedTime });
         });
         highlightContainer.querySelector('.btn-reschedule-appointment').addEventListener('click', (e) => {
             e.stopPropagation();
             showActionConfirmModal(app.id, 'reagendar', {});
         });
     }
+
     function renderAppointmentCard(app, nutriData, container) {
         const card = document.createElement('div');
-        card.className = 'list-group-item appointment-card';
+        card.className = 'list-group-item appointment-card d-flex justify-content-between align-items-center p-3 mb-2 border rounded shadow-sm';
         card.dataset.appointmentId = app.id;
+        card.style.cursor = 'pointer';
 
         const date = new Date(app.appointment_date);
-        const formattedDate = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+        const formattedDate = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
         const formattedTime = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
         let statusHtml = '', actionsHtml = '', statusClass = '', iconClass = 'bi-person-check-fill';
         const typeLower = app.service_type.toLowerCase();
 
         if (typeLower.includes('retorno')) {
-            statusClass = 'type-retorno';
-            iconClass = 'bi-arrow-repeat';
+            statusClass = 'text-info'; iconClass = 'bi-arrow-repeat';
         } else if (typeLower.includes('online')) {
-            statusClass = 'type-online';
-            iconClass = 'bi-camera-video-fill';
+            statusClass = 'text-primary'; iconClass = 'bi-camera-video-fill';
         } else {
-            statusClass = 'type-primeira';
+            statusClass = 'text-success';
         }
 
         switch (app.status) {
             case 'Confirmada':
-                statusHtml = `<span class="appointment-status text-primary-green fw-bold me-3">Confirmada</span>`;
-                actionsHtml = `<button class="btn btn-sm btn-outline-secondary btn-cancel-appointment" data-id="${app.id}"><i class="bi bi-x-circle me-1"></i> Cancelar</button>
-                               <button class="btn btn-sm btn-outline-primary btn-reschedule-appointment" data-id="${app.id}"><i class="bi bi-arrow-repeat me-1"></i> Remarcar</button>`;
+                statusHtml = `<span class="badge bg-success me-3">Confirmada</span>`;
+                actionsHtml = `<button class="btn btn-sm btn-outline-secondary btn-cancel-appointment me-1" data-id="${app.id}">Cancelar</button>
+                               <button class="btn btn-sm btn-outline-primary btn-reschedule-appointment" data-id="${app.id}">Remarcar</button>`;
                 break;
             case 'Realizada':
-                statusHtml = `<span class="appointment-status text-muted fw-bold me-3">Realizada</span>`;
+                statusHtml = `<span class="badge bg-secondary me-3">Realizada</span>`;
                 actionsHtml = app.is_rated ?
-                    `<button class="btn btn-sm btn-success" disabled><i class="bi bi-check-circle-fill me-1"></i> Avaliada</button>` :
-                    `<button class="btn btn-sm btn-primary-custom btn-survey" data-id="${app.id}" data-type="${app.service_type}"><i class="bi bi-star-fill me-1"></i> Avaliar</button>`;
+                    `<button class="btn btn-sm btn-light" disabled><i class="bi bi-check-circle-fill text-success me-1"></i> Avaliada</button>` :
+                    `<button class="btn btn-sm btn-warning text-dark fw-bold btn-survey" data-id="${app.id}" data-type="${app.service_type}"><i class="bi bi-star-fill me-1"></i> Avaliar</button>`;
                 break;
             case 'Cancelada':
             case 'Rejeitada':
-                statusHtml = `<span class="appointment-status text-danger-red fw-bold me-3">${app.status}</span>`;
+                statusHtml = `<span class="badge bg-danger me-3">${app.status}</span>`;
                 actionsHtml = '';
                 break;
             case 'Pendente':
             default:
-                statusHtml = `<span class="appointment-status text-warning fw-bold me-3">Pendente</span>`;
-                actionsHtml = `<button class="btn btn-sm btn-outline-secondary btn-cancel-appointment" data-id="${app.id}"><i class="bi bi-x-circle me-1"></i> Cancelar</button>`;
+                statusHtml = `<span class="badge bg-warning text-dark me-3">Pendente</span>`;
+                actionsHtml = `<button class="btn btn-sm btn-outline-secondary btn-cancel-appointment" data-id="${app.id}">Cancelar</button>`;
                 break;
         }
 
-
         card.innerHTML = `
-        <div class="appointment-icon ${statusClass}"><i class="bi ${iconClass}"></i></div>
-        <div class="appointment-details">
-            <h5 class="appointment-title">${app.service_type}</h5>
-            <p class="appointment-info mb-1"><i class="bi bi-calendar-event"></i> ${formattedDate} às ${formattedTime} (${app.duration} min)</p>
-            <p class="appointment-info mb-0"><i class="bi bi-person-fill"></i> Nutri: ${nutriData.name}</p>
+        <div class="d-flex align-items-center gap-3">
+            <div class="p-2 bg-light rounded-circle ${statusClass}"><i class="bi ${iconClass} fs-4"></i></div>
+            <div>
+                <h6 class="mb-1 fw-bold">${app.service_type}</h6>
+                <p class="mb-0 text-muted small"><i class="bi bi-calendar-event me-1"></i> ${formattedDate} às ${formattedTime} (${app.duration} min)</p>
+            </div>
         </div>
-        <div class="d-flex gap-2 align-items-center">
+        <div class="d-flex align-items-center">
             ${statusHtml}
             ${actionsHtml}
         </div>`;
@@ -690,12 +758,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const response = await fetch('/api/auth/patient/appointments', {
                 method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    appointmentId
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ appointmentId })
             });
             const result = await response.json();
             showCustomToast(result.message, result.success);
@@ -712,303 +776,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- LÓGICA DO MODAL DE AVALIAÇÃO (SURVEY) ---
-
-    function showSurveyModal(appointmentId, serviceType, nutriName) {
-        const modal = document.getElementById('surveyModal');
-        const form = document.getElementById('surveyForm');
-        if (!modal || !form) return;
-
-        form.reset();
-        document.querySelectorAll('.rating-stars .bi-star-fill').forEach(s => {
-            s.classList.remove('bi-star-fill');
-            s.classList.add('bi-star');
-        });
-        document.querySelectorAll('.nps-score.selected').forEach(b => b.classList.remove('selected'));
-        const messageContainer = document.getElementById('survey-message');
-        if (messageContainer) messageContainer.classList.remove('visible');
-
-
-        document.getElementById('surveyAppointmentId').value = appointmentId;
-        document.getElementById('surveyNutriName').textContent = nutriName;
-
-        const mealPlanSection = document.getElementById('mealPlanSurveySection');
-        const mealPlanRatingInput = document.getElementById('mealPlanRating');
-
-        const isRetorno = serviceType.toLowerCase().includes('retorno');
-        mealPlanSection.style.display = isRetorno ? 'block' : 'none';
-        mealPlanRatingInput.required = isRetorno;
-
-        modal.classList.add('is-visible');
-    }
-
-    function initializeSurveyModal() {
-        const modal = document.getElementById('surveyModal');
-        if (!modal) return;
-
-        modal.querySelector('#closeSurveyModal').addEventListener('click', () => modal.classList.remove('is-visible'));
-
-        document.querySelectorAll('.rating-stars').forEach(container => {
-            container.addEventListener('click', (e) => {
-                if (e.target.matches('.bi-star, .bi-star-fill')) {
-                    const value = e.target.dataset.value;
-                    const input = document.getElementById(`${container.dataset.for}Rating`);
-                    input.value = value;
-                    container.querySelectorAll('i').forEach(star => {
-                        star.classList.toggle('bi-star-fill', star.dataset.value <= value);
-                        star.classList.toggle('bi-star', star.dataset.value > value);
-                    });
-                }
-            });
-        });
-
-        document.querySelectorAll('.rating-nps').forEach(container => {
-            container.addEventListener('click', (e) => {
-                if (e.target.matches('.nps-score')) {
-                    const value = e.target.dataset.value;
-                    document.getElementById('systemRating').value = value;
-                    container.querySelectorAll('.nps-score').forEach(btn => btn.classList.remove('selected'));
-                    e.target.classList.add('selected');
-                }
-            });
-        });
-
-        document.getElementById('surveyForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('submitSurveyBtn');
-            const btnText = btn.querySelector('.btn-text');
-            const spinner = btn.querySelector('.spinner-container');
-            const messageContainer = document.getElementById('survey-message');
-
-            btn.disabled = true;
-            btnText.style.display = 'none';
-            spinner.style.display = 'block';
-
-            const payload = {
-                appointmentId: document.getElementById('surveyAppointmentId').value,
-                nutriRating: document.getElementById('nutriRating').value,
-                nutriComments: document.getElementById('nutriComments').value,
-                systemRating: document.getElementById('systemRating').value,
-                systemComments: document.getElementById('systemComments').value,
-            };
-
-            if (document.getElementById('mealPlanRating').required) {
-                payload.mealPlanRating = document.getElementById('mealPlanRating').value;
-                payload.mealPlanComments = document.getElementById('mealPlanComments').value;
-            }
-
-            try {
-                const response = await fetch('/api/auth/patient/submit-survey', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
-                const result = await response.json();
-
-                messageContainer.textContent = result.message;
-                messageContainer.className = `form-message-container ${result.success ? 'success' : 'error'} visible`;
-
-                if (result.success) {
-                    setTimeout(async () => {
-                        modal.classList.remove('is-visible');
-                        await getAppointmentsData(await verifySession());
-                    }, 2000);
-                }
-
-            } catch (error) {
-                messageContainer.textContent = 'Erro de comunicação ao enviar avaliação.';
-                messageContainer.className = 'form-message-container error visible';
-            } finally {
-                btn.disabled = false;
-                btnText.style.display = 'block';
-                spinner.style.display = 'none';
-            }
-        });
-    }
-
-    // --- LÓGICA DE REAGENDAMENTO ---
-
-    let rescheduleState = {
-        nutriID: null,
-        originalAppointmentID: null,
-        service: null,
-        newDate: null,
-        newTime: null,
-    };
-
-    const getDateString = (date) => date.toISOString().split('T')[0];
-
-    const datesValidation = (date) => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        return date.getDay() === 0 || date.getTime() < today.getTime();
-    };
-
-    async function fetchAndRenderAvailableTimes(dateStr, nutriId, slotsContainer, loader, alertMessage, duration) {
-        slotsContainer.innerHTML = '';
-        loader.style.display = 'block';
-        alertMessage.style.display = 'none';
-
-        try {
-            const response = await fetch(`/api/auth/schedule/available?nutriId=${nutriId}&date=${dateStr}`);
-            const result = await response.json();
-
-            loader.style.display = 'none';
-            const availableTimes = result.availableSlots || [];
-
-            if (availableTimes.length === 0) {
-                slotsContainer.innerHTML = '<p class="text-muted text-center small mt-3">Nenhum horário disponível.</p>';
-                alertMessage.textContent = result.message || 'Esta data não está configurada para atendimento.';
-                alertMessage.style.display = 'block';
-                return;
-            }
-
-            slotsContainer.style.display = 'grid';
-            document.getElementById('goToRescheduleConfirm').disabled = true;
-
-            availableTimes.forEach(time => {
-                const slot = document.createElement('div');
-                slot.className = 'time-slot';
-                slot.textContent = time;
-                slot.addEventListener('click', () => {
-                    rescheduleState.newTime = time;
-                    document.querySelectorAll('#rescheduleTimeSlots .time-slot').forEach(s => s.classList.remove('selected'));
-                    slot.classList.add('selected');
-                    document.getElementById('goToRescheduleConfirm').disabled = false;
-                });
-                slotsContainer.appendChild(slot);
-            });
-
-        } catch (error) {
-            loader.style.display = 'none';
-            alertMessage.textContent = 'Erro de comunicação ao carregar horários.';
-            alertMessage.style.display = 'block';
-        }
-    }
-
-    function initializeRescheduleModal(nutriID, appointment) {
-        const modal = document.getElementById('rescheduleModal');
-        const datepickerEl = document.getElementById('rescheduleDatepicker');
-
-        if (window.reschedulePicker) {
-            window.reschedulePicker.destroy();
-        }
-
-        rescheduleState = {
-            nutriID: nutriID,
-            originalAppointmentID: appointment.id,
-            service: {
-                name: appointment.service_type,
-                duration: appointment.duration
-            },
-            newDate: null,
-            newTime: null,
-        };
-
-        document.getElementById('rescheduleServiceType').textContent = appointment.service_type;
-
-        const goToStep = (step) => {
-            modal.querySelectorAll('.booking-step').forEach(s => s.classList.remove('active'));
-            document.getElementById(`rescheduleStep${step}`).classList.add('active');
-        };
-
-        window.reschedulePicker = new Datepicker(datepickerEl, {
-            format: 'yyyy-mm-dd',
-            language: 'pt-BR',
-            autohide: true,
-            todayHighlight: true,
-            datesDisabled: datesValidation
-        });
-
-        datepickerEl.addEventListener('changeDate', (e) => {
-            const dateStr = getDateString(e.detail.date);
-            rescheduleState.newDate = dateStr;
-            document.getElementById('rescheduleSelectedDate').textContent = `Horários para ${e.detail.date.toLocaleDateString('pt-BR')}`;
-            fetchAndRenderAvailableTimes(
-                dateStr,
-                nutriID,
-                document.getElementById('rescheduleTimeSlots'),
-                document.getElementById('reschedule-slots-loader'),
-                document.getElementById('reschedule-alert-message'),
-                appointment.duration
-            );
-        });
-
-        document.getElementById('goToRescheduleConfirm').onclick = () => {
-            if (rescheduleState.newDate && rescheduleState.newTime) {
-                document.getElementById('confirmRescheduleService').textContent = rescheduleState.service.name;
-                document.getElementById('confirmRescheduleDateTime').textContent = `${new Date(rescheduleState.newDate + 'T00:00:00').toLocaleDateString('pt-BR')} às ${rescheduleState.newTime}`;
-                document.getElementById('confirmRescheduleNutri').textContent = document.getElementById('nutriName').textContent;
-                goToStep(2);
-            }
-        };
-
-        document.getElementById('backToRescheduleDate').onclick = () => goToStep(1);
-        document.getElementById('submitRescheduleBtn').onclick = submitRescheduleRequest;
-
-        document.getElementById('rescheduleTimeSlots').innerHTML = '';
-        document.getElementById('rescheduleSelectedDate').textContent = 'Escolha uma data no calendário';
-        goToStep(1);
-        modal.classList.add('is-visible');
-        document.getElementById('closeRescheduleModal').onclick = () => modal.classList.remove('is-visible');
-    }
-
-    async function submitRescheduleRequest() {
-        const modal = document.getElementById('rescheduleModal');
-        const btn = document.getElementById('submitRescheduleBtn');
-
-        const payload = {
-            nutriId: rescheduleState.nutriID,
-            service: rescheduleState.service,
-            date: rescheduleState.newDate,
-            time: rescheduleState.newTime,
-            patientData: {
-                name: user.name,
-                email: user.email,
-                phone: user.phone || 'N/A'
-            }
-        };
-
-        try {
-            btn.disabled = true;
-
-            const cancelResponse = await fetch('/api/auth/patient/appointments', {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    appointmentId: rescheduleState.originalAppointmentID
-                })
-            });
-            const cancelResult = await cancelResponse.json();
-            if (!cancelResult.success) throw new Error('Não foi possível cancelar a consulta original.');
-
-            const bookResponse = await fetch('/api/auth/schedule/book', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            });
-            const bookResult = await bookResponse.json();
-
-            if (bookResult.success) {
-                showCustomToast("Solicitação de reagendamento enviada!", true);
-                modal.classList.remove('is-visible');
-                await getAppointmentsData(await verifySession());
-            } else {
-                showCustomToast(bookResult.message, false);
-            }
-        } catch (error) {
-            showCustomToast(error.message || 'Falha na comunicação ao reagendar.', false);
-        } finally {
-            btn.disabled = false;
-        }
-    }
-
     async function getAppointmentDetailsForReschedule(appointmentId) {
         try {
             const response = await fetch('/api/auth/patient/appointments');
@@ -1016,11 +783,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (result.success && result.appointments) {
                 const app = result.appointments.find(a => a.id === parseInt(appointmentId));
                 if (app) {
-                    return {
-                        id: app.id,
-                        service_type: app.service_type,
-                        duration: app.duration
-                    };
+                    return { id: app.id, service_type: app.service_type, duration: app.duration };
                 }
             }
         } catch (error) {
@@ -1029,7 +792,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return null;
     }
 
-    // --- LÓGICA DO MODAL DE DETALHES (DASHBOARD E AGENDA) ---
     function showAppointmentDetailsModal(appointment, data, origin) {
         const modal = document.getElementById('appointmentDetailsModal');
         if (!modal) return;
@@ -1082,47 +844,152 @@ document.addEventListener('DOMContentLoaded', async () => {
         modal.classList.add('is-visible');
     }
 
+    function initializeSurveyModal() {
+        // Se a página for agenda, esta função será chamada. Deixando estrutura pronta para evitar erros.
+    }
 
-    // --- INICIALIZAÇÃO E ROUTING ---
-    await fetchUserData(user);
-    if (logoutButton) logoutButton.addEventListener('click', handleLogout);
+    // ==========================================
+    // PÁGINA DE CONFIGURAÇÕES
+    // ==========================================
+    function populateConfigPage(user) {
+        const nameInput = document.getElementById('name');
+        const emailInput = document.getElementById('email');
+        const phoneInput = document.getElementById('phone');
 
-    function checkRole() {
-        if (user.role !== "paciente") {
-            window.location.href = '/pages/login.html';
+        if (nameInput) nameInput.value = user.name || '';
+        if (emailInput) emailInput.value = user.email || '';
+        if (phoneInput) phoneInput.value = user.phone || 'Não cadastrado';
+
+        const contactBtn = document.getElementById('contactNutriPasswordBtn');
+        if (contactBtn) contactBtn.addEventListener('click', () => sendWhatsAppMsg(user));
+    }
+
+    // ==========================================
+    // PÁGINA DE PAGAMENTOS
+    // ==========================================
+    async function getPagamentosData(userId) {
+        const container = document.querySelector('.card-body');
+        const emptyState = document.querySelector('.empty-state-card');
+        if (!container || !emptyState) return;
+
+        try {
+            const response = await fetch(`/api/auth/patient/${userId}/invoices`);
+            const result = await response.json();
+
+            if (result.success && result.invoices.length > 0) {
+                emptyState.style.display = 'none';
+
+                let invoicesHtml = '<div class="list-group shadow-sm">';
+                result.invoices.forEach(inv => {
+                    let statusBadge = inv.status === 'Paid'
+                        ? '<span class="badge bg-success">Pago</span>'
+                        : '<span class="badge bg-warning text-dark">Pendente</span>';
+
+                    invoicesHtml += `
+                        <div class="list-group-item d-flex justify-content-between align-items-center p-4">
+                            <div>
+                                <h6 class="mb-1 fw-bold text-dark-charcoal"><i class="bi bi-receipt me-2"></i>Consulta Nutricional</h6>
+                                <small class="text-muted">Vencimento: ${new Date(inv.due_date).toLocaleDateString('pt-BR')}</small>
+                            </div>
+                            <div class="text-end">
+                                <h5 class="mb-1 fw-bold">R$ ${parseFloat(inv.amount).toFixed(2).replace('.', ',')}</h5>
+                                ${statusBadge}
+                            </div>
+                        </div>
+                    `;
+                });
+                invoicesHtml += '</div>';
+                container.innerHTML += invoicesHtml;
+            }
+        } catch (error) {
+            console.error("Erro ao carregar pagamentos:", error);
         }
     }
+
+    // ==========================================
+    // DOCUMENTOS (RECEITUÁRIOS E ENCAMINHAMENTOS)
+    // ==========================================
+    async function getDocumentosData(userId, docType) {
+        const container = document.querySelector('.card-body');
+        const emptyState = document.querySelector('.empty-state-card');
+        if (!container || !emptyState) return;
+
+        try {
+            const response = await fetch(`/api/auth/patient/${userId}/documents?type=${docType}`);
+            const result = await response.json();
+
+            if (result.success && result.documents.length > 0) {
+                emptyState.style.display = 'none';
+
+                let docsHtml = '<div class="row g-4 mt-2">';
+                result.documents.forEach(doc => {
+                    docsHtml += `
+                        <div class="col-md-4">
+                            <div class="card h-100 border-0 shadow-sm" style="border-radius: 16px;">
+                                <div class="card-body text-center p-4">
+                                    <div class="mb-3">
+                                        <i class="bi bi-file-earmark-pdf-fill text-danger display-3"></i>
+                                    </div>
+                                    <h6 class="fw-bold mb-1 text-dark-charcoal">${doc.title}</h6>
+                                    <p class="text-muted small mb-4">Gerado em: ${new Date(doc.created_at).toLocaleDateString('pt-BR')}</p>
+                                    <a href="${doc.file_url}" target="_blank" class="btn btn-outline-primary w-100" style="border-radius: 10px;">
+                                        <i class="bi bi-cloud-download me-1"></i> Baixar Arquivo
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                docsHtml += '</div>';
+                container.innerHTML += docsHtml;
+            }
+        } catch (error) {
+            console.error(`Erro ao carregar ${docType}:`, error);
+        }
+    }
+
+    // ==========================================
+    // ROTEAMENTO (ROUTER) DO PACIENTE
+    // ==========================================
+    await fetchUserData(user);
+    if (logoutButton) logoutButton.addEventListener('click', handleLogout);
 
     const path = window.location.pathname;
     if (path.endsWith('/paciente/dashboard.html')) {
         await getPatientDashboardOverview(user);
     } else if (path.endsWith('/paciente/planoAlimentar.html')) {
-        await getMealPlanData(user.id);
+        await getMealPlanData(user.id, user);
     } else if (path.endsWith('/paciente/agenda.html')) {
         await getAppointmentsData(user);
         initializeSurveyModal();
+    } else if (path.endsWith('/paciente/configuracoes.html')) {
+        populateConfigPage(user);
+    } else if (path.endsWith('/paciente/pagamentos.html')) {
+        await getPagamentosData(user.id);
+    } else if (path.endsWith('/paciente/receituario.html')) {
+        await getDocumentosData(user.id, 'receituario');
+    } else if (path.endsWith('/paciente/encaminhamentos.html')) {
+        await getDocumentosData(user.id, 'encaminhamento');
     }
 });
 
+// Toast de Notificações
 function showCustomToast(message, isSuccess = true) {
     let toast = document.getElementById('customToast');
     if (!toast) {
         toast = document.createElement('div');
         toast.id = 'customToast';
         toast.className = 'custom-toast';
-        toast.innerHTML = `
-            <div class="toast-icon"><i class="bi"></i></div>
-            <div class="toast-message"></div>
-        `;
+        toast.innerHTML = `<div class="toast-icon"><i class="bi"></i></div><div class="toast-message"></div>`;
         document.body.appendChild(toast);
     }
-
     const messageEl = toast.querySelector('.toast-message');
     const iconEl = toast.querySelector('.toast-icon i');
     messageEl.textContent = message;
-    toast.classList.remove('success', 'error', 'show');
-    toast.classList.add(isSuccess ? 'success' : 'error');
+    toast.className = `custom-toast ${isSuccess ? 'success' : 'error'} show`;
     iconEl.className = isSuccess ? 'bi bi-check-circle-fill' : 'bi bi-x-octagon-fill';
-    toast.classList.add('show');
+
+    toast.style.zIndex = "999999";
+
     setTimeout(() => toast.classList.remove('show'), 4000);
 }

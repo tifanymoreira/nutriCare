@@ -7,79 +7,150 @@
     <title>Plano Alimentar - NutriCare</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../../css/style.css">
-    <link rel="stylesheet" href="../../css/dashboard-paciente.css">
+    
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f4f7f6; }
+        
+        /* Estilização Premium das Abas (Tabs) na Tela */
+        .custom-pills {
+            gap: 10px;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 15px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            scrollbar-width: none; /* Firefox */
+        }
+        .custom-pills::-webkit-scrollbar { display: none; /* Safari and Chrome */ }
+        
+        .custom-pills .nav-link {
+            color: #6c757d;
+            background-color: transparent;
+            border-radius: 12px;
+            font-weight: 600;
+            padding: 0.7rem 1.4rem;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+        .custom-pills .nav-link:hover {
+            background-color: #f8f9fa;
+            color: #2a9d8f;
+        }
+        .custom-pills .nav-link.active {
+            color: #ffffff;
+            background-color: #2a9d8f;
+            box-shadow: 0 4px 15px rgba(42, 157, 143, 0.35);
+            border-color: #2a9d8f;
+        }
+
+        /* Estilização dos Cards de Alimentos na Tela */
+        .food-item-card {
+            background: #ffffff;
+            border: 1px solid #edf2f4;
+            border-radius: 16px;
+            padding: 1.2rem 1.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .food-item-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            border-color: rgba(42, 157, 143, 0.5);
+        }
+        .food-name { font-weight: 700; color: #2b2d42; margin-bottom: 0.2rem; font-size: 1.1rem; }
+        .food-measure { color: #8d99ae; font-size: 0.9rem; margin: 0; display: flex; align-items: center; gap: 5px; }
+        .food-quantity-badge {
+            background-color: #e9f5f3;
+            color: #2a9d8f;
+            font-weight: 800;
+            padding: 0.6rem 1.2rem;
+            border-radius: 12px;
+            font-size: 1.05rem;
+        }
+
+        /* Botão de PDF Premium */
+        .btn-download-pdf {
+            background: linear-gradient(135deg, #e76f51 0%, #d65a3d 100%);
+            color: #ffffff;
+            font-weight: 700; 
+            padding: 0.7rem 1.6rem; 
+            border-radius: 12px;
+            border: none; 
+            transition: all 0.3s;
+            display: inline-flex; 
+            align-items: center; 
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(231, 111, 81, 0.3);
+        }
+        .btn-download-pdf:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(231, 111, 81, 0.4);
+            color: #ffffff;
+        }
+
+        /* A4 HIDDEN CONTAINER (EXCLUSIVO PARA O PDF) */
+        #pdf-export-container {
+            display: none; 
+            background: white; 
+            width: 210mm; /* Formato exato A4 */
+            min-height: 297mm;
+            padding: 0; /* Padding será configurado no jsPDF */
+            color: #333; 
+            font-family: 'Helvetica', Arial, sans-serif;
+        }
+    </style>
 </head>
 
 <body>
     <div class="dashboard-wrapper">
         <aside class="dashboard-sidebar">
-            <div class="sidebar-header">
-                <a class="navbar-brand" href="#"><i class="bi bi-heart-pulse-fill"></i> NutriCare</a>
-            </div>
+            <div class="sidebar-header"><a class="navbar-brand" href="#"><i class="bi bi-heart-pulse-fill"></i> NutriCare</a></div>
             <nav class="sidebar-nav">
                 <ul class="list-unstyled">
-                    <li class="nav-item"><a href="dashboard.html" class="nav-link"><i class="bi bi-grid-1x2-fill"></i>
-                            Início</a></li>
-                    <li class="nav-item active"><a href="planoAlimentar.html" class="nav-link"><i
-                                class="bi bi-file-earmark-text-fill"></i> Plano Alimentar</a></li>
-                    <li class="nav-item"><a href="agenda.html" class="nav-link"><i
-                                class="bi bi-calendar2-week-fill"></i> Minha Agenda</a></li>
-                    <li class="nav-item"><a href="encaminhamentos.html" class="nav-link"><i
-                                class="bi bi-folder-symlink-fill"></i> Encaminhamentos</a></li>
-                    <li class="nav-item"><a href="receituario.html" class="nav-link"><i class="bi bi-capsule-pill"></i>
-                            Receituário</a></li>
-                    <li class="nav-item"><a href="pagamentos.html" class="nav-link"><i class="bi bi-wallet-fill"></i>
-                            Pagamentos</a></li>
-                    <!-- <li class="nav-item"><a href="configuracoes.html" class="nav-link"><i -->
-                                <!-- class="bi bi-person-fill-gear"></i> Configurações</a></li> -->
+                    <li class="nav-item"><a href="dashboard.html" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Início</a></li>
+                    <li class="nav-item active"><a href="planoAlimentar.html" class="nav-link"><i class="bi bi-file-earmark-text-fill"></i> Plano Alimentar</a></li>
+                    <li class="nav-item"><a href="agenda.html" class="nav-link"><i class="bi bi-calendar2-week-fill"></i> Minha Agenda</a></li>
+                    <li class="nav-item"><a href="encaminhamentos.html" class="nav-link"><i class="bi bi-folder-symlink-fill"></i> Encaminhamentos</a></li>
+                    <li class="nav-item"><a href="receituario.html" class="nav-link"><i class="bi bi-capsule-pill"></i> Receituário</a></li>
+                    <li class="nav-item"><a href="pagamentos.html" class="nav-link"><i class="bi bi-wallet-fill"></i> Pagamentos</a></li>
+                    <!-- <li class="nav-item"><a href="configuracoes.html" class="nav-link"><i class="bi bi-person-fill-gear"></i> Configurações</a></li> -->
                 </ul>
             </nav>
-            <div class="sidebar-footer">
-                <button id="logoutBtn" class="btn btn-logout w-100"><i class="bi bi-box-arrow-left"></i> Sair</button>
-            </div>
+            <div class="sidebar-footer"><button id="logoutBtn" class="btn btn-logout w-100"><i class="bi bi-box-arrow-left"></i> Sair</button></div>
         </aside>
 
         <main class="dashboard-main">
-            <header class="dashboard-content-header">
-                <h1>Meu Plano Alimentar</h1>
+            <header class="dashboard-content-header d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+                <div>
+                    <h1 class="mb-1 fw-bold text-dark-charcoal">Meu Plano Alimentar</h1>
+                </div>
+                <button id="btnExportPDF" class="btn-download-pdf" style="display: none;">
+                    <i class="bi bi-file-earmark-pdf-fill fs-5"></i> Exportar Plano
+                </button>
             </header>
 
-            <div id="mealPlanContainer" class="card data-card">
+            <div class="card data-card p-4 p-md-5 border-0 shadow-sm" style="border-radius: 20px;">
+                <div id="mealPlanScreenContainer"></div>
             </div>
 
             <div id="emptyPlanState" class="empty-state-card" style="display: none;">
-                <div class="empty-state-icon">
-                    <i class="bi bi-stars"></i>
-                </div>
-                <h5 class="empty-state-title">Seu plano está no forno! 🔥</h5>
-                <p class="empty-state-text">
-                    Sua nutri já está preparando um plano alimentar incrível para você! 👩‍🍳✨<br>
-                    Fique de olho, pois assim que ele estiver pronto, vai aparecer bem aqui. 😉
-                </p>
-                <a href="dashboard.html" class="btn btn-outline-secondary mt-3">
-                    <i class="bi bi-arrow-left-circle me-2"></i>Voltar para o Início
-                </a>
+                <div class="empty-state-icon"><i class="bi bi-stars"></i></div>
+                <h5 class="empty-state-title">Plano em construção! ⏳</h5>
+                <p class="empty-state-text">Sua nutricionista está elaborando um cardápio 100% focado nos seus objetivos. Em breve ele estará disponível aqui.</p>
             </div>
-
         </main>
     </div>
 
-     <div id="whatsapp-widget" class="whatsapp-widget">
-        <i class="bi bi-whatsapp"></i>
-    </div>
+    <div id="pdf-export-container"></div>
 
-    <div class="modal-backdrop" id="contactNutriModal">
-        <div class="modal-content text-center">
-            <button class="modal-close" id="closeContactModal">&times;</button>
-            <h4 class="card-title">Fale com sua Nutri</h4>
-            <p class="text-muted mb-3">Dra. <strong id="nutriName"></strong></p>
-            <button class="btn-modal-wpp" id="sendText"><i class="bi bi-whatsapp"></i> Enviar Mensagem</button>
-        </div>
-    </div>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module" src="../../js/dashboard-paciente.js"></script>
 </body>
-
 </html>

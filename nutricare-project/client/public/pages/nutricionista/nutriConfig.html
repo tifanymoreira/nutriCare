@@ -19,22 +19,26 @@
                     <i class="bi bi-heart-pulse-fill"></i> NutriCare
                 </a>
             </div>
-           <nav class="sidebar-nav">
+            <nav class="sidebar-nav">
                 <ul class="list-unstyled">
                     <li class="nav-item">
                         <a href="dashboard.html" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Visão Geral</a>
                     </li>
                     <li class="nav-item">
-                        <a href="patientsList.html" class="nav-link"><i class="bi bi-people-fill"></i> Meus Pacientes</a>
+                        <a href="patientsList.html" class="nav-link"><i class="bi bi-people-fill"></i> Meus
+                            Pacientes</a>
                     </li>
                     <li class="nav-item">
-                        <a href="nutriAgenda.html" class="nav-link"><i class="bi bi-calendar2-week-fill"></i> Minha Agenda</a>
+                        <a href="nutriAgenda.html" class="nav-link"><i class="bi bi-calendar2-week-fill"></i> Minha
+                            Agenda</a>
                     </li>
                     <li class="nav-item">
-                        <a href="nutriMetrics.html" class="nav-link"><i class="bi bi-graph-up-arrow"></i> Minhas Métricas</a>
+                        <a href="nutriMetrics.html" class="nav-link"><i class="bi bi-graph-up-arrow"></i> Minhas
+                            Métricas</a>
                     </li>
                     <li class="nav-item">
-                        <a href="nutriConfig.html" class="nav-link"><i class="bi bi-person-fill-gear"></i> Meus Detalhes</a>
+                        <a href="nutriConfig.html" class="nav-link"><i class="bi bi-person-fill-gear"></i> Meus
+                            Detalhes</a>
                     </li>
                     <li class="nav-item">
                         <a href="nutriInvoicing.html" class="nav-link"><i class="bi bi-cash-stack"></i> Faturamento</a>
@@ -344,8 +348,8 @@
 
         async function loadNutriData() {
             try {
-                // 1. Carregar Perfil
                 const resProfile = await fetch('/api/auth/nutricionista/details');
+                console.log("resProfile = ", resProfile)
                 if (!resProfile.ok) throw new Error(`Erro: ${resProfile.status}`);
                 const resultProfile = await resProfile.json();
 
@@ -609,4 +613,5 @@
         }
     </script>
 </body>
+
 </html>

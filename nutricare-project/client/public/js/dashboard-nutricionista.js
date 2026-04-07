@@ -686,7 +686,7 @@ async function initializePatientList(nutriId) {
                 document.getElementById('patientPhone').textContent = globalPatientData.phone || 'Não informado';
                 document.getElementById('patientBirthdate').textContent = globalAnamneseData.birthdate ? new Date(globalAnamneseData.birthdate).toLocaleDateString('pt-BR') : 'N/A';
                 document.getElementById('patientAge').textContent = age;
-                document.getElementById('patientAppointmentDate').textContent = globalPatientData.appointmentDate || 'Sem retorno marcado';
+                // document.getElementById('patientAppointmentDate').textContent = globalPatientData.appointmentDate || 'Sem retorno marcado';
                 document.getElementById('patientStatusBadge').innerHTML = `<span class="badge bg-success bg-opacity-10 text-success border border-success px-3 py-2 rounded-pill">${globalPatientData.status || 'Ativo'}</span>`;
 
                 const val = (v) => v ? v : '<span class="text-muted fw-normal fst-italic">Não preenchido</span>';
@@ -1018,7 +1018,7 @@ async function initializePatientList(nutriId) {
  
         const element = document.createElement('div');
         element.innerHTML = `
-            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; padding: 30px; background: #fff;">
+            <div style="font-family: 'Poppins Neue', Poppins, Arial, sans-serif; color: #333; padding: 30px; background: #fff;">
                 
                 <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #2a9d8f; padding-bottom: 20px; margin-bottom: 30px;">
                     <div>

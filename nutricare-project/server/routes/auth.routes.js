@@ -20,7 +20,8 @@ import {
     scheduleReturnAppointment,
     getScheduleConfig,
     updateScheduleConfig,
-    getTodayAppointment, saveAppointmentNotes, getPatientInvoices, getPatientDocuments
+    getTodayAppointment, saveAppointmentNotes, getPatientInvoices, getPatientDocuments,
+    forgotPassword, resetPassword
 } from '../controllers/auth.controller.js';
 
 import checkAuth from '../middlewares/checkAuth.js';
@@ -29,6 +30,8 @@ import { saveAssessment, getAssessmentHistory } from '../controllers/anthropomet
 
 router.post('/save', checkAuth, saveAssessment);
 router.get('/history/:patientId', checkAuth, getAssessmentHistory); // NOVA ROTA
+
+router.get('/patient/dashboard-overview', checkAuth, getPatientDashboardOverview);
 
 router.get('/patient/:userId/invoices', checkAuth, getPatientInvoices);
 router.get('/patient/:userId/documents', checkAuth, getPatientDocuments);
@@ -41,6 +44,8 @@ router.post('/register', register);
 router.post('/login', login);
 router.post('/logout', checkAuth, logout);
 router.get('/me', checkAuth, getMe);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 
 // Rotas de Dashboard e Métricas
 router.get('/dashboard-overview', checkAuth, getDashboardOverview);

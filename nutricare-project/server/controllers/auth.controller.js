@@ -1,5 +1,7 @@
 // nutricare-project/server/controllers/auth.controller.js
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 import { pool } from '../config/dbConnect.js';
 import { validarCRN } from '../middlewares/checkCrn.js';
 const saltRounds = 10;
@@ -251,7 +253,7 @@ export const getPatientInvoices = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Acesso negado.' });
         }
 
-        const [invoices] = await db.query(
+        const [invoices] = await pool.query(
             `SELECT id, amount, status, due_date, issue_date 
              FROM invoices 
              WHERE patient_id = ? 
@@ -275,7 +277,7 @@ export const getPatientDocuments = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Acesso negado.' });
         }
 
-        const [documents] = await db.query(
+        const [documents] = await pool.query(
             `SELECT id, title, type, file_url, created_at 
              FROM documents 
              WHERE patient_id = ? AND type = ? 
@@ -856,7 +858,7 @@ export async function getNutricionistaDetails(req, res) {
     try {
         const nutriId = req.session.user.id;
         const [rows] = await pool.query(
-            'SELECT name, email, phone, crn FROM nutricionista WHERE id = ?',
+            'SELECT name, email, phone, crnCode FROM nutricionista WHERE id = ?',
             [nutriId]
         );
         if (rows.length > 0) {
@@ -1059,98 +1061,98 @@ function calculateBMI(weight, heightCm) {
     return parseFloat(bmi.toFixed(1));
 }
 
-export async function getPatientDashboardOverview(req, res) {
-    const patientID = req.session.user.id;
+// export async function getPatientDashboardOverview(req, res) {
+//     const patientID = req.session.user.id;
 
-    try {
-        const [patientRows] = await pool.query('SELECT p.nome, p.nutriID, n.name as nutriName, n.phone as nutriPhone FROM pacientes p JOIN nutricionista n ON p.nutriID = n.id WHERE p.id = ?', [patientID]);
+//     try {
+//         const [patientRows] = await pool.query('SELECT p.nome, p.nutriID, n.name as nutriName, n.phone as nutriPhone FROM pacientes p JOIN nutricionista n ON p.nutriID = n.id WHERE p.id = ?', [patientID]);
 
-        if (patientRows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Dados do paciente não encontrados.' });
-        }
+//         if (patientRows.length === 0) {
+//             return res.status(404).json({ success: false, message: 'Dados do paciente não encontrados.' });
+//         }
 
-        const { nome: patientName, nutriID, nutriName, nutriPhone } = patientRows[0];
+//         const { nome: patientName, nutriID, nutriName, nutriPhone } = patientRows[0];
 
-        const [anamneseRows] = await pool.query(
-            `SELECT weight, height, objective, created_at FROM anamnese WHERE patientID = ? ORDER BY created_at ASC LIMIT 1`,
-            [patientID]
-        );
-        const initialData = anamneseRows[0] || {};
+//         const [anamneseRows] = await pool.query(
+//             `SELECT weight, height, objective, created_at FROM anamnese WHERE patientID = ? ORDER BY created_at ASC LIMIT 1`,
+//             [patientID]
+//         );
+//         const initialData = anamneseRows[0] || {};
 
-        const [consultationHistory] = await pool.query(
-            `SELECT * FROM consultations WHERE patient_id = ? ORDER BY consultation_date ASC`,
-            [patientID]
-        );
+//         const [consultationHistory] = await pool.query(
+//             `SELECT * FROM consultations WHERE patient_id = ? ORDER BY consultation_date ASC`,
+//             [patientID]
+//         );
 
-        const nextAppointment = await getNextAppointment(patientID);
+//         const nextAppointment = await getNextAppointment(patientID);
 
-        let currentWeight = initialData.weight || 0;
-        let height = initialData.height || 0;
+//         let currentWeight = initialData.weight || 0;
+//         let height = initialData.height || 0;
 
-        if (consultationHistory.length > 0) {
-            const lastConsultation = consultationHistory[consultationHistory.length - 1];
-            currentWeight = lastConsultation.weight || currentWeight;
-            height = lastConsultation.height || height;
-        }
+//         if (consultationHistory.length > 0) {
+//             const lastConsultation = consultationHistory[consultationHistory.length - 1];
+//             currentWeight = lastConsultation.weight || currentWeight;
+//             height = lastConsultation.height || height;
+//         }
 
-        const bmi = calculateBMI(currentWeight, height);
-        const initialWeight = initialData.weight || 0;
-        const weightDifference = currentWeight - initialWeight;
+//         const bmi = calculateBMI(currentWeight, height);
+//         const initialWeight = initialData.weight || 0;
+//         const weightDifference = currentWeight - initialWeight;
 
-        let parsedObjective = [];
-        if (initialData && initialData.objective) {
-            const objectiveValue = initialData.objective;
-            if (Array.isArray(objectiveValue)) {
-                parsedObjective = objectiveValue;
-            } else if (typeof objectiveValue === 'string') {
-                const objStr = objectiveValue.trim();
-                if (objStr.startsWith('[') && objStr.endsWith(']')) {
-                    try { parsedObjective = JSON.parse(objStr); }
-                    catch (e) { parsedObjective = [objStr.replace(/[\[\]"]/g, '')]; }
-                } else if (objStr) {
-                    parsedObjective = [objStr];
-                }
-            } else if (objectiveValue) {
-                parsedObjective = [String(objectiveValue)];
-            }
-        }
+//         let parsedObjective = [];
+//         if (initialData && initialData.objective) {
+//             const objectiveValue = initialData.objective;
+//             if (Array.isArray(objectiveValue)) {
+//                 parsedObjective = objectiveValue;
+//             } else if (typeof objectiveValue === 'string') {
+//                 const objStr = objectiveValue.trim();
+//                 if (objStr.startsWith('[') && objStr.endsWith(']')) {
+//                     try { parsedObjective = JSON.parse(objStr); }
+//                     catch (e) { parsedObjective = [objStr.replace(/[\[\]"]/g, '')]; }
+//                 } else if (objStr) {
+//                     parsedObjective = [objStr];
+//                 }
+//             } else if (objectiveValue) {
+//                 parsedObjective = [String(objectiveValue)];
+//             }
+//         }
 
-        const evolutionHistoryWithInitial = [
-            {
-                consultation_date: initialData.created_at,
-                weight: initialData.weight,
-                body_fat_percentage: null,
-                circum_waist: null,
-                circum_abdomen: null,
-                circum_hip: null
-            },
-            ...consultationHistory
-        ];
+//         const evolutionHistoryWithInitial = [
+//             {
+//                 consultation_date: initialData.created_at,
+//                 weight: initialData.weight,
+//                 body_fat_percentage: null,
+//                 circum_waist: null,
+//                 circum_abdomen: null,
+//                 circum_hip: null
+//             },
+//             ...consultationHistory
+//         ];
 
-        const overviewData = {
-            patientName,
-            nutriID,
-            nutriName,
-            nutriPhone,
-            kpis: {
-                currentWeight,
-                initialWeight,
-                height,
-                bmi,
-                weightDifference,
-                objective: parsedObjective.filter(o => o).join(', ') || 'Não definido',
-            },
-            nextAppointment,
-            evolutionHistory: evolutionHistoryWithInitial,
-        };
+//         const overviewData = {
+//             patientName,
+//             nutriID,
+//             nutriName,
+//             nutriPhone,
+//             kpis: {
+//                 currentWeight,
+//                 initialWeight,
+//                 height,
+//                 bmi,
+//                 weightDifference,
+//                 objective: parsedObjective.filter(o => o).join(', ') || 'Não definido',
+//             },
+//             nextAppointment,
+//             evolutionHistory: evolutionHistoryWithInitial,
+//         };
 
-        res.json({ success: true, data: overviewData });
+//         res.json({ success: true, data: overviewData });
 
-    } catch (error) {
-        console.error("Erro ao buscar dados do dashboard do paciente:", error);
-        res.status(500).json({ success: false, message: 'Erro interno ao servidor.' });
-    }
-}
+//     } catch (error) {
+//         console.error("Erro ao buscar dados do dashboard do paciente:", error);
+//         res.status(500).json({ success: false, message: 'Erro interno ao servidor.' });
+//     }
+// }
 
 async function getNextAppointment(patientID) {
     const [rows] = await pool.query(
@@ -1471,7 +1473,7 @@ export const getAssessmentHistory = async (req, res) => {
             ORDER BY created_at ASC
         `;
 
-        const [rows] = await db.execute(query, [patientId]);
+        const [rows] = await pool.execute(query, [patientId]);
 
         res.status(200).json({
             success: true,
@@ -1598,6 +1600,9 @@ export async function getMealPlan(req, res) {
         if (rows.length === 0) {
             return res.json({ success: true, plan: null });
         }
+
+        console.log("rows")
+        console.log(rows)
 
         const plan = {
             id: rows[0].plan_id,
@@ -1726,5 +1731,152 @@ export async function updateScheduleConfig(req, res) {
     } catch (error) {
         console.error("Erro ao salvar config agenda:", error);
         res.status(500).json({ success: false, message: 'Erro ao salvar configurações.' });
+    }
+}
+
+export const getPatientDashboardOverview = async (req, res) => {
+    try {
+        // Pega o ID do paciente logado na sessão atual
+        const patientId = req.session.user.id;
+
+        // 1. BUSCAR A PRÓXIMA CONSULTA (Mais próxima a partir de hoje)
+        const [appointments] = await pool.execute(`
+            SELECT service_type, appointment_date, duration 
+            FROM appointments 
+            WHERE patientID = ? 
+              AND appointment_date >= NOW() 
+              AND status = 'Confirmada'
+            ORDER BY appointment_date ASC 
+            LIMIT 1
+        `, [patientId]);
+
+        let nextAppointment = null;
+        if (appointments.length > 0) {
+            const apt = appointments[0];
+            const dateObj = new Date(apt.appointment_date);
+
+            nextAppointment = {
+                service: apt.service_type,
+                date: dateObj.toLocaleDateString('pt-BR'),
+                time: dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                duration: apt.duration
+            };
+        }
+
+        // 2. BUSCAR HISTÓRICO ANTROPOMÉTRICO (Para popular os Gráficos e os KPIs)
+        const [history] = await pool.execute(`
+            SELECT 
+                weight, 
+                calc_bmi as bmi, 
+                calc_body_fat as body_fat_percentage,
+                circ_waist as circum_waist, 
+                circ_chest as circum_abdomen, -- Mapeado para o gráfico
+                circ_hip as circum_hip,
+                created_at as consultation_date
+            FROM anthropometric_assessments
+            WHERE patient_id = ?
+            ORDER BY created_at ASC
+        `, [patientId]);
+
+        // 3. CALCULAR OS KPIs (Resumo Rápido)
+        let kpis = {
+            currentWeight: null,
+            bmi: null,
+            bodyFat: null,
+            weightDifference: null
+        };
+
+        if (history.length > 0) {
+            const firstAssessment = history[0];
+            const lastAssessment = history[history.length - 1]; // O registro mais recente
+
+            kpis.currentWeight = lastAssessment.weight;
+            kpis.bmi = lastAssessment.bmi;
+            kpis.bodyFat = lastAssessment.body_fat_percentage;
+
+            const diff = parseFloat(lastAssessment.weight) - parseFloat(firstAssessment.weight);
+            kpis.weightDifference = diff.toFixed(1);
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                kpis,
+                nextAppointment,
+                evolutionHistory: history
+            }
+        });
+
+    } catch (error) {
+        console.error("Erro ao buscar overview do paciente:", error);
+        res.status(500).json({ success: false, error: "Erro interno do servidor ao carregar dashboard." });
+    }
+};
+
+export async function forgotPassword(req, res) {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, message: 'E-mail obrigatório.' });
+
+    const connection = await pool.getConnection();
+    try {
+        const [rows] = await connection.query('SELECT id FROM users WHERE email = ?', [email]);
+        if (rows.length === 0) {
+            // Por segurança anti-enumeração, retornamos sucesso de forma genérica
+            return res.json({ success: true, message: 'Se o e-mail existir, um link será enviado.' });
+        }
+
+        const token = crypto.randomBytes(32).toString('hex');
+        const expires = new Date(Date.now() + 3600000); // Validade de 1 hora
+
+        await connection.query('UPDATE users SET reset_token = ?, reset_expires = ? WHERE email = ?', [token, expires, email]);
+
+        // Configuração de envio de E-mail
+        const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST || "sandbox.smtp.mailtrap.io",
+            port: process.env.SMTP_PORT || 2525,
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
+            }
+        });
+
+        const resetLink = `http://localhost:3000/pages/reset-password.html?token=${token}`;
+
+        await transporter.sendMail({
+            from: '"Equipe NutriCare" <suporte@nutricare.com>',
+            to: email,
+            subject: 'Recuperação de Senha - NutriCare',
+            html: `<p>Você solicitou a recuperação de senha.</p><p>Clique <a href="${resetLink}">aqui</a> para redefinir sua senha.</p><p>Este link expira em 1 hora.</p>`
+        });
+
+        res.json({ success: true, message: 'Se o e-mail existir, um link será enviado.' });
+    } catch (error) {
+        console.error('Erro no forgotPassword:', error);
+        res.status(500).json({ success: false, message: 'Erro no servidor ao tentar enviar o e-mail.' });
+    } finally {
+        connection.release();
+    }
+}
+
+export async function resetPassword(req, res) {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) return res.status(400).json({ success: false, message: 'Dados inválidos.' });
+
+    const connection = await pool.getConnection();
+    try {
+        const [rows] = await connection.query('SELECT id FROM users WHERE reset_token = ? AND reset_expires > NOW()', [token]);
+        if (rows.length === 0) return res.status(400).json({ success: false, message: 'Link inválido ou expirado. Tente novamente.' });
+
+        const userId = rows[0].id;
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await connection.query('UPDATE users SET password = ?, reset_token = NULL, reset_expires = NULL WHERE id = ?', [hashedPassword, userId]);
+
+        res.json({ success: true, message: 'Senha redefinida com sucesso!' });
+    } catch (error) {
+        console.error('Erro no resetPassword:', error);
+        res.status(500).json({ success: false, message: 'Erro no servidor.' });
+    } finally {
+        connection.release();
     }
 }

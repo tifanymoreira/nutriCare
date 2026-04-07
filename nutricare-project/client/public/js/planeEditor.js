@@ -16,6 +16,48 @@ document.addEventListener("DOMContentLoaded", async () => {
     let foodLibraryData = {};
     let draggedItem = null;
 
+    // --- NOVA FUNÇÃO DE NOTIFICAÇÃO (Substitui o Alert) ---
+    const showNotification = (message, isSuccess = true) => {
+        const notif = document.createElement('div');
+        notif.style.position = 'fixed';
+        notif.style.bottom = '30px';
+        notif.style.right = '30px';
+        notif.style.backgroundColor = isSuccess ? '#2a9d8f' : '#e76f51';
+        notif.style.color = '#fff';
+        notif.style.padding = '16px 24px';
+        notif.style.borderRadius = '12px';
+        notif.style.boxShadow = '0 10px 25px rgba(0,0,0,0.2)';
+        notif.style.zIndex = '9999';
+        notif.style.transform = 'translateY(100px)';
+        notif.style.opacity = '0';
+        notif.style.transition = 'all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+        notif.style.display = 'flex';
+        notif.style.alignItems = 'center';
+        notif.style.gap = '12px';
+        notif.style.fontWeight = '600';
+        notif.style.fontSize = '15px';
+
+        notif.innerHTML = `
+            <i class="bi ${isSuccess ? 'bi-check-circle-fill' : 'bi-exclamation-octagon-fill'} fs-4"></i>
+            <span>${message}</span>
+        `;
+
+        document.body.appendChild(notif);
+
+        // Animação de entrada
+        requestAnimationFrame(() => {
+            notif.style.transform = 'translateY(0)';
+            notif.style.opacity = '1';
+        });
+
+        // Animação de saída
+        setTimeout(() => {
+            notif.style.transform = 'translateY(100px)';
+            notif.style.opacity = '0';
+            setTimeout(() => notif.remove(), 400); // Remove do DOM após a animação
+        }, 3500);
+    };
+
     const calculateTotals = () => {
         let gKcal = 0, gCarbs = 0, gProt = 0, gFat = 0;
         let gMicros = {
@@ -106,7 +148,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         updateMicroLabel('totVitE', gMicros.vitE, 'mg');
         updateMicroLabel('totVitB12', gMicros.vitB12, 'mcg');
     };
-
 
     mealPlanCanvas.addEventListener('input', (e) => {
         if (e.target.tagName === 'INPUT') calculateTotals();
@@ -274,21 +315,51 @@ document.addEventListener("DOMContentLoaded", async () => {
         calculateTotals();
     };
 
+    if (clearPlanBtn) {
+        clearPlanBtn.onclick = () => {
+            mealPlanCanvas.innerHTML = '';
+            ["Café da Manhã", "Almoço", "Jantar"].forEach(n => createMealCard(n));
+            calculateTotals();
+        };
+    }
+
     addMealBtn.onclick = () => createMealCard();
+
+    // --- NOVA LÓGICA DE SALVAR COM FEEDBACK VISUAL E NOTIFICAÇÃO ---
     savePlanBtn.onclick = async () => {
-        const meals = Array.from(document.querySelectorAll('.meal-card-pro')).map(c => ({
-            name: c.querySelector('.meal-title-input').value,
-            items: Array.from(c.querySelectorAll('.meal-food-row')).map(r => ({
-                foodId: r.dataset.foodId,
-                quantity: `${r.querySelector('input').value}g`
-            }))
-        }));
-        const res = await fetch('/api/auth/mealplan', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ patientId: currentPatientId, meals })
-        }).then(r => r.json());
-        alert(res.message);
+        // Altera o estado do botão para loading
+        const originalHtml = savePlanBtn.innerHTML;
+        savePlanBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Salvando...';
+        savePlanBtn.disabled = true;
+
+        try {
+            const meals = Array.from(document.querySelectorAll('.meal-card-pro')).map(c => ({
+                name: c.querySelector('.meal-title-input').value,
+                items: Array.from(c.querySelectorAll('.meal-food-row')).map(r => ({
+                    foodId: r.dataset.foodId,
+                    quantity: `${r.querySelector('input').value}g`
+                }))
+            }));
+            
+            const res = await fetch('/api/auth/mealplan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ patientId: currentPatientId, meals })
+            }).then(r => r.json());
+
+            if (res.success) {
+                showNotification(res.message || "Plano alimentar atualizado com sucesso!", true);
+            } else {
+                showNotification(res.message || "Ocorreu um erro ao salvar o plano.", false);
+            }
+        } catch (error) {
+            console.error(error);
+            showNotification("Falha na comunicação com o servidor.", false);
+        } finally {
+            // Restaura o botão original
+            savePlanBtn.innerHTML = originalHtml;
+            savePlanBtn.disabled = false;
+        }
     };
 
     init();

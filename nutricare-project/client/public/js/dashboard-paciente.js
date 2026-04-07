@@ -1,14 +1,9 @@
-// import { getNutricionistaDetails } from "../../../server/controllers/auth.controller";
-
-// nutricare-project/client/public/js/dashboard-paciente.js
 document.addEventListener('DOMContentLoaded', async () => {
     const user = await verifySession();
     if (!user) return;
     checkRole();
 
     window.user = user;
-
-    // window.nutriNameFull = 'Sua Nutricionista';
 
     const whatsappWidget = document.getElementById("whatsapp-widget");
     const contactNutriModal = document.getElementById("contactNutriModal");
@@ -17,6 +12,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     const notificationBell = document.getElementById('notificationBell');
     const notificationDropdown = document.getElementById('notificationDropdown');
     const logoutButton = document.getElementById('logoutBtn');
+
+    // ==========================================
+    // SAUDAÇÃO DINÂMICA (PREMIUM UI)
+    // ==========================================
+    const setGreeting = (name) => {
+        const titleEl = document.getElementById('greetingTitle');
+        if (!titleEl) return;
+        const hour = new Date().getHours();
+        let greeting = 'Bom dia';
+        let emoji = '☀️';
+        
+        if (hour >= 12 && hour < 18) { greeting = 'Boa tarde'; emoji = '☕'; } 
+        else if (hour >= 18) { greeting = 'Boa noite'; emoji = '🌙'; }
+
+        titleEl.innerHTML = `${greeting}, <span class="text-primary">${name.split(' ')[0]}</span>! ${emoji}`;
+    };
+    setGreeting(user.name);
 
     // ==========================================
     // WIDGET DE WHATSAPP
@@ -81,19 +93,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function fetchUserData(user) {
-        console.log("start fetchUserData | user data")
-        console.log(user)
-        const userNameSpan = document.getElementById('userName');
-        if (userNameSpan) userNameSpan.textContent = user.name.split(' ')[0];
-
         const nutriNameSpan = document.getElementById('nutriName');
-        if (user.nutriID && nutriNameSpan) {
-            console.log("entrou aqui")
+        const nutriNameFormSpan = document.getElementById('nutriNameForm');
+        const nutriApptNameSpan = document.getElementById('nutriApptName'); // Premium Ticket
+
+        if (user.nutriID) {
             try {
                 const response = await fetch(`/api/auth/nutricionista/${user.nutriID}`);
                 const result = await response.json();
                 if (result.success) {
-                    nutriNameSpan.textContent = result.nutricionista.name;
+                    if(nutriNameSpan) nutriNameSpan.textContent = result.nutricionista.name;
+                    if(nutriNameFormSpan) nutriNameFormSpan.textContent = result.nutricionista.name;
+                    if(nutriApptNameSpan) nutriApptNameSpan.textContent = result.nutricionista.name.split(' ')[0];
                     window.nutriCRN = result.nutricionista.crn || 'Não informado';
                     window.nutriNameFull = result.nutricionista.name;
                 }
@@ -104,20 +115,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function fetchNutriData(user) {
-        console.log("start fetchNutriData | user data")
-        console.log(user)
-        const userNameSpan = document.getElementById('userName');
-        if (userNameSpan) userNameSpan.textContent = user.name.split(' ')[0];
-
         if (user.nutriID) {
-            console.log("entrou aqui")
             try {
                 const response = await fetch(`/api/auth/nutricionista/${user.nutriID}`);
                 const result = await response.json();
-                console.log("fetchNutriData | result")
-                console.log(result)
                 if (result.success) {
-                    window.nutriCRN = result.nutricionista.crnCode;
+                    window.nutriCRN = result.nutricionista.crnCode || result.nutricionista.crn;
                     window.nutriNameFull = result.nutricionista.name;
                 }
             } catch (error) {
@@ -165,20 +168,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     let iconClass = '', statusClass = '', messageText = '', actionText = '';
                     if (notif.status === 'Confirmada') {
-                        statusClass = 'status-approved'; iconClass = 'bi-calendar-check-fill';
+                        statusClass = 'text-success'; iconClass = 'bi-check-circle-fill';
                         messageText = `🎉 Aí sim! ${notif.message}`; actionText = `Ver Agenda`;
                     } else if (notif.status === 'Rejeitada') {
-                        statusClass = 'status-rejected'; iconClass = 'bi-calendar-x-fill';
+                        statusClass = 'text-danger'; iconClass = 'bi-x-circle-fill';
                         messageText = `😔 Poxa! ${notif.message}.`; actionText = `Reagendar`;
                     } else { return; }
 
                     newHtml += `
-                        <div class="notification-item">
-                            <div class="notification-icon-status ${statusClass}"><i class="bi ${iconClass}"></i></div>
-                            <div class="notification-content">
-                                <p class="mb-1">${messageText}</p>
+                        <div class="d-flex align-items-start gap-3 p-3 border-bottom">
+                            <div class="${statusClass} fs-4"><i class="bi ${iconClass}"></i></div>
+                            <div>
+                                <p class="mb-1 small text-dark">${messageText}</p>
                                 <a href="${notif.status === 'Confirmada' ? 'agenda.html' : `/pages/paciente/preSchedule.html?nutriId=${user.nutriID}`}" class="text-decoration-none small fw-bold ${statusClass}">
-                                    <i class="bi bi-arrow-right-circle me-1"></i> ${actionText}
+                                    ${actionText} <i class="bi bi-arrow-right"></i>
                                 </a>
                             </div>
                         </div>
@@ -187,7 +190,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (notificationCount > 0) {
-                if (countBadge) { countBadge.textContent = notificationCount; countBadge.style.display = 'inline-block'; }
+                if (countBadge) { countBadge.textContent = notificationCount; countBadge.style.display = 'flex'; }
                 if (emptyMessage) emptyMessage.style.display = 'none';
                 listContainer.innerHTML = newHtml;
             } else {
@@ -201,7 +204,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ==========================================
-    // HOME DASHBOARD (RESUMO)
+    // HOME DASHBOARD (RESUMO PREMIUM)
     // ==========================================
     async function getPatientDashboardOverview(user) {
         await fetchAndRenderNotifications(user);
@@ -236,27 +239,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (nextAppointmentCard) {
             if (nextAppointment) {
+                console.log("nextAppointment Value = ", nextAppointment)
+                const dateObj = new Date(nextAppointment.date.split[0][2])
+                const day = String(dateObj.getDate()).padStart(2, '0');
+                const month = dateObj.toLocaleString('pt-BR', { month: 'short' });
+
+                document.getElementById('apptDay').textContent = day;
+                document.getElementById('apptMonth').textContent = month;
                 document.getElementById('nextAppointmentService').textContent = nextAppointment.service;
-                document.getElementById('nextAppointmentDate').textContent = nextAppointment.date;
                 document.getElementById('nextAppointmentTime').textContent = nextAppointment.time;
-                nextAppointmentCard.style.display = 'flex';
+                
+                nextAppointmentCard.style.display = 'block';
                 if (emptyNextAppointmentCard) emptyNextAppointmentCard.style.display = 'none';
             } else {
                 nextAppointmentCard.style.display = 'none';
                 if (emptyNextAppointmentCard) emptyNextAppointmentCard.style.display = 'block';
             }
 
+            // Render KPIs
             if (document.getElementById('currentWeight')) document.getElementById('currentWeight').textContent = kpis.currentWeight ? `${kpis.currentWeight} kg` : '-- kg';
-            if (document.getElementById('currentBmi')) document.getElementById('currentBmi').textContent = kpis.bmi ? kpis.bmi : '--';
+            if (document.getElementById('currentBmi')) {
+                const fatOrBmi = kpis.bodyFat ? `${kpis.bodyFat}% Gord.` : (kpis.bmi ? `IMC ${kpis.bmi}` : '--');
+                document.getElementById('currentBmi').textContent = fatOrBmi;
+            }
 
             const diffEl = document.getElementById('weightDifference');
             if (diffEl) {
                 if (kpis.weightDifference !== null && kpis.weightDifference !== undefined) {
                     const diff = parseFloat(kpis.weightDifference);
                     const sign = diff > 0 ? '+' : '';
-                    const icon = diff > 0 ? 'bi-arrow-up-right' : (diff < 0 ? 'bi-arrow-down-right' : 'bi-arrow-right');
-                    const colorClass = diff > 0 ? 'text-danger-red' : (diff < 0 ? 'text-primary-green' : 'text-muted');
-                    diffEl.innerHTML = `<i class="bi ${icon} me-1 ${colorClass}"></i> ${sign}${diff.toFixed(1)} kg`;
+                    const colorClass = diff > 0 ? 'text-danger' : (diff < 0 ? 'text-success' : 'text-muted');
+                    diffEl.innerHTML = `<span class="${colorClass}">${sign}${diff.toFixed(1)} kg</span>`;
                 } else {
                     diffEl.textContent = '-- kg';
                 }
@@ -278,31 +291,56 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (tabsContent) tabsContent.style.display = 'block';
 
         const uniqueHistory = evolutionHistory.sort((a, b) => new Date(a.consultation_date) - new Date(b.consultation_date));
-        const labels = uniqueHistory.map(item => new Date(item.consultation_date).toLocaleDateString('pt-BR'));
+        const labels = uniqueHistory.map(item => new Date(item.consultation_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }));
 
-        const weightData = uniqueHistory.map(item => item.weight);
+        // Configuração Comum Premium
+        const commonOptions = {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: { backgroundColor: 'rgba(38, 70, 83, 0.9)', titleFont: { size: 14, family: 'Poppins' }, bodyFont: { size: 14, fontColor: '#fff' }, padding: 12, cornerRadius: 8, displayColors: false }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { family: 'Poppins', size: 12 }, color: '#adb5bd' } },
+                y: { grid: { color: '#f1f3f5', borderDash: [5, 5] }, ticks: { font: { family: 'Poppins', size: 12 }, color: '#adb5bd' }, border: { display: false } }
+            }
+        };
+
+        const createGradient = (ctx, colorHex) => {
+            let gradient = ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, `${colorHex}80`); // 50% opacity
+            gradient.addColorStop(1, `${colorHex}00`); // 0% opacity
+            return gradient;
+        };
+
+        // Gráfico de Peso
         const weightCtx = document.getElementById('weightChart').getContext('2d');
         if (window.myWeightChart) window.myWeightChart.destroy();
         window.myWeightChart = new Chart(weightCtx, {
             type: 'line',
-            data: { labels: labels, datasets: [{ label: 'Peso (kg)', data: weightData, borderColor: '#2a9d8f', backgroundColor: 'rgba(42, 157, 143, 0.2)', fill: true, tension: 0.4, pointRadius: 5, pointBackgroundColor: '#2a9d8f' }] },
-            options: { responsive: true, maintainAspectRatio: false }
+            data: { labels: labels, datasets: [{ 
+                label: 'Peso (kg)', data: uniqueHistory.map(item => item.weight), 
+                borderColor: '#2a9d8f', backgroundColor: createGradient(weightCtx, '#2a9d8f'), 
+                borderWidth: 3, fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderColor: '#2a9d8f', pointBorderWidth: 2 
+            }]},
+            options: commonOptions
         });
 
-        const fatData = uniqueHistory.map(item => item.body_fat_percentage || null);
+        // Gráfico de Gordura
         const fatCtx = document.getElementById('fatChart').getContext('2d');
         if (window.myFatChart) window.myFatChart.destroy();
         window.myFatChart = new Chart(fatCtx, {
             type: 'line',
-            data: { labels: labels, datasets: [{ label: '% de Gordura', data: fatData, borderColor: '#f4a261', backgroundColor: 'rgba(244, 162, 97, 0.2)', fill: true, tension: 0.4, spanGaps: true }] },
-            options: { responsive: true, maintainAspectRatio: false }
+            data: { labels: labels, datasets: [{ 
+                label: '% Gordura', data: uniqueHistory.map(item => item.body_fat_percentage || null), 
+                borderColor: '#e76f51', backgroundColor: createGradient(fatCtx, '#e76f51'), 
+                borderWidth: 3, fill: true, tension: 0.4, spanGaps: true, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderColor: '#e76f51', pointBorderWidth: 2 
+            }]},
+            options: commonOptions
         });
 
-        const measuresData = {
-            waist: uniqueHistory.map(item => item.circum_waist || null),
-            abdomen: uniqueHistory.map(item => item.circum_abdomen || null),
-            hip: uniqueHistory.map(item => item.circum_hip || null),
-        };
+        // Gráfico de Medidas
         const measuresCtx = document.getElementById('measuresChart').getContext('2d');
         if (window.myMeasuresChart) window.myMeasuresChart.destroy();
         window.myMeasuresChart = new Chart(measuresCtx, {
@@ -310,12 +348,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             data: {
                 labels: labels,
                 datasets: [
-                    { label: 'Cintura (cm)', data: measuresData.waist, borderColor: '#e76f51', tension: 0.4, spanGaps: true },
-                    { label: 'Abdómen (cm)', data: measuresData.abdomen, borderColor: '#264653', tension: 0.4, spanGaps: true },
-                    { label: 'Anca/Quadril (cm)', data: measuresData.hip, borderColor: '#e9c46a', tension: 0.4, spanGaps: true }
+                    { label: 'Cintura (cm)', data: uniqueHistory.map(item => item.circum_waist || null), borderColor: '#f4a261', borderWidth: 2, tension: 0.4, spanGaps: true },
+                    { label: 'Abdómen (cm)', data: uniqueHistory.map(item => item.circum_abdomen || null), borderColor: '#264653', borderWidth: 2, tension: 0.4, spanGaps: true },
+                    { label: 'Quadril (cm)', data: uniqueHistory.map(item => item.circum_hip || null), borderColor: '#2a9d8f', borderWidth: 2, tension: 0.4, spanGaps: true }
                 ]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: { ...commonOptions, plugins: { ...commonOptions.plugins, legend: { display: true, position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } } } }
         });
     }
 
@@ -366,7 +404,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function renderMealPlanTabs(plan) {
         const container = document.getElementById('mealPlanScreenContainer');
         container.innerHTML = '';
-
+        
         const tabsNav = document.createElement('ul');
         tabsNav.className = 'nav nav-pills custom-pills';
         tabsNav.id = 'mealPlanTab';
@@ -380,13 +418,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const tabId = `meal-tab-${meal.id || index}`;
             const paneId = `meal-pane-${meal.id || index}`;
 
-            // Aba
             const navItem = document.createElement('li');
             navItem.className = 'nav-item';
             navItem.innerHTML = `<button class="nav-link ${index === 0 ? 'active' : ''}" id="${tabId}" data-bs-toggle="pill" data-bs-target="#${paneId}" type="button" role="tab"><i class="bi bi-clock me-2"></i>${meal.name}</button>`;
             tabsNav.appendChild(navItem);
 
-            // Conteúdo
             let itemsHtml = '<div class="text-center p-5 text-muted"><i class="bi bi-emoji-smile fs-1 d-block mb-3"></i>Refeição livre ou sem itens cadastrados.</div>';
 
             if (meal.items && meal.items.length > 0) {
@@ -394,7 +430,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="food-item-card">
                         <div>
                             <p class="food-name">${item.foodName}</p>
-                            <p class="food-measure"><i class="bi bi-info-circle me-1"></i> ${item.measure || 'Medida Padrão'}</p>
+                            <p class="food-measure"><i class="bi bi-info-circle me-1"></i> ${item.quantity || 'Medida Padrão'}</p>
                         </div>
                         <div class="food-quantity-badge">${item.quantity}</div>
                     </div>
@@ -421,10 +457,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function renderA4DocumentForPDF(plan, user) {
-        console.log("renderA4DocumentForPDF infos")
-        console.log(user)
         await fetchNutriData(user);
         const pdfContainer = document.getElementById('pdf-export-container');
+        if(!pdfContainer) return;
+        
         const pacienteNome = window.user ? window.user.name : 'Paciente';
         const nutriNome = window.nutriNameFull;
         const nutriCRN = window.nutriCRN;
@@ -432,8 +468,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         let a4Html = `
             <div style="background-color: #ffffff; padding: 0 10px;">
-                
-                <div style="border-bottom: 2px solid #2a9d8f; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-start; font-family: Helvetica, Arial, sans-serif;">
+                <div style="border-bottom: 2px solid #2a9d8f; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-start; font-family: Poppins, Arial, sans-serif;">
                     <div>
                         <h1 style="color: #2a9d8f; font-size: 24px; margin: 0 0 12px 0; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">Plano Alimentar Individualizado</h1>
                         <p style="margin: 4px 0; font-size: 14px; color: #333;">Paciente: <strong>${pacienteNome}</strong></p>
@@ -446,12 +481,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         plan.meals.forEach((meal) => {
             a4Html += `
-            <div style="margin-bottom: 25px; page-break-inside: avoid; font-family: Helvetica, Arial, sans-serif;">
-                
+            <div style="margin-bottom: 25px; page-break-inside: avoid; font-family: Poppins, Arial, sans-serif;">
                 <div style="background-color: #2a9d8f; color: #ffffff; padding: 10px 15px; border-radius: 8px 8px 0 0;">
                     <h3 style="margin: 0; font-size: 15px; font-weight: bold; letter-spacing: 1px;">${meal.name.toUpperCase()}</h3>
                 </div>
-                
                 <div style="border: 1px solid #e0e6ed; border-top: none; border-radius: 0 0 8px 8px; padding: 10px 15px; background-color: #ffffff;">
                     <table style="width: 100%; border-collapse: collapse;">
                         <tbody>
@@ -480,17 +513,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 a4Html += `<tr><td colspan="2" style="padding: 15px; font-size: 13px; color: #8d99ae; text-align: center; font-style: italic;">Nenhum item específico prescrito.</td></tr>`;
             }
 
-            a4Html += `
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            `;
+            a4Html += `</tbody></table></div></div>`;
         });
 
-        // Rodapé de Assinatura
         a4Html += `
-                <div style="margin-top: 50px; text-align: center; page-break-inside: avoid; font-family: Helvetica, Arial, sans-serif;">
+                <div style="margin-top: 50px; text-align: center; page-break-inside: avoid; font-family: Poppins, Arial, sans-serif;">
                     <div style="width: 300px; border-bottom: 1px solid #333; margin: 0 auto 10px auto;"></div>
                     <p style="margin: 0; font-size: 14px; color: #2b2d42; font-weight: bold;">Dra. ${nutriNome}</p>
                     <p style="margin: 3px 0 0 0; font-size: 12px; color: #555;">CRN: ${nutriCRN}</p>
@@ -498,7 +525,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             </div>
         `;
-
         pdfContainer.innerHTML = a4Html;
     }
 
@@ -511,29 +537,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         const element = document.getElementById('pdf-export-container');
         const pacienteNome = window.user ? window.user.name : 'Paciente';
 
-        // Torna o elemento visível apenas para o motor ler (ele está fora da tela visualmente)
         element.style.display = 'block';
 
         const opt = {
-            margin: 15, // Margens de 15mm para as bordas do PDF ficarem como uma folha real
+            margin: 15,
             filename: `Cardapio_${pacienteNome.replace(/\s+/g, '_')}.pdf`,
             image: { type: 'jpeg', quality: 1 },
-            html2canvas: { scale: 3, useCORS: true, logging: false }, // Scale 3 = Alta Resolução
+            html2canvas: { scale: 3, useCORS: true, logging: false },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
 
-        html2pdf().set(opt).from(element).save().then(() => {
-            element.style.display = 'none';
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-            showCustomToast("PDF Profissional gerado com sucesso!", true);
-        }).catch(err => {
-            console.error("Erro ao gerar PDF:", err);
-            element.style.display = 'none';
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-            showCustomToast("Erro ao gerar PDF. Tente novamente.", false);
-        });
+        if(typeof html2pdf !== 'undefined') {
+            html2pdf().set(opt).from(element).save().then(() => {
+                element.style.display = 'none';
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                showCustomToast("PDF gerado com sucesso!", true);
+            }).catch(err => {
+                console.error("Erro ao gerar PDF:", err);
+                element.style.display = 'none';
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                showCustomToast("Erro ao gerar PDF.", false);
+            });
+        }
     }
 
     // ==========================================
@@ -742,7 +769,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 const appointmentData = await getAppointmentDetailsForReschedule(appointmentId);
                 if (appointmentData && window.user && window.user.nutriID) {
-                    initializeRescheduleModal(window.user.nutriID, appointmentData);
+                    if(typeof initializeRescheduleModal === 'function') {
+                        initializeRescheduleModal(window.user.nutriID, appointmentData);
+                    }
                 } else {
                     showCustomToast("Não foi possível carregar os detalhes. Tente novamente.", false);
                 }
@@ -844,9 +873,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         modal.classList.add('is-visible');
     }
 
-    function initializeSurveyModal() {
-        // Se a página for agenda, esta função será chamada. Deixando estrutura pronta para evitar erros.
-    }
+    function initializeSurveyModal() {}
 
     // ==========================================
     // PÁGINA DE CONFIGURAÇÕES
@@ -879,16 +906,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (result.success && result.invoices.length > 0) {
                 emptyState.style.display = 'none';
 
-                let invoicesHtml = '<div class="list-group shadow-sm">';
+                let invoicesHtml = '<div class="list-group shadow-sm border-0">';
                 result.invoices.forEach(inv => {
                     let statusBadge = inv.status === 'Paid'
-                        ? '<span class="badge bg-success">Pago</span>'
-                        : '<span class="badge bg-warning text-dark">Pendente</span>';
+                        ? '<span class="badge bg-success bg-opacity-10 text-success border border-success">Pago</span>'
+                        : '<span class="badge bg-warning bg-opacity-10 text-warning border border-warning">Pendente</span>';
 
                     invoicesHtml += `
-                        <div class="list-group-item d-flex justify-content-between align-items-center p-4">
+                        <div class="list-group-item d-flex justify-content-between align-items-center p-4 border-0 border-bottom">
                             <div>
-                                <h6 class="mb-1 fw-bold text-dark-charcoal"><i class="bi bi-receipt me-2"></i>Consulta Nutricional</h6>
+                                <h6 class="mb-1 fw-bold text-dark"><i class="bi bi-receipt me-2 text-primary"></i>Consulta Nutricional</h6>
                                 <small class="text-muted">Vencimento: ${new Date(inv.due_date).toLocaleDateString('pt-BR')}</small>
                             </div>
                             <div class="text-end">
@@ -973,7 +1000,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// Toast de Notificações
 function showCustomToast(message, isSuccess = true) {
     let toast = document.getElementById('customToast');
     if (!toast) {
@@ -986,10 +1012,35 @@ function showCustomToast(message, isSuccess = true) {
     const messageEl = toast.querySelector('.toast-message');
     const iconEl = toast.querySelector('.toast-icon i');
     messageEl.textContent = message;
-    toast.className = `custom-toast ${isSuccess ? 'success' : 'error'} show`;
-    iconEl.className = isSuccess ? 'bi bi-check-circle-fill' : 'bi bi-x-octagon-fill';
+    
+    // Premium Toast Styles Inject
+    toast.style.position = 'fixed';
+    toast.style.bottom = '30px';
+    toast.style.right = '30px';
+    toast.style.backgroundColor = isSuccess ? '#2a9d8f' : '#e76f51';
+    toast.style.color = '#fff';
+    toast.style.padding = '16px 24px';
+    toast.style.borderRadius = '12px';
+    toast.style.boxShadow = '0 10px 25px rgba(0,0,0,0.2)';
+    toast.style.zIndex = '9999';
+    toast.style.display = 'flex';
+    toast.style.alignItems = 'center';
+    toast.style.gap = '12px';
+    toast.style.fontWeight = '600';
+    toast.style.transition = 'all 0.4s ease';
 
-    toast.style.zIndex = "999999";
+    if (toast.classList.contains('show')) return;
 
-    setTimeout(() => toast.classList.remove('show'), 4000);
+    iconEl.className = isSuccess ? 'bi bi-check-circle-fill fs-5' : 'bi bi-x-octagon-fill fs-5';
+    toast.classList.add('show');
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            toast.classList.remove('show');
+            toast.style.opacity = '1';
+            toast.style.transform = 'none';
+        }, 400);
+    }, 3000);
 }

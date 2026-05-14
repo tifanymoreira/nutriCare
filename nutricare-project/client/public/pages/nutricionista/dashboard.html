@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visão Geral - NutriCare Premium</title>
-    <link rel="icon" type="image/svg+xml" href="../../images/logo-mae.png" />
+    <link rel="icon" type="image/png" href="../../images/logo-mae.png" />
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -71,6 +71,13 @@
         .empty-state-pro h6 { font-weight: 700; color: #495057; margin-bottom: 0.25rem; }
         .empty-state-pro p { font-size: 0.85rem; color: #adb5bd; margin-bottom: 0; }
     </style>
+
+    <!-- Previne o flash de tela branca (FOUC) carregando o tema imediatamente -->
+    <script>
+        if (localStorage.getItem('nutriTheme') === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    </script>
 </head>
 
 <body>
@@ -92,6 +99,29 @@
         </aside>
 
         <main class="dashboard-main p-4 p-md-5">
+            <!-- Global Topbar UX -->
+            <div class="topbar-pro d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+                <div class="d-none d-md-flex align-items-center bg-white rounded-pill px-3 py-2 shadow-sm border border-light position-relative" style="width: 300px;">
+                    <i class="bi bi-search text-muted"></i>
+                    <input type="text" id="globalSearchInput" class="border-0 bg-transparent ms-2 w-100 shadow-none text-dark" placeholder="Buscar páginas ou pacientes..." style="outline: none; font-size: 0.85rem;" autocomplete="off">
+                    <div id="searchSuggestions" class="dropdown-menu shadow-lg border-0 rounded-4 mt-2 p-0" style="width: 100%; position: absolute; top: 100%; left: 0; z-index: 1050; max-height: 400px; overflow-y: auto;"></div>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <button class="btn btn-light rounded-circle shadow-sm border border-light" id="darkModeToggle" title="Alternar Modo Escuro"><i class="bi bi-moon-stars-fill text-dark"></i></button>
+                    <div class="dropdown">
+                        <button class="btn btn-light rounded-circle shadow-sm border border-light position-relative" data-bs-toggle="dropdown"><i class="bi bi-bell-fill text-muted"></i><span id="notificationBadge" class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle d-none"></span></button>
+                        <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 mt-2 p-0" style="width: 320px;" id="notificationDropdown">
+                            <div class="p-3 border-bottom bg-light rounded-top-4 d-flex justify-content-between align-items-center"><h6 class="mb-0 fw-bold text-dark">Notificações</h6><span id="notificationCountBadge" class="badge bg-primary rounded-pill">0</span></div>
+                            <div id="notificationList"><div class="p-4 text-center text-muted small">Carregando...</div></div>
+                            <div class="p-2 text-center"><a href="dashboard.html" class="small text-decoration-none text-primary fw-bold">Ir para Painel</a></div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 bg-white rounded-pill pe-3 p-1 shadow-sm border border-light">
+                        <img src="https://api.dicebear.com/8.x/initials/svg?seed=Nutri" id="topbarAvatar" alt="Nutri" class="rounded-circle bg-light border" width="32" height="32">
+                        <span class="small fw-bold text-dark d-none d-md-block" id="topbarNutriName">Nutricionista</span>
+                    </div>
+                </div>
+            </div>
             
             <header class="welcome-banner">
                 <div class="welcome-text">
@@ -199,6 +229,21 @@
             <button class="modal-close" id="closeGenerateLinkModal">&times;</button>
             <h2 class="auth-title text-center">Link de Cadastro</h2>
             <p class="auth-subtitle text-center">Envie este link para seus novos pacientes se cadastrarem.</p>
+            
+            <div class="mb-4 bg-light p-3 rounded-4 border text-start shadow-sm">
+                <label class="form-label fw-bold small text-dark mb-3"><i class="bi bi-sliders text-primary me-1"></i> Modalidade do Atendimento:</label>
+                <div class="d-flex gap-4">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="linkType" id="typeParticular" value="particular" checked>
+                        <label class="form-check-label fw-medium text-dark" for="typeParticular">Particular</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="linkType" id="typeConvenio" value="conveniado">
+                        <label class="form-check-label fw-medium text-dark" for="typeConvenio">Conveniado (Plano de Saúde)</label>
+                    </div>
+                </div>
+            </div>
+
             <div id="linkContainer" class="text-center">
                 <p id="generatedLink" class="bg-light p-3 rounded border" style="word-break: break-all;"></p>
                 <button id="copyLinkBtn" class="btn btn-primary-custom w-100 rounded-pill"><i class="bi bi-clipboard"></i> Copiar Link</button>
@@ -266,8 +311,58 @@
         </div>
     </div>
 
-    <div class="modal-backdrop" id="logoutModal"><div class="modal-content text-center"><button class="modal-close" id="closeLogoutModal">&times;</button><h2 class="auth-title">Sair do sistema?</h2><div class="modal-actions d-flex justify-content-center gap-3 mt-4"><button id="btnNo" class="btn btn-secondary w-100 rounded-pill">Não</button><button id="btnYes" class="btn btn-primary-custom w-100 rounded-pill">Sim</button></div></div></div>
+    <!-- Widget Flutuante de Ajuda -->
+    <div class="help-widget" data-bs-toggle="modal" data-bs-target="#helpManualModal" title="Central de Ajuda">
+        <i class="bi bi-question-lg"></i>
+    </div>
 
+    <!-- Modal Manual do Usuário -->
+    <div class="modal fade" id="helpManualModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-bottom-right">
+            <div class="modal-content border-0 shadow rounded-4 p-0">
+                <div class="modal-header bg-light border-0 rounded-top-4 p-4">
+                    <h4 class="modal-title fw-bold text-dark"><i class="bi bi-journal-text text-primary me-2"></i> Central de Ajuda NutriCare</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4" style="max-height: 65vh; overflow-y: auto;">
+                    <p class="text-muted mb-4">Encontre soluções rápidas para as principais dúvidas de navegação desta tela.</p>
+                    <div class="accordion accordion-flush custom-manual-accordion" id="manualAccordion">
+                        <div class="accordion-item mb-3 border rounded shadow-sm">
+                            <h2 class="accordion-header"><button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#manualDashboard1"><i class="bi bi-link-45deg text-primary me-3 fs-5"></i> Como convidar um novo paciente?</button></h2>
+                            <div id="manualDashboard1" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                                <div class="accordion-body text-secondary">No topo da tela inicial, clique em <strong>"Link de Cadastro"</strong>. Copie o link gerado e envie para o seu paciente via WhatsApp ou E-mail. Ele mesmo fará o cadastro e preencherá a anamnese inicial!</div>
+                            </div>
+                        </div>
+                        <div class="accordion-item mb-3 border rounded shadow-sm">
+                            <h2 class="accordion-header"><button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#manualDashboard2"><i class="bi bi-inboxes text-warning me-3 fs-5"></i> O que são as Solicitações Pendentes?</button></h2>
+                            <div id="manualDashboard2" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                                <div class="accordion-body text-secondary">Sempre que um paciente se cadastrar e tentar agendar uma consulta pelo seu link, o pedido cairá no quadro <strong>Solicitações Pendentes</strong>. Clique no ícone de "olho" para verificar os dados e Aprovar ou Recusar o horário.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="logoutModal">
+        <div class="modal-content text-center p-4 p-md-5" style="max-width: 420px;">
+            <button class="modal-close" id="closeLogoutModal">&times;</button>
+            <div class="mb-4 mt-2">
+                <div class="d-inline-flex align-items-center justify-content-center bg-danger bg-opacity-10 text-danger rounded-circle mb-3" style="width: 80px; height: 80px;">
+                    <i class="bi bi-box-arrow-right" style="font-size: 2.5rem;"></i>
+                </div>
+                <h3 class="fw-bold text-dark mb-2">Sair do sistema?</h3>
+                <p class="text-muted small mb-0">Tem certeza que deseja encerrar sua sessão atual?</p>
+            </div>
+            <div class="d-flex justify-content-center gap-3">
+                <button id="btnNo" class="btn btn-light w-50 fw-bold border">Cancelar</button>
+                <button id="btnYes" class="btn btn-danger w-50 fw-bold shadow-sm">Sim, sair</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/scrollreveal"></script>
     <script type="module" src="../../js/dashboard-nutricionista.js"></script>
 </body>

@@ -194,9 +194,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 elements.anamneseLink.href = `/pages/paciente/anamnese.html?${urlParams.toString()}`;
                 goToStep(4);
+            } else {
+                showAgendaAlert(result.message || 'Erro ao realizar agendamento.');
             }
         } catch (error) {
-            console.log(`erro = `, result.message)
+            showAgendaAlert('Ocorreu um erro de comunicação com o servidor.');
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalBtnText;

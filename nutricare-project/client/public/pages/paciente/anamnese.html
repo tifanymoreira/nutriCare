@@ -82,13 +82,25 @@
                                 <input type="tel" class="form-control" id="phone" required>
                             </div>
                             <div class="form-question">
-                                <div class="form-question">
-                                    <label for="password" class="form-label">Crie a sua senha de acesso *</label>
-                                    <input type="password" class="form-control" id="password" required>
+                                <label for="password" class="form-label">Crie a sua senha de acesso *</label>
+                                <div class="position-relative mb-3">
+                                    <input type="password" class="form-control pe-5" id="password" required>
+                                </div>
 
-                                    <label for="password_confirmation" class="form-label mt-3">Confirme a sua senha
-                                        *</label>
-                                    <input type="password" class="form-control" id="password_confirmation" required>
+                                <label for="password_confirmation" class="form-label">Confirme a sua senha *</label>
+                                <div class="position-relative">
+                                    <input type="password" class="form-control pe-5" id="password_confirmation" required>
+                                </div>
+
+                                <div id="password-requirements" class="mt-3 p-3 bg-white border rounded">
+                                    <p class="small text-muted fw-bold mb-2">Requisitos de segurança:</p>
+                                    <ul class="list-unstyled mb-0 d-flex flex-wrap gap-2">
+                                        <li id="req-length" class="requirement w-100 text-muted small"><i class="bi bi-x-circle"></i> Mínimo de 6 caracteres</li>
+                                        <li id="req-lowercase" class="requirement col-5 text-muted small"><i class="bi bi-x-circle"></i> Letra Minúscula</li>
+                                        <li id="req-uppercase" class="requirement col-5 text-muted small"><i class="bi bi-x-circle"></i> Letra Maiúscula</li>
+                                        <li id="req-special" class="requirement col-5 text-muted small"><i class="bi bi-x-circle"></i> Número/Especial</li>
+                                        <li id="req-match" class="requirement col-5 text-muted small"><i class="bi bi-x-circle"></i> Senhas iguais</li>
+                                    </ul>
                                 </div>
                             </div>
                            
@@ -413,6 +425,42 @@
     </div>
     <script src="https://unpkg.com/scrollreveal"></script>
     <script type="module" src="../../js/anamnese.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const pwd = document.getElementById('password');
+            const pwdConf = document.getElementById('password_confirmation');
+            const reqs = {
+                length: document.getElementById('req-length'),
+                lowercase: document.getElementById('req-lowercase'),
+                uppercase: document.getElementById('req-uppercase'),
+                special: document.getElementById('req-special'),
+                match: document.getElementById('req-match')
+            };
+            
+            const updateReq = (el, valid) => {
+                if (valid) {
+                    el.classList.replace('text-muted', 'text-success');
+                    el.querySelector('i').classList.replace('bi-x-circle', 'bi-check-circle-fill');
+                } else {
+                    el.classList.replace('text-success', 'text-muted');
+                    el.querySelector('i').classList.replace('bi-check-circle-fill', 'bi-x-circle');
+                }
+            };
+            
+            const validate = () => {
+                const v = pwd.value, c = pwdConf.value;
+                updateReq(reqs.length, v.length >= 6);
+                updateReq(reqs.lowercase, /[a-z]/.test(v));
+                updateReq(reqs.uppercase, /[A-Z]/.test(v));
+                updateReq(reqs.special, /[\d\W]/.test(v));
+                updateReq(reqs.match, v === c && v.length > 0);
+            };
+            
+            pwd.addEventListener('input', validate);
+            pwdConf.addEventListener('input', validate);
+        });
+    </script>
 </body>
 
 </html>

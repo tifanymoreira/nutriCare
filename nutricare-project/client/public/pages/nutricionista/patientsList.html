@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meus Pacientes - NutriCare Premium</title>
+    <link rel="icon" type="image/png" href="../../images/logo-mae.png" />
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -45,6 +46,13 @@
         .file-card { transition: all 0.2s ease; cursor: pointer; }
         .file-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important; border-color: var(--primary-color, #2a9d8f) !important; }
     </style>
+
+    <!-- Previne o flash de tela branca (FOUC) carregando o tema imediatamente -->
+    <script>
+        if (localStorage.getItem('nutriTheme') === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    </script>
 </head>
 
 <body>
@@ -69,31 +77,60 @@
         </aside>
 
         <main class="dashboard-main">
+            <!-- Global Topbar UX -->
+            <div class="topbar-pro d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+                
+                <div class="d-flex align-items-center gap-3">
+                    <button class="btn btn-light rounded-circle shadow-sm border border-light" id="darkModeToggle" title="Alternar Modo Escuro"><i class="bi bi-moon-stars-fill text-dark"></i></button>
+                    <div class="dropdown">
+                        <button class="btn btn-light rounded-circle shadow-sm border border-light position-relative" data-bs-toggle="dropdown"><i class="bi bi-bell-fill text-muted"></i><span id="notificationBadge" class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle d-none"></span></button>
+                        <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 mt-2 p-0" style="width: 320px;" id="notificationDropdown">
+                            <div class="p-3 border-bottom bg-light rounded-top-4 d-flex justify-content-between align-items-center"><h6 class="mb-0 fw-bold text-dark">Notificações</h6><span id="notificationCountBadge" class="badge bg-primary rounded-pill">0</span></div>
+                            <div id="notificationList"><div class="p-4 text-center text-muted small">Carregando...</div></div>
+                            <div class="p-2 text-center"><a href="dashboard.html" class="small text-decoration-none text-primary fw-bold">Ir para Painel</a></div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 bg-white rounded-pill pe-3 p-1 shadow-sm border border-light">
+                        <img src="https://api.dicebear.com/8.x/initials/svg?seed=Nutri" id="topbarAvatar" alt="Nutri" class="rounded-circle bg-light border" width="32" height="32">
+                        <span class="small fw-bold text-dark d-none d-md-block" id="topbarNutriName">Nutricionista</span>
+                    </div>
+                </div>
+            </div>
             <header class="dashboard-content-header">
                 <h1>Meus Pacientes</h1>
             </header>
 
-            <div class="card data-card border-0 shadow-sm">
-                 <div class="card-header patient-list-header bg-white border-bottom-0 pt-4 pb-0">
-                    <div class="input-group input-group-lg shadow-sm rounded">
-                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                        <input type="text" class="form-control border-start-0 ps-0" id="patientSearchInput" placeholder="Buscar paciente por nome ou e-mail...">
-                    </div>
+            <!-- Área de Busca -->
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                <div class="input-group input-group-lg shadow-sm rounded w-100 bg-white" style="max-width: 600px; border: 1px solid #e9ecef;">
+                    <span class="input-group-text bg-transparent border-0 text-muted pe-1"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control border-0 bg-transparent ps-2 shadow-none" id="patientSearchInput" placeholder="Buscar paciente por nome ou e-mail...">
                 </div>
-                <div class="card-body">
+            </div>
+
+            <!-- Container da Lista Premium -->
+            <div class="card data-card border-0 shadow-sm mt-4 rounded-4" id="tableContainerCard">
+                <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mt-3">
+                        <table class="table table-hover table-modern-pro align-middle mb-0" id="patientTable">
                             <thead class="table-light">
                                 <tr>
-                                    <th class="text-secondary fw-semibold">Paciente</th>
-                                    <th class="text-secondary fw-semibold">Contato</th>
-                                    <th class="text-secondary fw-semibold">Status</th>
-                                    <th class="text-secondary fw-semibold">Próxima Consulta</th>
-                                    <th class="text-end text-secondary fw-semibold">Ações</th>
+                                    <th class="ps-4">Paciente</th>
+                                    <th>Contato</th>
+                                    <th>Status</th>
+                                    <th>Próxima Consulta</th>
+                                    <th class="text-end pe-4">Ações Rápidas</th>
                                 </tr>
                             </thead>
                             <tbody id="patientTableBody"></tbody>
                         </table>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center p-3 border-top bg-light rounded-bottom-4" id="paginationContainer" style="display: none !important;">
+                        <span class="text-muted small fw-medium" id="paginationInfo">Mostrando 1 a 10 de 50 pacientes</span>
+                        <ul class="pagination pagination-sm mb-0 shadow-sm" id="paginationList"></ul>
+                        <nav>
+                            
+                        </nav>
                     </div>
                     <div id="emptyState" class="empty-state-card" style="display: none;">
                         <div class="empty-state-icon"><i class="bi bi-person-x"></i></div>
@@ -138,6 +175,9 @@
                             </li>
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link" id="records-tab" data-bs-toggle="tab" data-bs-target="#records-pane" type="button" role="tab"><i class="bi bi-folder2-open me-2"></i>Ficheiros & Exportação</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="exams-tab" data-bs-toggle="tab" data-bs-target="#exams-pane" type="button" role="tab"><i class="bi bi-droplet-half me-2"></i>Exames</button>
                             </li>
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link" id="anamnese-tab" data-bs-toggle="tab" data-bs-target="#anamnese-pane" type="button" role="tab"><i class="bi bi-file-medical me-2"></i>Anamnese Base</button>
@@ -185,6 +225,41 @@
                                     </div>
                                     <div id="records-container" class="row g-4">
                                         </div>
+                                </div>
+
+                                <div class="tab-pane fade" id="exams-pane" role="tabpanel">
+                                    <div class="row g-4 h-100">
+                                        <div class="col-lg-7 border-end">
+                                            <div class="d-flex justify-content-between align-items-center mb-4 pe-3">
+                                                <div>
+                                                    <h4 class="fw-bold text-dark m-0"><i class="bi bi-droplet-half text-danger me-2"></i> Exames Laboratoriais</h4>
+                                                    <p class="text-muted small m-0">Faça o upload dos exames (PDF/Imagem) para arquivar no prontuário.</p>
+                                                </div>
+                                                <button class="btn btn-primary-custom rounded-pill px-4 shadow-sm" onclick="document.getElementById('fileUploadExame').click()"><i class="bi bi-cloud-arrow-up-fill me-1"></i> Anexar Exame</button>
+                                                <input type="file" id="fileUploadExame" class="d-none" accept=".pdf,.png,.jpg">
+                                            </div>
+                                            <div id="exams-list-container" class="row g-3 pe-3">
+                                                <div class="col-12" id="empty-exams">
+                                                    <div class="text-center py-5 bg-white rounded-4 border shadow-sm"><i class="bi bi-file-earmark-x display-4 text-muted opacity-25"></i><p class="text-muted mt-3 fw-medium">Nenhum exame arquivado para este paciente.</p></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-5">
+                                            <div class="anamnese-card bg-light border-0 shadow-sm border-top border-danger border-4">
+                                                <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-robot text-danger me-2"></i>Insight Inteligente</h5>
+                                                <p class="small text-muted mb-3">Cole o resumo ou os principais marcadores do exame laboratorial abaixo. A Inteligência Artificial (Gemini) cruzará os dados com o histórico do paciente para sugerir condutas nutricionais.</p>
+                                                <textarea id="aiExamSummaryInput" class="form-control form-control-soap mb-3 shadow-sm" rows="5" placeholder="Ex: Glicemia em jejum 105 mg/dL, Colesterol Total 220 mg/dL, Vitamina D 20 ng/mL..."></textarea>
+                                                <button id="btnAnalyzeExamAI" class="btn btn-danger w-100 fw-bold rounded-pill shadow-sm"><i class="bi bi-magic me-2"></i> Analisar com Gemini AI</button>
+                                                
+                                                <div id="aiExamResultContainer" class="mt-4" style="display: none;">
+                                                    <div class="p-3 border-start border-danger border-4 bg-white shadow-sm rounded">
+                                                        <small class="text-danger d-block fw-bold mb-2"><i class="bi bi-stars me-1"></i> INSIGHT CLÍNICO</small>
+                                                        <span id="aiExamInsightText" class="small text-dark lh-base d-block" style="font-size: 0.9rem;"></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="tab-pane fade" id="anamnese-pane" role="tabpanel">
@@ -382,7 +457,57 @@
             </div>
             
             <div class="modal-backdrop" id="scheduleReturnModal"><div class="modal-content pro-modal modal-lg"><button class="modal-close" id="closeScheduleReturnModal">&times;</button><div class="modal-icon"><i class="bi bi-calendar2-plus"></i></div><h4 class="modal-title-pro">Agendar Retorno</h4><div id="return-schedule-flow"><div class="row gx-4"><div class="col-md-6"><div id="returnDatePicker" class="mb-4"></div></div><div class="col-md-6"><div class="time-slots-container"><h6 class="text-center mb-3" id="returnSelectedDate">Escolha uma data</h6><div class="time-slots-list" id="returnTimeSlots"></div><div id="return-slots-loader" class="text-center mt-3" style="display: none;"><span class="spinner-border spinner-border-sm text-primary"></span></div></div></div></div><div class="d-flex justify-content-end mt-3"><button type="button" class="btn btn-primary-custom" id="confirmReturnScheduleBtn" disabled><i class="bi bi-check-circle-fill me-2"></i> Confirmar</button></div></div></div></div>
-            <div class="modal-backdrop" id="logoutModal"><div class="modal-content text-center"><button class="modal-close" id="closeLogoutModal">&times;</button><h2 class="auth-title">Sair do sistema?</h2><div class="modal-actions d-flex justify-content-center gap-3 mt-4"><button id="btnNo" class="btn btn-secondary w-100">Não</button><button id="btnYes" class="btn btn-primary-custom w-100">Sim</button></div></div></div>
+            
+            <!-- Widget Flutuante de Ajuda -->
+            <div class="help-widget" data-bs-toggle="modal" data-bs-target="#helpManualModal" title="Central de Ajuda">
+                <i class="bi bi-question-lg"></i>
+            </div>
+
+            <!-- Modal Manual do Usuário -->
+            <div class="modal fade" id="helpManualModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-bottom-right">
+                    <div class="modal-content border-0 shadow rounded-4 p-0">
+                        <div class="modal-header bg-light border-0 rounded-top-4 p-4">
+                            <h4 class="modal-title fw-bold text-dark"><i class="bi bi-journal-text text-primary me-2"></i> Central de Ajuda NutriCare</h4>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4" style="max-height: 65vh; overflow-y: auto;">
+                            <p class="text-muted mb-4">Encontre soluções rápidas para as principais dúvidas sobre os pacientes.</p>
+                            <div class="accordion accordion-flush custom-manual-accordion" id="manualAccordion">
+                                <div class="accordion-item mb-3 border rounded shadow-sm">
+                                    <h2 class="accordion-header"><button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#manualPatients1"><i class="bi bi-journal-medical text-primary me-3 fs-5"></i> Como acessar o Prontuário Completo?</button></h2>
+                                    <div id="manualPatients1" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                                        <div class="accordion-body text-secondary">Na linha do paciente desejado, clique no primeiro botão (ícone de agenda com cruz <i class="bi bi-journal-medical"></i>). Lá você terá acesso ao histórico de consultas, anamnese e poderá gerar PDFs.</div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item mb-3 border rounded shadow-sm">
+                                    <h2 class="accordion-header"><button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#manualPatients2"><i class="bi bi-calculator text-info me-3 fs-5"></i> Como usar a Calculadora Antropométrica?</button></h2>
+                                    <div id="manualPatients2" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
+                                        <div class="accordion-body text-secondary">Clique no ícone de calculadora (<i class="bi bi-calculator"></i>) ao lado do nome do paciente na tabela. Preencha as dobras cutâneas e o sistema calculará automaticamente o % de Gordura, IMC, Massa Magra e Taxa Metabólica Basal.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-backdrop" id="logoutModal">
+                <div class="modal-content text-center p-4 p-md-5" style="max-width: 420px;">
+                    <button class="modal-close" id="closeLogoutModal">&times;</button>
+                    <div class="mb-4 mt-2">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-danger bg-opacity-10 text-danger rounded-circle mb-3" style="width: 80px; height: 80px;">
+                            <i class="bi bi-box-arrow-right" style="font-size: 2.5rem;"></i>
+                        </div>
+                        <h3 class="fw-bold text-dark mb-2">Sair do sistema?</h3>
+                        <p class="text-muted small mb-0">Tem certeza que deseja encerrar sua sessão atual?</p>
+                    </div>
+                    <div class="d-flex justify-content-center gap-3">
+                        <button id="btnNo" class="btn btn-light w-50 fw-bold border">Cancelar</button>
+                        <button id="btnYes" class="btn btn-danger w-50 fw-bold shadow-sm">Sim, sair</button>
+                    </div>
+                </div>
+            </div>
 
         </main>
     </div>

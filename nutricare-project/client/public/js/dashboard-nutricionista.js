@@ -1,3 +1,71 @@
+window.showToast = function(message, type = 'success') {
+    let toast = document.getElementById('globalSystemToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'globalSystemToast';
+        toast.className = 'custom-toast';
+        toast.innerHTML = `<i class="toast-icon"></i><span class="toast-message"></span>`;
+        document.body.appendChild(toast);
+    }
+    const msgEl = toast.querySelector('.toast-message');
+    const iconEl = toast.querySelector('.toast-icon');
+
+    msgEl.textContent = message;
+    toast.className = `custom-toast show ${type}`;
+    if (type === 'success') {
+        iconEl.className = 'bi bi-check-circle-fill toast-icon';
+    } else if (type === 'error') {
+        iconEl.className = 'bi bi-exclamation-triangle-fill toast-icon';
+    } else {
+        iconEl.className = 'bi bi-info-circle-fill toast-icon';
+    }
+    setTimeout(() => toast.classList.remove('show'), 3500);
+};
+
+window.showConfirm = function(title, message, confirmText, confirmClass, onConfirm) {
+    let modal = document.getElementById('globalConfirmModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'globalConfirmModal';
+        modal.className = 'modal-backdrop';
+        modal.style.zIndex = '1070';
+        modal.innerHTML = `
+            <div class="modal-content text-center p-4 p-md-5" style="max-width: 420px;">
+                <button class="modal-close" onclick="document.getElementById('globalConfirmModal').classList.remove('is-visible')">&times;</button>
+                <div class="mb-4 mt-2">
+                    <div id="confirmIconContainer" class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3" style="width: 80px; height: 80px;">
+                        <i id="confirmIcon" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h3 class="fw-bold text-dark mb-2" id="confirmTitle"></h3>
+                    <p class="text-muted small mb-0" id="confirmMessage"></p>
+                </div>
+                <div class="d-flex justify-content-center gap-3">
+                    <button class="btn btn-light w-50 fw-bold border" onclick="document.getElementById('globalConfirmModal').classList.remove('is-visible')">Cancelar</button>
+                    <button id="confirmBtnYes" class="btn w-50 fw-bold shadow-sm"></button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').textContent = message;
+    const iconContainer = document.getElementById('confirmIconContainer');
+    const icon = document.getElementById('confirmIcon');
+    const btnYes = document.getElementById('confirmBtnYes');
+    if (confirmClass === 'danger') {
+        iconContainer.className = 'd-inline-flex align-items-center justify-content-center bg-danger bg-opacity-10 text-danger rounded-circle mb-3';
+        icon.className = 'bi bi-exclamation-triangle-fill';
+        btnYes.className = 'btn btn-danger w-50 fw-bold shadow-sm';
+    } else {
+        iconContainer.className = 'd-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-circle mb-3';
+        icon.className = 'bi bi-question-circle-fill';
+        btnYes.className = 'btn btn-primary-custom w-50 fw-bold shadow-sm';
+    }
+    btnYes.textContent = confirmText;
+    btnYes.onclick = () => { modal.classList.remove('is-visible'); if (onConfirm) onConfirm(); };
+    setTimeout(() => modal.classList.add('is-visible'), 10);
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
 
     const user = await verifySession();
@@ -7,6 +75,134 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     const nutriName = user.name;
     const nutriID = user.id;
+
+    // --- GLOBAL UX: Topbar & Dark Mode Initialization ---
+    const toggleBtn = document.getElementById('darkModeToggle');
+    const savedTheme = localStorage.getItem('nutriTheme') || 'light';
+    if(savedTheme === 'dark') { document.documentElement.setAttribute('data-theme', 'dark'); if(toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-sun-fill text-warning"></i>'; }
+    if(toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('nutriTheme', newTheme);
+            toggleBtn.innerHTML = newTheme === 'dark' ? '<i class="bi bi-sun-fill text-warning"></i>' : '<i class="bi bi-moon-stars-fill text-dark"></i>';
+        });
+    }
+    const topbarName = document.getElementById('topbarNutriName');
+    if(topbarName) topbarName.textContent = user.name.split(' ')[0];
+    
+    const topAvatar = document.getElementById('topbarAvatar');
+    if (topAvatar) topAvatar.src = `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(user.name)}`;
+
+    // --- UX: Lógica de Busca Global e Autocomplete ---
+    const globalSearchInput = document.getElementById('globalSearchInput');
+    const searchSuggestions = document.getElementById('searchSuggestions');
+    if (globalSearchInput && searchSuggestions) {
+        let searchTimeout;
+        const systemPages = [
+            { name: 'Visão Geral', url: 'dashboard.html', icon: 'bi-grid-1x2-fill' },
+            { name: 'Meus Pacientes', url: 'patientsList.html', icon: 'bi-people-fill' },
+            { name: 'Minha Agenda', url: 'nutriAgenda.html', icon: 'bi-calendar2-week-fill' },
+            { name: 'Minhas Métricas', url: 'nutriMetrics.html', icon: 'bi-graph-up-arrow' },
+            { name: 'Configurações', url: 'nutriConfig.html', icon: 'bi-person-fill-gear' },
+            { name: 'Faturamento', url: 'nutriInvoicing.html', icon: 'bi-cash-stack' }
+        ];
+
+        globalSearchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase().trim();
+            clearTimeout(searchTimeout);
+            
+            if (term.length < 2) {
+                searchSuggestions.classList.remove('show');
+                return;
+            }
+
+            searchTimeout = setTimeout(async () => {
+                let resultsHtml = '';
+                
+                const matchedPages = systemPages.filter(p => p.name.toLowerCase().includes(term));
+                if (matchedPages.length > 0) {
+                    resultsHtml += `<div class="px-3 py-2 bg-light border-bottom"><small class="text-muted fw-bold" style="font-size: 0.7rem; text-transform: uppercase;">Páginas do Sistema</small></div>`;
+                    matchedPages.forEach(p => {
+                        resultsHtml += `<a href="${p.url}" class="dropdown-item d-flex align-items-center gap-2 py-2 search-suggestion-item"><div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width:30px; height:30px;"><i class="bi ${p.icon}"></i></div> <span class="fw-medium text-dark">${p.name}</span></a>`;
+                    });
+                }
+
+                try {
+                    const response = await fetch(`/api/auth/patientList`);
+                    const data = await response.json();
+                    if (data.success && data.patients) {
+                        const matchedPatients = data.patients.filter(p => p.nome.toLowerCase().includes(term) || p.email.toLowerCase().includes(term)).slice(0, 5);
+                        if (matchedPatients.length > 0) {
+                            resultsHtml += `<div class="px-3 py-2 bg-light border-bottom"><small class="text-muted fw-bold" style="font-size: 0.7rem; text-transform: uppercase;">Pacientes</small></div>`;
+                            matchedPatients.forEach(p => {
+                                resultsHtml += `<a href="patientsList.html?q=${encodeURIComponent(p.nome)}" class="dropdown-item d-flex align-items-center gap-2 py-2 search-suggestion-item">
+                                    <img src="https://api.dicebear.com/8.x/bottts/svg?seed=${p.id}" width="32" height="32" class="rounded-circle border bg-white shadow-sm">
+                                    <div>
+                                        <div class="fw-bold text-dark mb-0 lh-sm" style="font-size: 0.85rem;">${p.nome}</div>
+                                        <div class="text-muted" style="font-size: 0.75rem;">${p.email}</div>
+                                    </div>
+                                </a>`;
+                            });
+                        }
+                    }
+                } catch (err) { console.error('Erro no autocomplete de pacientes', err); }
+
+                if (resultsHtml === '') {
+                    resultsHtml = `<div class="p-4 text-center text-muted small"><i class="bi bi-search d-block fs-4 mb-2 opacity-50"></i>Nenhum resultado para "${term}"</div>`;
+                }
+
+                searchSuggestions.innerHTML = resultsHtml;
+                searchSuggestions.classList.add('show');
+            }, 300);
+        });
+
+        globalSearchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const term = e.target.value.trim();
+                if (term) window.location.href = `patientsList.html?q=${encodeURIComponent(term)}`;
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!globalSearchInput.contains(e.target) && !searchSuggestions.contains(e.target)) {
+                searchSuggestions.classList.remove('show');
+            }
+        });
+        
+        globalSearchInput.addEventListener('focus', () => {
+            if (globalSearchInput.value.length >= 2 && searchSuggestions.innerHTML.trim() !== '') {
+                searchSuggestions.classList.add('show');
+            }
+        });
+    }
+
+    // --- UX: Notificações Reais ---
+    async function loadGlobalNotifications() {
+        const badge = document.getElementById('notificationBadge');
+        const countBadge = document.getElementById('notificationCountBadge');
+        const list = document.getElementById('notificationList');
+        if (!list) return;
+        try {
+            const res = await fetch('/api/auth/nutricionista/notifications');
+            const data = await res.json();
+            if (data.success) {
+                const notifs = data.notifications;
+                if (notifs.length > 0) {
+                    badge.classList.remove('d-none');
+                    countBadge.textContent = `${notifs.length} nova${notifs.length > 1 ? 's' : ''}`;
+                    list.innerHTML = notifs.map(n => `<div class="p-3 border-bottom notification-item bg-white" style="cursor:pointer;" onclick="window.location.href='dashboard.html'"><p class="small text-dark fw-bold mb-1"><i class="bi ${n.icon} ${n.color} me-1"></i> ${n.title}</p><p class="small text-muted mb-0">${n.message}</p></div>`).join('');
+                } else {
+                    badge.classList.add('d-none');
+                    countBadge.textContent = '0';
+                    list.innerHTML = '<div class="p-4 text-center text-muted small">Nenhuma notificação pendente.</div>';
+                }
+            }
+        } catch(e) { console.error('Erro notificações', e); }
+    }
+    loadGlobalNotifications();
+    setInterval(loadGlobalNotifications, 10000); // Atualiza a cada 10s
 
     if (!sessionStorage.getItem('hasAnimated')) {
         const sr = ScrollReveal({ distance: '40px', duration: 2200, delay: 200, reset: false });
@@ -31,6 +227,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         initializeInvoicingPage(nutriID);
     }
 
+    initializeSecurityTimeout();
+
     const logoutButton = document.getElementById('logoutBtn');
     const modal = document.getElementById('logoutModal');
     const buttonYes = document.getElementById('btnYes');
@@ -44,6 +242,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         closeLogoutModalBtn.addEventListener('click', () => modal.classList.remove('is-visible'));
     }
 });
+
+function initializeSecurityTimeout() {
+    let timeout;
+    const resetTimer = () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(async () => {
+            window.showToast('Sessão encerrada por inatividade para sua segurança e proteção dos dados do paciente.', 'error');
+            await handleLogout();
+        }, 15 * 60 * 1000); // 15 minutos de tolerância
+    };
+    
+    ['click', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
+        document.addEventListener(event, resetTimer, true);
+    });
+    resetTimer();
+}
 
 async function verifySession() {
     try {
@@ -77,13 +291,26 @@ function initializeGenerateLinkModal(nutriId) {
     const closeBtn = document.getElementById('closeGenerateLinkModal');
     const copyBtn = document.getElementById('copyLinkBtn');
     const linkSpan = document.getElementById('generatedLink');
+    const typeRadios = document.querySelectorAll('input[name="linkType"]');
+
+    const generateUrl = () => {
+        const selectedType = document.querySelector('input[name="linkType"]:checked').value;
+        const baseUrl = window.location.origin || 'http://localhost:3000';
+        return `${baseUrl}/pages/paciente/preSchedule.html?nutriId=${nutriId}&type=${selectedType}`;
+    };
 
     openBtn.addEventListener('click', () => {
         modal.classList.add('is-visible');
         linkSpan.textContent = "Gerando seu link...";
         setTimeout(() => {
-            linkSpan.textContent = `http://localhost:3000/pages/paciente/preSchedule.html?nutriId=${nutriId}`;
+            linkSpan.textContent = generateUrl();
         }, 500);
+    });
+
+    typeRadios.forEach(radio => {
+        radio.addEventListener('change', () => {
+            linkSpan.textContent = generateUrl();
+        });
     });
 
     closeBtn.addEventListener('click', () => modal.classList.remove('is-visible'));
@@ -293,7 +520,7 @@ async function getAppointmentsForDay(nutriId, dateStr) {
     } catch (error) { return []; }
 }
 
-function openPatientContactModal(apt, date, nutriName) {
+function openPatientContactModal(apt, date, nutriName, customMessage = "") {
     const modal = document.getElementById('patientContactModal');
     const closeBtn = document.getElementById('closePatientContactModal');
     if(!modal) return;
@@ -307,7 +534,18 @@ function openPatientContactModal(apt, date, nutriName) {
     const patientFirstName = apt.patientName.split(' ')[0];
     const nutriFirstName = nutriName.split(' ')[0];
     const phone = apt.phone.replace(/\D/g, '');
-    const message = `Olá, ${patientFirstName}! Eu sou a Dra. ${nutriFirstName} do NutriCare. Vi que temos uma consulta de ${apt.title.toLowerCase()} marcada para o dia ${date} às ${apt.time}. Gostaria de confirmar se está tudo certo ou se precisa de alguma orientação prévia? Estou à disposição!`;
+    
+    let message = '';
+    if (customMessage && customMessage.trim() !== "") {
+        message = customMessage
+            .replace(/{paciente}/g, patientFirstName)
+            .replace(/{nutri}/g, nutriFirstName)
+            .replace(/{servico}/g, apt.title.toLowerCase())
+            .replace(/{data}/g, date)
+            .replace(/{hora}/g, apt.time);
+    } else {
+        message = `Olá, ${patientFirstName}! Eu sou a Dra. ${nutriFirstName} do NutriCare. Vi que temos uma consulta de ${apt.title.toLowerCase()} marcada para o dia ${date} às ${apt.time}. Gostaria de confirmar se está tudo certo ou se precisa de alguma orientação prévia? Estou à disposição!`;
+    }
 
     const wppLink = `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
     document.getElementById('btnWppContact').href = wppLink;
@@ -317,7 +555,7 @@ function openPatientContactModal(apt, date, nutriName) {
     modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('is-visible'); };
 }
 
-function initializeProfessionalAgenda(nutriId, nutriName) {
+async function initializeProfessionalAgenda(nutriId, nutriName) {
     const header = document.getElementById('currentDayHeader');
     const prevDayBtn = document.getElementById('prevDayBtn');
     const nextDayBtn = document.getElementById('nextDayBtn');
@@ -327,6 +565,13 @@ function initializeProfessionalAgenda(nutriId, nutriName) {
     const emptyState = document.getElementById('emptyAgendaState');
 
     if(!header) return;
+    
+    let globalWppMessage = "";
+    try {
+        const res = await fetch('/api/auth/nutricionista/details');
+        const data = await res.json();
+        if(data.success && data.data.wppMessage) globalWppMessage = data.data.wppMessage;
+    } catch(e) { console.error(e); }
 
     let currentDate = new Date();
     let pollingInterval = null;
@@ -386,7 +631,7 @@ function initializeProfessionalAgenda(nutriId, nutriName) {
                 <div class="appointment-details-pro">${apt.title} - ${apt.time} (${duration} min)</div>
             `;
 
-            aptBlock.addEventListener('click', () => openPatientContactModal(apt, readableDate, nutriName));
+            aptBlock.addEventListener('click', () => openPatientContactModal(apt, readableDate, nutriName, globalWppMessage));
             timelineContainer.appendChild(aptBlock);
         });
     };
@@ -550,6 +795,7 @@ const premiumColors = { primary: '#2a9d8f', secondary: '#f4a261', info: '#0dcaf0
 
 async function initializePatientList(nutriId) {
     const tableBody = document.getElementById('patientTableBody');
+    const tableElement = document.getElementById('patientTable');
     const searchInput = document.getElementById('patientSearchInput');
     const modal = document.getElementById('patientDetailsModal');
     const closeModalBtn = document.getElementById('closePatientModal');
@@ -557,8 +803,33 @@ async function initializePatientList(nutriId) {
 
     if(!tableBody) return;
 
+    // --- EXAMS UPLOAD SIMULATION ---
+    const fileUploadExame = document.getElementById('fileUploadExame');
+    if (fileUploadExame) {
+        fileUploadExame.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const emptyState = document.getElementById('empty-exams');
+                if (emptyState) emptyState.style.display = 'none';
+                const container = document.getElementById('exams-list-container');
+                const file = e.target.files[0];
+                const date = new Date().toLocaleDateString('pt-BR');
+                container.innerHTML += `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="p-3 bg-white border rounded-4 shadow-sm d-flex align-items-center gap-3" style="animation: fadeIn 0.4s ease-out;">
+                            <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle"><i class="bi bi-file-earmark-pdf-fill fs-4"></i></div>
+                            <div class="flex-grow-1 overflow-hidden"><h6 class="fw-bold text-dark mb-1 text-truncate">${file.name}</h6><p class="text-muted small mb-0">Enviado: ${date}</p></div>
+                            <button class="btn btn-light text-primary border rounded-circle"><i class="bi bi-download"></i></button>
+                        </div>
+                    </div>`;
+            }
+        });
+    }
+
     let allPatients = [];
     let currentPatientId = null;
+    let filteredPatients = [];
+    let currentPage = 1;
+    const itemsPerPage = 5;
 
     const openAnthropometryModal = (patientId) => {
         const anthroModal = document.getElementById('anthropometryModal');
@@ -615,40 +886,151 @@ async function initializePatientList(nutriId) {
         });
     }
 
-    const renderTable = (patientsToRender) => {
+    const renderTable = () => {
         tableBody.innerHTML = '';
-        emptyState.style.display = patientsToRender.length === 0 ? 'block' : 'none';
-        patientsToRender.forEach(patient => {
+        
+        if(filteredPatients.length === 0) {
+            tableElement.style.display = 'none';
+            emptyState.style.display = 'block';
+            const pagCont = document.getElementById('paginationContainer');
+            if(pagCont) pagCont.style.setProperty('display', 'none', 'important');
+            return;
+        }
+        
+        tableElement.style.display = 'table';
+        emptyState.style.display = 'none';
+        const pagCont = document.getElementById('paginationContainer');
+        if(pagCont) pagCont.style.setProperty('display', 'flex', 'important');
+        
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const paginatedPatients = filteredPatients.slice(startIndex, endIndex);
+
+        paginatedPatients.forEach((patient, index) => {
             const tr = document.createElement('tr');
+            tr.style.animation = `fadeIn 0.3s ease-out ${index * 0.05}s both`;
+
+            const statusClass = (patient.status === 'Inativo' || patient.status === 'Cancelado') ? 'bg-secondary text-secondary' : 'bg-success text-success border-success';
+            
             tr.innerHTML = `
-            <td>
-                <div class="d-flex align-items-center gap-3">
-                     <img src="https://api.dicebear.com/8.x/bottts/svg?seed=${patient.id}" class="rounded-circle shadow-sm border" width="45" height="45" alt="Avatar">
-                    <div><div class="fw-bold text-dark">${patient.nome}</div><div class="text-muted small">${patient.email}</div></div>
-                </div>
-            </td>
-            <td class="text-muted">${patient.phone || 'N/A'}</td>
-            <td><span class="badge rounded-pill bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2">${patient.status || 'Ativo'}</span></td>
-            <td class="text-muted fw-medium">${patient.appointmentDate || 'Não agendada'}</td>
-            <td class="text-end">
-                <div class="btn-group shadow-sm rounded-pill" role="group">
-                    <button class="btn btn-light btn-ver-detalhes text-primary border-end px-3" data-patient-id="${patient.id}" title="Abrir Prontuário"><i class="bi bi-journal-medical"></i></button>
-                    <button class="btn btn-light text-info border-end btn-open-anthro px-3" data-patient-id="${patient.id}" title="Calculadora Científica"><i class="bi bi-calculator"></i></button>
-                    <a href="planeEditor.html?patientId=${patient.id}" class="btn btn-light text-success px-3" title="Montar Dieta"><i class="bi bi-apple"></i></a>
-                </div>
-            </td>`;
+                <td class="ps-4 py-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <img src="https://api.dicebear.com/8.x/bottts/svg?seed=${patient.id}" class="rounded-circle shadow-sm border border-2 border-white" width="48" height="48" alt="Avatar">
+                        <div>
+                            <div class="fw-bold text-dark mb-1">${patient.nome}</div>
+                            <div class="text-muted small"><i class="bi bi-envelope me-1"></i>${patient.email}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="py-3">
+                    <div class="text-dark fw-medium small"><i class="bi bi-telephone text-primary me-1 opacity-75"></i>${patient.phone || 'N/A'}</div>
+                </td>
+                <td class="py-3">
+                    <span class="badge ${statusClass} bg-opacity-10 border border-opacity-25 rounded-pill px-3 py-2"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> ${patient.status || 'Ativo'}</span>
+                </td>
+                <td class="py-3">
+                    <div class="text-primary fw-bold small bg-primary bg-opacity-10 d-inline-block px-3 py-2 rounded-3"><i class="bi bi-calendar-event me-1"></i>${patient.appointmentDate || 'Não agendada'}</div>
+                </td>
+                <td class="text-end pe-4 py-3">
+                    <div class="d-flex justify-content-end gap-2">
+                        <button class="btn btn-sm btn-light text-primary border shadow-sm btn-ver-detalhes fw-semibold" data-patient-id="${patient.id}"><i class="bi bi-journal-medical me-1"></i> Prontuário</button>
+                        <button class="btn btn-sm btn-light text-info border shadow-sm btn-open-anthro px-2" data-patient-id="${patient.id}" data-bs-toggle="tooltip" title="Calculadora Científica"><i class="bi bi-calculator"></i></button>
+                        <a href="planeEditor.html?patientId=${patient.id}" class="btn btn-sm btn-light text-success border shadow-sm px-2" data-bs-toggle="tooltip" title="Editor de Dieta"><i class="bi bi-apple"></i></a>
+                    </div>
+                </td>
+            `;
             tableBody.appendChild(tr);
+        });
+        
+        renderPaginationControls();
+
+        const tooltipTriggerList = [].slice.call(tableBody.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    };
+
+    const renderPaginationControls = () => {
+        const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
+        const paginationList = document.getElementById('paginationList');
+        const paginationInfo = document.getElementById('paginationInfo');
+        
+        if (!paginationList || !paginationInfo) return;
+        
+        const startIndex = (currentPage - 1) * itemsPerPage + 1;
+        const endIndex = Math.min(startIndex + itemsPerPage - 1, filteredPatients.length);
+        paginationInfo.textContent = `Mostrando ${startIndex} a ${endIndex} de ${filteredPatients.length} pacientes`;
+
+        let html = '';
+        html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link" href="#" data-page="${currentPage - 1}"><i class="bi bi-chevron-left"></i></a></li>`;
+        
+        for (let i = 1; i <= totalPages; i++) {
+            html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+        }
+        
+        html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link" href="#" data-page="${currentPage + 1}"><i class="bi bi-chevron-right"></i></a></li>`;
+        
+        paginationList.innerHTML = html;
+        
+        paginationList.querySelectorAll('.page-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const page = parseInt(e.currentTarget.getAttribute('data-page'));
+                if (page >= 1 && page <= totalPages) {
+                    currentPage = page;
+                    renderTable();
+                }
+            });
         });
     };
 
     const getPatientData = async () => {
-        tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
+        tableElement.style.display = 'table';
+        emptyState.style.display = 'none';
+        const pagCont = document.getElementById('paginationContainer');
+        if(pagCont) pagCont.style.setProperty('display', 'none', 'important');
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="text-muted mt-3 mb-0">Carregando lista de pacientes...</p></td></tr>';
         try {
             const response = await fetch(`/api/auth/patientList`);
             const data = await response.json();
-            if (data.success && Array.isArray(data.patients)) { allPatients = data.patients; renderTable(allPatients); }
-            else { allPatients = []; renderTable([]); }
-        } catch (error) { emptyState.style.display = 'block'; }
+            if (data.success && Array.isArray(data.patients)) { 
+                allPatients = data.patients; 
+                
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+                allPatients.sort((a, b) => {
+                    const dateA = a.lastUpdateDate ? new Date(a.lastUpdateDate) : new Date(0);
+                    const dateB = b.lastUpdateDate ? new Date(b.lastUpdateDate) : new Date(0);
+                    
+                    const aRecent = a.status === 'Ativo' && dateA >= thirtyDaysAgo;
+                    const bRecent = b.status === 'Ativo' && dateB >= thirtyDaysAgo;
+
+                    // Prioridade para ativos + com retorno nos ultimos 30 dias
+                    if (aRecent && !bRecent) return -1;
+                    if (!aRecent && bRecent) return 1;
+                    
+                    // Desempate: quem atualizou há menos tempo fica por cima
+                    return dateB - dateA;
+                });
+
+                filteredPatients = [...allPatients];
+                currentPage = 1;
+                renderTable(); 
+            } else { 
+                allPatients = []; 
+                filteredPatients = [];
+                renderTable(); 
+            }
+        } catch (error) { emptyState.style.display = 'block'; tableBody.innerHTML = ''; }
+        
+        // UX: Filtro de paciente se vindo da Busca Global
+        const urlParams = new URLSearchParams(window.location.search);
+        const query = urlParams.get('q');
+        if (query && searchInput) {
+            searchInput.value = query;
+            setTimeout(() => { searchInput.dispatchEvent(new Event('input')); }, 300);
+        }
     };
 
     const initPatientDetails = async (patientId) => {
@@ -728,6 +1110,48 @@ async function initializePatientList(nutriId) {
                 }
 
                 loadingState.style.display = 'none'; detailsContent.style.display = 'block';
+                
+                // Lógica de Inteligência Artificial de Exames
+                const btnAnalyzeExamAI = document.getElementById('btnAnalyzeExamAI');
+                if (btnAnalyzeExamAI) {
+                    const newBtn = btnAnalyzeExamAI.cloneNode(true);
+                    btnAnalyzeExamAI.parentNode.replaceChild(newBtn, btnAnalyzeExamAI);
+                    
+                    document.getElementById('aiExamSummaryInput').value = '';
+                    document.getElementById('aiExamResultContainer').style.display = 'none';
+
+                    newBtn.addEventListener('click', async () => {
+                        const summaryText = document.getElementById('aiExamSummaryInput').value.trim();
+                        if (!summaryText) { showToast("Insira o resumo ou os dados do exame.", "error"); return; }
+
+                        const resultContainer = document.getElementById('aiExamResultContainer');
+                        const resultText = document.getElementById('aiExamInsightText');
+
+                        newBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Analisando...';
+                        newBtn.disabled = true;
+                        resultContainer.style.display = 'none';
+
+                        const patientHistory = {
+                            objective: globalAnamneseData?.objective || 'Não informado',
+                            health_issues: globalAnamneseData?.health_issue || 'Nenhum problema',
+                            age: calculateAge(globalAnamneseData?.birthdate)
+                        };
+
+                        try {
+                            const resAI = await fetch('/api/auth/exam-insight', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ examSummary: summaryText, patientHistory })
+                            });
+                            const dataAI = await resAI.json();
+                            if (dataAI.success) {
+                                resultText.innerHTML = dataAI.insight.replace(/\n/g, '<br>');
+                                resultContainer.style.display = 'block';
+                            } else { showToast("Erro na IA: " + dataAI.message, "error"); }
+                        } catch (err) { showToast("Falha de conexão com a IA.", "error"); }
+                        finally { newBtn.innerHTML = '<i class="bi bi-magic me-2"></i> Analisar com Gemini AI'; newBtn.disabled = false; }
+                    });
+                }
             }
         } catch (error) { loadingState.innerHTML = '<p class="text-danger fw-bold text-center mt-4"><i class="bi bi-exclamation-triangle"></i> Erro ao carregar prontuário.</p>'; }
     };
@@ -945,7 +1369,7 @@ async function initializePatientList(nutriId) {
                     await exportConsultationToPDF(itemData, globalPatientData, globalAnamneseData);
                 } catch (err) {
                     console.error("Erro ao exportar PDF:", err);
-                    alert("Ocorreu um erro ao tentar gerar o PDF.");
+                    window.showToast("Ocorreu um erro ao tentar gerar o PDF.", "error");
                 } finally {
                     btnEl.innerHTML = originalHtml;
                     btnEl.disabled = false;
@@ -956,7 +1380,7 @@ async function initializePatientList(nutriId) {
 
      const exportConsultationToPDF = async (appointment, patient, anamnese) => {
         if(typeof html2pdf === 'undefined') {
-            alert("A biblioteca de PDF não está carregada. Verifique se adicionou o script no HTML.");
+            window.showToast("A biblioteca de PDF não está carregada. Verifique se adicionou o script no HTML.", "error");
             return;
         }
 
@@ -1115,7 +1539,9 @@ async function initializePatientList(nutriId) {
 
     searchInput.addEventListener('input', (e) => {
         const term = e.target.value.toLowerCase();
-        renderTable(allPatients.filter(p => p.nome.toLowerCase().includes(term) || p.email.toLowerCase().includes(term)));
+        filteredPatients = allPatients.filter(p => p.nome.toLowerCase().includes(term) || p.email.toLowerCase().includes(term));
+        currentPage = 1;
+        renderTable();
     });
 
     tableBody.addEventListener('click', (event) => {
@@ -1136,6 +1562,85 @@ async function initializePatientList(nutriId) {
     const closeReturnModalBtn = document.getElementById('closeScheduleReturnModal');
     if(closeReturnModalBtn) {
         closeReturnModalBtn.addEventListener('click', () => document.getElementById('scheduleReturnModal').classList.remove('is-visible'));
+    }
+
+    // --- NOVA LÓGICA: EDIÇÃO DE ANAMNESE (FICHA BASE) ---
+    const editAnamneseModal = document.getElementById('editAnamneseModal');
+    const openEditAnamneseBtn = document.getElementById('btnEditAnamnese');
+    const closeEditAnamneseBtn = document.getElementById('closeEditAnamneseModal');
+    const editAnamneseForm = document.getElementById('editAnamneseForm');
+
+    if (openEditAnamneseBtn && editAnamneseModal) {
+        openEditAnamneseBtn.addEventListener('click', () => {
+            if (!globalAnamneseData) return;
+            
+            // Preenche o modal com os dados atuais
+            document.getElementById('edit_health_issue').value = globalAnamneseData.health_issue || '';
+            document.getElementById('edit_allergic').value = globalAnamneseData.allergic || '';
+            document.getElementById('edit_avoidment').value = globalAnamneseData.avoidment || '';
+            document.getElementById('edit_medicine').value = globalAnamneseData.medicine || '';
+            document.getElementById('edit_exercise').value = globalAnamneseData.exercise || '';
+            document.getElementById('edit_digestion').value = globalAnamneseData.digestion || '';
+            document.getElementById('edit_intestino').value = globalAnamneseData.intestino || '';
+            document.getElementById('edit_sleep').value = globalAnamneseData.wake_up_time || '';
+
+            // Trata o z-index para sobrepor o modal de Detalhes do Paciente
+            if (modal.classList.contains('is-visible')) { modal.style.zIndex = "1040"; }
+            editAnamneseModal.classList.add('is-visible');
+        });
+    }
+
+    if (closeEditAnamneseBtn) {
+        closeEditAnamneseBtn.addEventListener('click', () => {
+            editAnamneseModal.classList.remove('is-visible');
+            modal.style.zIndex = "1045"; // Restaura o z-index do modal pai
+        });
+    }
+
+    if (editAnamneseForm) {
+        editAnamneseForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('btnSaveAnamnese');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando...';
+            submitBtn.disabled = true;
+
+            const payload = {
+                health_issue: document.getElementById('edit_health_issue').value,
+                allergic: document.getElementById('edit_allergic').value,
+                avoidment: document.getElementById('edit_avoidment').value,
+                medicine: document.getElementById('edit_medicine').value,
+                exercise: document.getElementById('edit_exercise').value,
+                digestion: document.getElementById('edit_digestion').value,
+                intestino: document.getElementById('edit_intestino').value,
+                sleep: document.getElementById('edit_sleep').value
+            };
+
+            try {
+                const response = await fetch(`/api/auth/anamnese/${currentPatientId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    window.showToast('Ficha base atualizada com sucesso!', 'success');
+                    editAnamneseModal.classList.remove('is-visible');
+                    modal.style.zIndex = "1045";
+                    // Recarrega os dados do paciente para atualizar a tela principal instantaneamente
+                    initPatientDetails(currentPatientId);
+                } else {
+                    window.showToast(data.message || 'Erro ao atualizar ficha.', 'error');
+                }
+            } catch (error) {
+                console.error(error);
+                window.showToast('Falha na comunicação com o servidor.', 'error');
+            } finally {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
     }
 
     getPatientData();
@@ -1622,17 +2127,39 @@ function initializeInvoicingPage(nutriId) {
             const result = await response.json();
 
             if (result.success) {
-                let invoices = result.data.invoices || [];
+                const allInvoices = result.data.invoices || [];
+                
+                let monthlyRevenue = 0;
+                let pendingRevenue = 0;
+                let paidCount = 0;
+                const currentMonthStr = new Date().toISOString().slice(0, 7);
+                
+                allInvoices.forEach(inv => {
+                    const amt = parseFloat(inv.amount) || 0;
+                    if (inv.status === 'Paid') {
+                        if (inv.issueDate.startsWith(currentMonthStr)) {
+                            monthlyRevenue += amt;
+                            paidCount++;
+                        }
+                    } else if (inv.status === 'Pending' || inv.status === 'Overdue') {
+                        pendingRevenue += amt;
+                    }
+                });
+                
+                document.getElementById('kpi-monthly-revenue').textContent = monthlyRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                document.getElementById('kpi-pending-revenue').textContent = pendingRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                document.getElementById('kpi-avg-ticket').textContent = paidCount > 0 ? (monthlyRevenue / paidCount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00';
 
-                if (month) invoices = invoices.filter(inv => inv.issueDate.startsWith(month));
-                if (status && status !== 'all') invoices = invoices.filter(inv => inv.status === status);
-
+                let filteredInvoices = allInvoices;
+                if (month) filteredInvoices = filteredInvoices.filter(inv => inv.issueDate.startsWith(month));
+                if (status && status !== 'all') filteredInvoices = filteredInvoices.filter(inv => inv.status === status);
+                
                 tableBody.innerHTML = '';
-                if (invoices.length === 0) {
+                if (filteredInvoices.length === 0) {
                     emptyState.style.display = 'block';
                 } else {
                     emptyState.style.display = 'none';
-                    invoices.forEach(invoice => {
+                    filteredInvoices.forEach(invoice => {
                         const tr = document.createElement('tr');
                         const issueDate = new Date(invoice.issueDate).toLocaleDateString('pt-BR');
                         const dueDate = new Date(invoice.dueDate).toLocaleDateString('pt-BR');
@@ -1644,14 +2171,25 @@ function initializeInvoicingPage(nutriId) {
                         else if (invoice.status === 'Pending') { badgeClass = 'bg-warning text-dark'; statusText = 'Pendente'; }
                         else if (invoice.status === 'Overdue') { badgeClass = 'bg-danger'; statusText = 'Atrasado'; }
                         else if (invoice.status === 'Canceled') { badgeClass = 'bg-dark'; statusText = 'Cancelado'; }
+                        
+                        let actionBtns = '';
+                        if (invoice.payment_link && invoice.status !== 'Paid' && invoice.status !== 'Canceled') {
+                            actionBtns += `<button class="btn btn-sm btn-light border text-primary shadow-sm me-1" onclick="navigator.clipboard.writeText('${invoice.payment_link}'); window.showToast('Link de pagamento copiado!', 'success')" title="Copiar Link"><i class="bi bi-link-45deg"></i></button>`;
+                        }
+                        if (invoice.status !== 'Paid' && invoice.status !== 'Canceled') {
+                            actionBtns += `<button class="btn btn-sm btn-light border text-success shadow-sm" onclick="markAsPaid(${invoice.id})" title="Marcar como Pago"><i class="bi bi-check2-circle"></i></button>`;
+                        }
 
                         tr.innerHTML = `
-                            <td>#${invoice.id}</td>
-                            <td>${invoice.patientName}</td>
+                            <td>
+                                <span class="text-muted small fw-bold me-2">#${invoice.id}</span>
+                                <span class="fw-medium text-dark">${invoice.patientName}</span>
+                            </td>
                             <td>${issueDate}</td>
                             <td>${dueDate}</td>
-                            <td>${amount}</td>
-                            <td><span class="badge ${badgeClass}">${statusText}</span></td>
+                            <td class="text-end fw-bold text-dark">${amount}</td>
+                            <td class="text-center"><span class="badge ${badgeClass}">${statusText}</span></td>
+                            <td class="text-end">${actionBtns || '-'}</td>
                         `;
                         tableBody.appendChild(tr);
                     });
@@ -1729,7 +2267,17 @@ function initializeInvoicingPage(nutriId) {
             });
             const result = await response.json();
             if (result.success) {
-                showMessage('invoice-message', 'Fatura criada com sucesso!', true);
+                if (result.paymentLink) {
+                    showMessage('invoice-message', 'Fatura e Link MercadoPago gerados!', true);
+                    setTimeout(() => {
+                        window.showConfirm('Link Gerado', 'O link de pagamento foi gerado. O paciente também o recebeu automaticamente no WhatsApp. Deseja copiar o link?', 'Copiar Link', 'primary', () => {
+                            navigator.clipboard.writeText(result.paymentLink);
+                            window.showToast('Link de pagamento copiado!', 'success');
+                        });
+                    }, 500);
+                } else {
+                    showMessage('invoice-message', 'Fatura criada com sucesso!', true);
+                }
                 setTimeout(() => {
                     modal.classList.remove('is-visible');
                     loadInvoices();
@@ -1747,6 +2295,16 @@ function initializeInvoicingPage(nutriId) {
 
     monthFilter.addEventListener('change', loadInvoices);
     statusFilter.addEventListener('change', loadInvoices);
+
+    window.markAsPaid = async (id) => {
+        window.showConfirm('Baixa Manual', 'Tem certeza que deseja marcar esta fatura como paga manualmente?', 'Sim, marcar como paga', 'primary', async () => {
+            try {
+                const res = await fetch(`/api/auth/invoices/${id}/paid`, { method: 'PUT' });
+                if((await res.json()).success) loadInvoices();
+                else window.showToast('Falha ao atualizar fatura.', 'error');
+            } catch(e) { console.error(e); window.showToast('Erro de comunicação.', 'error'); }
+        });
+    };
 
     const now = new Date();
     monthFilter.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;

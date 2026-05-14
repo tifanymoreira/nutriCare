@@ -1,8 +1,20 @@
 // nutricare-project/client/public/js/login.js
 document.addEventListener("DOMContentLoaded", async function () {
+    // --- REGISTRO DO SERVICE WORKER (PWA) ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then((registration) => {
+                    console.log('Service Worker registrado com sucesso no escopo:', registration.scope);
+                }).catch((error) => {
+                    console.log('Falha ao registrar o Service Worker:', error);
+                });
+        });
+    }
+
     await checkIfAlreadyLoggedIn();
 
-    // Elementos principais
+    // Elementos principais6
     const flipper = document.querySelector('.auth-flipper');
     const showRegisterLink = document.getElementById('showRegister');
     const showLoginLink = document.getElementById('showLogin');
@@ -262,6 +274,13 @@ document.addEventListener("DOMContentLoaded", async function () {
     registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        // Validação LGPD (Checkbox do Termos de uso)
+        const termsCheckbox = document.getElementById('acceptTerms');
+        if (termsCheckbox && !termsCheckbox.checked) {
+            showMessage(registerMessageContainer, 'Você precisa aceitar os Termos de Uso e Política de Privacidade (LGPD).', false);
+            return;
+        }
+
         if (!validatePassword()) {
             showMessage(registerMessageContainer, 'Por favor, cumpra todos os requisitos da senha.', false);
             return;

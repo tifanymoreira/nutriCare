@@ -6,6 +6,41 @@ import { pool } from '../config/dbConnect.js';
 import { validarCRN } from '../middlewares/checkCrn.js';
 const saltRounds = 10;
 
+// -------------------------------------------------------------
+// FUNÇÃO DE SANITIZAÇÃO (Prevenção XSS e Injections)
+// -------------------------------------------------------------
+const sanitizeInput = (input) => {
+    if (typeof input !== 'string') return input;
+    return input.replace(/[&<>"']/g, function(m) {
+        switch (m) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            case "'": return '&#039;';
+            default: return m;
+        }
+    });
+};
+
+// -------------------------------------------------------------
+// INTEGRAÇÃO META WHATSAPP CLOUD API
+// -------------------------------------------------------------
+async function sendWhatsAppMessage(phone, text) {
+    const waToken = process.env.WA_TOKEN;
+    const phoneId = process.env.WA_PHONE_ID;
+    if (!waToken || !phoneId || !phone) return;
+    let cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+    try {
+        await fetch(`https://graph.facebook.com/v17.0/${phoneId}/messages`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${waToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messaging_product: "whatsapp", to: cleanPhone, type: "text", text: { body: text } })
+        });
+    } catch (error) { console.error('Erro na automação do WhatsApp:', error); }
+}
+
 // Função utilitária para gerar horários baseados em um intervalo.
 function generateTimeSlots(startTimeStr, endTimeStr, slotDuration) {
     const slots = [];
@@ -94,6 +129,11 @@ async function registerPacienteWithAnamnese(req, res) {
         return res.status(400).json({ success: false, message: 'Dados de registro do paciente incompletos.' });
     }
 
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\d\W]).{6,}$/;
+    if (!passwordRegex.test(password)) {
+        return res.status(400).json({ success: false, message: 'A senha não atende aos requisitos mínimos de segurança.' });
+    }
+
     const connection = await pool.getConnection();
 
     try {
@@ -130,6 +170,10 @@ async function registerPacienteWithAnamnese(req, res) {
             alergias, aversao, gostos, alcool, medicacao, atividade_fisica, sono, exames_sangue, expectativas
         } = anamneseData;
 
+        // Sanitização básica contra inserção de scripts em campos sensíveis
+        const safeProblemaSaude = sanitizeInput(problema_saude);
+        const safeExpectativas = sanitizeInput(expectativas);
+
         await connection.query(
             `INSERT INTO anamnese (
             nutriID, patientID, name, weight, height, birthdate, objective, 
@@ -139,9 +183,9 @@ async function registerPacienteWithAnamnese(req, res) {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 nutriID, patientId, name, peso, altura, data_nascimento, JSON.stringify(objetivos),
-                problema_saude, cirurgia, digestao, intestino, consistencia_fezes, ingestao_agua,
+                safeProblemaSaude, cirurgia, digestao, intestino, consistencia_fezes, ingestao_agua,
                 ciclo_menstrual, tratamento_anterior, mastigacao, alergias, aversao, gostos, alcool,
-                medicacao, atividade_fisica, sono, exames_sangue, expectativas, new Date()
+                medicacao, atividade_fisica, sono, exames_sangue, safeExpectativas, new Date()
             ]
         );
 
@@ -455,7 +499,7 @@ export async function getNutriSchedule(req, res) {
 export async function bookAppointment(req, res) {
     const { nutriId, service, date, time, patientData, birthDate, objective } = req.body;
 
-    const patientID = req.session.user?.id;
+    const patientID = req.session?.user?.id || null;
 
     if (!nutriId || !service || !date || !time || !patientData || !patientData.name || !patientData.email || !patientData.phone || !birthDate || !objective) {
         return res.status(400).json({ success: false, message: 'Dados de agendamento incompletos.' });
@@ -492,7 +536,7 @@ export async function bookAppointment(req, res) {
                 appointmentDateStr,
                 'Pendente',
                 birthDate,
-                objective
+                sanitizeInput(objective)
             ]
         );
 
@@ -562,7 +606,20 @@ export async function updateAppointmentStatus(req, res) {
     }
 
     try {
+        // Busca dados do paciente ANTES de atualizar para enviar no WhatsApp
+        const [appRows] = await pool.query('SELECT patient_name, patient_phone, appointment_date, service_type FROM appointments WHERE id = ?', [appointmentId]);
         await pool.query(query, values);
+        
+        // Automação WhatsApp Real
+        if (appRows.length > 0) {
+            const app = appRows[0];
+            const dateStr = new Date(app.appointment_date).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+            if (status === 'Confirmada') {
+                await sendWhatsAppMessage(app.patient_phone, `✅ Olá ${app.patient_name.split(' ')[0]}!\n\nSua consulta de *${app.service_type}* foi confirmada para o dia *${dateStr}*.\n\nAté breve!`);
+            } else if (status === 'Rejeitada') {
+                await sendWhatsAppMessage(app.patient_phone, `❌ Olá ${app.patient_name.split(' ')[0]},\n\nSua solicitação para *${dateStr}* precisou ser ajustada. Motivo:\n_${finalRejectionMessage}_`);
+            }
+        }
         res.json({ success: true, message: `Consulta ${status.toLowerCase()} com sucesso!` });
     } catch (error) {
         console.error('Erro ao atualizar status da consulta:', error);
@@ -782,6 +839,39 @@ export async function anamneseDetails(req, res) {
     }
 }
 
+export async function updateAnamnese(req, res) {
+    const nutriId = req.session.user.id;
+    const patientId = req.params.patientId;
+    const { 
+        health_issue, allergic, avoidment, medicine, 
+        exercise, digestion, intestino, sleep 
+    } = req.body;
+
+    try {
+        const [result] = await pool.query(
+            `UPDATE anamnese 
+             SET health_issue = ?, allergic = ?, avoidment = ?, medicine = ?, 
+                 exercise = ?, digestion = ?, intestino = ?, wake_up_time = ?
+             WHERE nutriID = ? AND patientID = ?`,
+            [
+                sanitizeInput(health_issue), sanitizeInput(allergic), 
+                sanitizeInput(avoidment), sanitizeInput(medicine),
+                sanitizeInput(exercise), sanitizeInput(digestion), 
+                sanitizeInput(intestino), sanitizeInput(sleep),
+                nutriId, patientId
+            ]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'Anamnese não encontrada ou você não tem permissão.' });
+        }
+        res.json({ success: true, message: 'Ficha base do paciente atualizada com sucesso!' });
+    } catch (error) {
+        console.error('Erro ao atualizar anamnese:', error);
+        res.status(500).json({ success: false, message: 'Erro interno ao atualizar a ficha do paciente.' });
+    }
+}
+
 // -------------------------------------------------------------
 // LOGICA DE METRICAS E KPIS
 // -------------------------------------------------------------
@@ -858,7 +948,7 @@ export async function getNutricionistaDetails(req, res) {
     try {
         const nutriId = req.session.user.id;
         const [rows] = await pool.query(
-            'SELECT name, email, phone, crnCode FROM nutricionista WHERE id = ?',
+            'SELECT name, email, phone, crnCode, wppMessage FROM nutricionista WHERE id = ?',
             [nutriId]
         );
         if (rows.length > 0) {
@@ -882,7 +972,7 @@ export async function getNutricionistaDetails(req, res) {
 }
 
 export async function updateNutricionistaDetails(req, res) {
-    const { name, email, phone } = req.body;
+    const { name, email, phone, wppMessage } = req.body;
     const nutriId = req.session.user.id;
 
     if (!name || !email || !phone) {
@@ -899,8 +989,8 @@ export async function updateNutricionistaDetails(req, res) {
         );
 
         await connection.query(
-            'UPDATE nutricionista SET name = ?, email = ?, phone = ? WHERE id = ?',
-            [name, email, phone, nutriId]
+            'UPDATE nutricionista SET name = ?, email = ?, phone = ?, wppMessage = ? WHERE id = ?',
+            [name, email, phone, wppMessage || null, nutriId]
         );
 
         await connection.commit();
@@ -958,7 +1048,7 @@ export async function getInvoices(req, res) {
     const nutriId = req.session.user.id;
     try {
         const [invoices] = await pool.query(`
-            SELECT i.id, i.patientId, p.nome as patientName, i.issueDate, i.dueDate, i.totalValue as amount, i.status 
+            SELECT i.id, i.patientId, p.nome as patientName, i.issueDate, i.dueDate, i.totalValue as amount, i.status, i.payment_link
             FROM invoices i 
             JOIN pacientes p ON i.patientId = p.id 
             WHERE i.nutriID = ? ORDER BY i.issueDate DESC
@@ -986,13 +1076,77 @@ export async function createInvoice(req, res) {
         for (let item of items) {
             await conn.query(`INSERT INTO invoice_items (invoice_id, description, amount) VALUES (?, ?, ?)`, [invoiceId, item.description, item.amount]);
         }
+        
+        // INTEGRAÇÃO MERCADO PAGO + ENVIO DE COBRANÇA WHATSAPP
+        let paymentLink = null;
+        if (process.env.MP_ACCESS_TOKEN) {
+            try {
+                const mpRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        items: items.map(i => ({ title: i.description, quantity: 1, unit_price: parseFloat(i.amount) })),
+                        external_reference: invoiceId.toString(),
+                        notification_url: `${process.env.PUBLIC_URL || 'https://sua-url-aqui.com'}/api/auth/invoices/webhook`
+                    })
+                });
+                const mpData = await mpRes.json();
+                if (mpData.init_point) {
+                    paymentLink = mpData.init_point;
+                    try { await conn.query('UPDATE invoices SET payment_link = ? WHERE id = ?', [paymentLink, invoiceId]); } catch (e) {}
+                    const [patRows] = await conn.query('SELECT nome, phone FROM pacientes WHERE id = ?', [patientId]);
+                    if (patRows.length > 0 && patRows[0].phone) {
+                        await sendWhatsAppMessage(patRows[0].phone, `🧾 Olá ${patRows[0].nome.split(' ')[0]}!\n\nSua fatura de *R$ ${total.toFixed(2).replace('.',',')}* foi gerada.\nPara pagar com PIX ou Cartão via MercadoPago, acesse:\n${paymentLink}`);
+                    }
+                }
+            } catch(e) { console.error("Aviso: Falha no Mercado Pago:", e.message); }
+        }
+
         await conn.commit();
-        res.json({ success: true, message: 'Fatura criada com sucesso!' });
+        res.json({ success: true, message: 'Fatura criada com sucesso!', paymentLink });
     } catch (err) {
         await conn.rollback();
         res.status(500).json({ success: false, message: 'Erro interno ao criar fatura.' });
     } finally {
         conn.release();
+    }
+}
+
+// MARCAR FATURA COMO PAGA MANUALMENTE
+export async function markInvoiceAsPaid(req, res) {
+    const invoiceId = req.params.id;
+    const nutriId = req.session.user.id;
+    try {
+        const [rows] = await pool.query('SELECT id FROM invoices WHERE id = ? AND nutriID = ?', [invoiceId, nutriId]);
+        if(rows.length === 0) return res.status(403).json({success: false, message: 'Não autorizado'});
+        
+        await pool.query("UPDATE invoices SET status = 'Paid' WHERE id = ?", [invoiceId]);
+        res.json({success: true, message: 'Fatura atualizada para Pago.'});
+    } catch(e) {
+        console.error("Erro ao atualizar fatura:", e);
+        res.status(500).json({success: false, message: 'Erro interno ao atualizar.'});
+    }
+}
+
+// WEBHOOK MERCADO PAGO
+export async function mpWebhook(req, res) {
+    const { type, data } = req.body;
+    res.status(200).send('OK'); // Responde IMEDIATAMENTE ao MercadoPago
+    if (type === 'payment' && data && data.id) {
+        try {
+            const paymentRes = await fetch(`https://api.mercadopago.com/v1/payments/${data.id}`, {
+                headers: { 'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}` }
+            });
+            const paymentData = await paymentRes.json();
+            if (paymentData.status === 'approved') {
+                const invoiceId = paymentData.external_reference;
+                await pool.query("UPDATE invoices SET status = 'Paid' WHERE id = ?", [invoiceId]);
+                const [invRows] = await pool.query("SELECT i.totalValue, p.nome, p.phone FROM invoices i JOIN pacientes p ON i.patientId = p.id WHERE i.id = ?", [invoiceId]);
+                if (invRows.length > 0 && invRows[0].phone) {
+                    await sendWhatsAppMessage(invRows[0].phone, `✅ Pagamento Confirmado!\n\n${invRows[0].nome.split(' ')[0]}, recebemos seu pagamento de *R$ ${parseFloat(invRows[0].totalValue).toFixed(2).replace('.',',')}*. Obrigado!`);
+                }
+            }
+        } catch(e) { console.error("Erro no Webhook MP:", e); }
     }
 }
 
@@ -1254,7 +1408,11 @@ export async function patientList(req, res) {
                 (SELECT MIN(a.appointment_date) 
                  FROM appointments a 
                  WHERE a.patientID = p.id AND a.appointment_date > NOW() AND a.status = 'Confirmada'
-                ) AS appointmentDate
+                ) AS appointmentDate,
+                (SELECT MAX(a.appointment_date) 
+                 FROM appointments a 
+                 WHERE a.patientID = p.id AND a.status = 'Realizada'
+                ) AS lastUpdateDate
             FROM 
                 pacientes p
             WHERE 
@@ -1296,6 +1454,11 @@ export async function createConsultation(req, res) {
     try {
         await connection.beginTransaction();
 
+        const s_subjective = sanitizeInput(subjective_notes);
+        const s_objective = sanitizeInput(objective_notes);
+        const s_assessment = sanitizeInput(assessment_notes);
+        const s_plan = sanitizeInput(plan_notes);
+
         const [appointmentRows] = await connection.query(
             'SELECT appointment_date FROM appointments WHERE id = ? AND nutriID = ?',
             [appointmentId, nutriId]
@@ -1321,7 +1484,7 @@ export async function createConsultation(req, res) {
             circum_waist || null, circum_abdomen || null, circum_hip || null, circum_arm || null,
             skinfold_triceps || null, skinfold_subscapular || null, skinfold_suprailiac || null, skinfold_abdominal || null,
             body_fat_percentage || null,
-            subjective_notes, objective_notes, assessment_notes, plan_notes
+            s_subjective, s_objective, s_assessment, s_plan
         ];
 
         await connection.query(query, values);
@@ -1450,7 +1613,7 @@ export const saveAppointmentNotes = async (req, res) => {
             UPDATE appointments 
             SET subjective_notes = ?, objective_notes = ?, assessment_notes = ?, plan_notes = ?, status = 'Realizada'
             WHERE id = ?
-        `, [subjective, objective, assessment, plan, appointmentId]);
+        `, [sanitizeInput(subjective), sanitizeInput(objective), sanitizeInput(assessment), sanitizeInput(plan), appointmentId]);
 
         res.status(200).json({ success: true, message: 'Prontuário atualizado com sucesso!' });
     } catch (error) {
@@ -1464,10 +1627,9 @@ export const getAssessmentHistory = async (req, res) => {
 
         const query = `
             SELECT 
-                created_at as date, weight, calc_body_fat as body_fat, 
-                calc_lean_mass as lean_mass, fold_chest, fold_midaxillary, 
-                fold_triceps, fold_subscapular, fold_abdominal, 
-                fold_suprailiac, fold_thigh
+                *,
+                created_at as date, calc_body_fat as body_fat, 
+                calc_lean_mass as lean_mass
             FROM anthropometric_assessments 
             WHERE patient_id = ? 
             ORDER BY created_at ASC
@@ -1486,8 +1648,14 @@ export const getAssessmentHistory = async (req, res) => {
     }
 };
 
+let foodsCache = null;
+let foodsCacheTime = 0;
+
 export const getFoods = async (req, res) => {
     try {
+        if (foodsCache && (Date.now() - foodsCacheTime < 3600000)) { // Cache de 1 hora
+            return res.status(200).json({ success: true, library: foodsCache });
+        }
         const [rows] = await pool.query('SELECT * FROM foods ORDER BY category, name');
 
         const library = rows.reduce((acc, food) => {
@@ -1518,6 +1686,8 @@ export const getFoods = async (req, res) => {
             return acc;
         }, {});
 
+        foodsCache = library;
+        foodsCacheTime = Date.now();
         res.status(200).json({ success: true, library });
     } catch (error) {
         console.error('Erro ao buscar alimentos:', error);
@@ -1537,6 +1707,12 @@ export async function saveMealPlan(req, res) {
     try {
         await connection.beginTransaction();
 
+        // CHECK DE SEGURANÇA (IDOR): Garante que a nutricionista não adultere o plano de um paciente que não é seu
+        const [patientOwnerCheck] = await connection.query('SELECT id FROM pacientes WHERE id = ? AND nutriID = ?', [patientId, nutriId]);
+        if (patientOwnerCheck.length === 0) {
+            throw new Error('Acesso negado: Paciente não pertence a este nutricionista ou não existe.');
+        }
+
         const [existingPlans] = await connection.query('SELECT id FROM meal_plans WHERE patient_id = ?', [patientId]);
         if (existingPlans.length > 0) {
             await connection.query('DELETE FROM meal_plans WHERE patient_id = ?', [patientId]);
@@ -1550,18 +1726,18 @@ export async function saveMealPlan(req, res) {
 
         for (const meal of meals) {
             const [mealResult] = await connection.query(
-                'INSERT INTO meals (meal_plan_id, name) VALUES (?, ?)',
-                [mealPlanId, meal.name]
+                'INSERT INTO meals (meal_plan_id, name, time, notes, recipes) VALUES (?, ?, ?, ?, ?)',
+                [mealPlanId, meal.name, meal.time || null, meal.notes || null, meal.recipes || null]
             );
             const mealId = mealResult.insertId;
 
             if (meal.items && meal.items.length > 0) {
-                for (const item of meal.items) {
-                    await connection.query(
-                        'INSERT INTO meal_items (meal_id, food_id, quantity) VALUES (?, ?, ?)',
-                        [mealId, item.foodId, item.quantity]
-                    );
-                }
+                // HIGH PERFORMANCE: Bulk insert para aniquilar o gargalo de N+1 Queries da concorrência
+                const itemValues = meal.items.map(item => [mealId, item.foodId, item.quantity, item.optionGroup || 1]);
+                await connection.query(
+                    'INSERT INTO meal_items (meal_id, food_id, quantity, option_group) VALUES ?',
+                    [itemValues]
+                );
             }
         }
 
@@ -1580,13 +1756,18 @@ export async function saveMealPlan(req, res) {
 
 export async function getMealPlan(req, res) {
     const { patientId } = req.params;
+    
+    // FIX DE SEGURANÇA: Impede que um paciente veja a dieta de outro (IDOR)
+    if (req.session.user.role === 'paciente' && req.session.user.id !== parseInt(patientId)) {
+        return res.status(403).json({ success: false, message: 'Acesso negado. Você não tem permissão para visualizar esta dieta.' });
+    }
 
     try {
         const query = `
             SELECT 
                 mp.id as plan_id, mp.title,
-                m.id as meal_id, m.name as meal_name,
-                mi.id as item_id, mi.quantity,
+                m.id as meal_id, m.name as meal_name, m.time, m.notes, m.recipes,
+                mi.id as item_id, mi.quantity, mi.option_group,
                 f.name as food_name, f.category
             FROM meal_plans mp
             JOIN meals m ON mp.id = m.meal_plan_id
@@ -1616,6 +1797,9 @@ export async function getMealPlan(req, res) {
                 mealsMap.set(row.meal_id, {
                     id: row.meal_id,
                     name: row.meal_name,
+                    time: row.time,
+                    notes: row.notes,
+                    recipes: row.recipes,
                     items: []
                 });
             }
@@ -1623,7 +1807,8 @@ export async function getMealPlan(req, res) {
                 mealsMap.get(row.meal_id).items.push({
                     id: row.item_id,
                     foodName: row.food_name,
-                    quantity: row.quantity
+                    quantity: row.quantity,
+                    optionGroup: row.option_group
                 });
             }
         });
@@ -1635,6 +1820,36 @@ export async function getMealPlan(req, res) {
     } catch (error) {
         console.error("Erro ao buscar plano alimentar:", error);
         res.status(500).json({ success: false, message: 'Erro interno no servidor.' });
+    }
+}
+
+export async function notifyPatientMealPlan(req, res) {
+    const patientId = req.params.patientId;
+    const nutriId = req.session.user.id;
+
+    try {
+        const [patientRows] = await pool.query('SELECT nome, phone FROM pacientes WHERE id = ? AND nutriID = ?', [patientId, nutriId]);
+        
+        if (patientRows.length === 0) {
+            return res.status(403).json({ success: false, message: 'Paciente não encontrado.' });
+        }
+
+        const patient = patientRows[0];
+        
+        if (!patient.phone) {
+            return res.status(400).json({ success: false, message: 'O paciente não possui celular cadastrado.' });
+        }
+
+        const firstName = patient.nome.split(' ')[0];
+        const message = `🍏 Olá ${firstName}!\n\nSeu novo *Plano Alimentar* acabou de ser prescrito e disponibilizado pela sua Nutricionista.\n\nAcesse o aplicativo NutriCare para visualizar sua dieta completa, suas novas metas e a lista de compras inteligente!\n\nFoco no objetivo! 💪`;
+
+        await sendWhatsAppMessage(patient.phone, message);
+
+        res.json({ success: true, message: 'Aviso enviado para o WhatsApp do paciente!' });
+
+    } catch (error) {
+        console.error('Erro ao notificar paciente sobre a dieta:', error);
+        res.status(500).json({ success: false, message: 'Erro interno ao notificar paciente.' });
     }
 }
 
@@ -1878,5 +2093,273 @@ export async function resetPassword(req, res) {
         res.status(500).json({ success: false, message: 'Erro no servidor.' });
     } finally {
         connection.release();
+    }
+}
+
+export async function getNutriNotifications(req, res) {
+    const nutriId = req.session.user.id;
+    try {
+        const [pendingRows] = await pool.query(
+            `SELECT id, patient_name, service_type, appointment_date
+             FROM appointments 
+             WHERE nutriID = ? AND status = 'Pendente' 
+             ORDER BY appointment_date ASC LIMIT 5`,
+            [nutriId]
+        );
+        
+        const notifications = pendingRows.map(row => {
+            const dateStr = new Date(row.appointment_date).toLocaleDateString('pt-BR');
+            return {
+                id: row.id, type: 'appointment', title: 'Nova Solicitação',
+                message: `${row.patient_name} solicitou ${row.service_type} para ${dateStr}.`,
+                icon: 'bi-calendar-plus', color: 'text-warning'
+            };
+        });
+
+        res.json({ success: true, notifications });
+    } catch (error) {
+        console.error("Erro ao buscar notificações reais:", error);
+        res.status(500).json({ success: false, message: 'Erro ao buscar notificações.' });
+    }
+}
+
+export async function getExamInsight(req, res) {
+    const { examSummary, patientHistory } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+        return res.status(500).json({ success: false, message: 'A chave da API do Gemini não está configurada (GEMINI_API_KEY).' });
+    }
+
+    try {
+        // BUSCA DINÂMICA DO MODELO (Mesma lógica do ai.controller.js)
+        const listResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+        const listData = await listResponse.json();
+
+        if (!listData.models || listData.models.length === 0) {
+            return res.status(500).json({ success: false, message: 'Sua chave de API não tem acesso a nenhum modelo do Gemini.' });
+        }
+
+        const validModels = listData.models.filter(m =>
+            m.supportedGenerationMethods && 
+            m.supportedGenerationMethods.includes('generateContent') &&
+            m.name.includes('gemini') &&
+            !m.name.includes('vision')
+        );
+
+        if (validModels.length === 0) {
+            return res.status(500).json({ success: false, message: 'Nenhum modelo de texto liberado para sua chave.' });
+        }
+
+        const selectedModel = validModels[0].name; // ex: "models/gemini-pro" ou "models/gemini-1.5-flash"
+
+        const prompt = `Você é um assistente de inteligência artificial avançado especializado em Nutrição Clínica e Endocrinologia.
+Sua tarefa é analisar o seguinte resumo de exame laboratorial e cruzar os marcadores com o histórico do paciente para fornecer um insight clínico direto, prático e focado na conduta nutricional.
+
+--- HISTÓRICO DO PACIENTE ---
+Idade: ${patientHistory.age} anos
+Objetivo: ${patientHistory.objective}
+Problemas de Saúde: ${patientHistory.health_issues}
+
+--- RESUMO DOS EXAMES ---
+${examSummary}
+
+Instruções de Conduta:
+1. Identifique possíveis deficiências nutricionais ou desvios metabólicos baseado nos marcadores fornecidos.
+2. Faça correlações com os Problemas de Saúde relatados pelo paciente no histórico.
+3. Retorne um ou dois parágrafos diretos e estritamente profissionais. Sem saudações ou apresentações.`;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos de timeout
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/${selectedModel}:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        const data = await response.json();
+        if (data.error) throw new Error(data.error.message);
+        if (data.candidates && data.candidates.length > 0) res.json({ success: true, insight: data.candidates[0].content.parts[0].text });
+        else throw new Error('A API retornou uma resposta vazia.');
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            return res.status(504).json({ success: false, message: 'A Inteligência Artificial demorou muito para responder (Timeout). Tente novamente.' });
+        }
+        console.error('Erro no AI Exam Insight:', error);
+        res.status(500).json({ success: false, message: 'Erro interno ao processar a IA. Verifique as configurações da API.' });
+    }
+}
+
+export async function generateDietAI(req, res) {
+    const { patientId } = req.body;
+    const nutriId = req.session.user.id;
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+        return res.status(500).json({ success: false, message: 'A chave da API do Gemini não está configurada.' });
+    }
+
+    try {
+        // Busca os dados clínicos do paciente para alimentar a IA
+        const [anamnese] = await pool.query('SELECT * FROM anamnese WHERE patientID = ? ORDER BY created_at DESC LIMIT 1', [patientId]);
+        const [anthro] = await pool.query('SELECT * FROM anthropometric_assessments WHERE patient_id = ? ORDER BY created_at DESC LIMIT 1', [patientId]);
+
+        if (anamnese.length === 0) {
+            return res.status(400).json({ success: false, message: 'O paciente precisa ter uma anamnese preenchida para usar a IA.' });
+        }
+
+        const aData = anamnese[0];
+        const pData = anthro.length > 0 ? anthro[0] : null;
+
+        const prompt = `
+        Você é um Nutricionista Clínico Esportivo auxiliando na criação de um plano alimentar brasileiro.
+        Baseado nos dados do paciente abaixo, crie uma SUGESTÃO de esqueleto de plano alimentar (Café da Manhã, Almoço, Lanche, Jantar).
+        
+        DADOS DO PACIENTE:
+        Objetivo: ${aData.objective || 'Manutenção'}
+        Alergias/Intolerâncias: ${aData.allergic || 'Nenhuma'}
+        Aversões: ${aData.avoidment || 'Nenhuma'}
+        Patologias: ${aData.health_issue || 'Nenhuma'}
+        ${pData ? `Peso: ${pData.weight}kg | Gordura: ${pData.calc_body_fat}% | Massa Magra: ${pData.calc_lean_mass}kg` : ''}
+        
+        REGRA: Use alimentos típicos da Tabela TACO brasileira. 
+        Retorne APENAS um texto bem formatado em HTML (use <b>, <ul>, <li>, <br>) contendo as refeições e as justificativas fisiológicas das escolhas. Não use markdown como \`\`\`html.
+        `;
+
+        const listResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+        const listData = await listResponse.json();
+        const selectedModel = listData.models.find(m => m.name.includes('gemini-1.5'))?.name || 'models/gemini-1.5-flash';
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s de timeout (Geração de dieta é mais pesada)
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/${selectedModel}:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        const data = await response.json();
+        
+        if (data.error) throw new Error(data.error.message);
+        
+        if (data.candidates && data.candidates.length > 0) {
+            let aiText = data.candidates[0].content.parts[0].text;
+            // Limpa formatação markdown se a IA colocar acidentalmente
+            aiText = aiText.replace(/```html/g, '').replace(/```/g, '');
+            
+            res.json({ 
+                success: true, 
+                suggestion: aiText 
+            });
+        } else {
+            throw new Error('Resposta vazia da IA.');
+        }
+
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            return res.status(504).json({ success: false, message: 'A geração da dieta demorou muito para responder (Timeout). Tente novamente.' });
+        }
+        console.error('Erro ao gerar dieta com IA:', error);
+        res.status(500).json({ success: false, message: 'Falha ao conectar com o modelo de inteligência artificial.' });
+    }
+}
+
+// -------------------------------------------------------------
+// FEATURES PREMIUM DO PACIENTE (NUTRICHEF & SMART SHOPPING LIST)
+// -------------------------------------------------------------
+
+export async function generatePatientShoppingList(req, res) {
+    const patientId = req.session.user.id;
+    const daysMultiplier = parseInt(req.query.days) || 7; // Padrão: Lista para 7 dias
+
+    try {
+        const query = `
+            SELECT f.name as food_name, f.category, SUM(mi.quantity) as daily_quantity
+            FROM meal_plans mp
+            JOIN meals m ON mp.id = m.meal_plan_id
+            JOIN meal_items mi ON m.id = mi.meal_id
+            JOIN foods f ON mi.food_id = f.id
+            WHERE mp.patient_id = ?
+            GROUP BY f.id, f.name, f.category
+            ORDER BY f.category, f.name;
+        `;
+        const [rows] = await pool.query(query, [patientId]);
+
+        if (rows.length === 0) {
+            return res.json({ success: true, message: 'Nenhum plano alimentar ativo.', shoppingList: {} });
+        }
+
+        // Agrupa por categoria e multiplica pelos dias da semana
+        const shoppingList = rows.reduce((acc, item) => {
+            const category = item.category || 'Outros';
+            if (!acc[category]) acc[category] = [];
+            
+            const totalQty = (parseFloat(item.daily_quantity) * daysMultiplier).toFixed(0);
+            acc[category].push({ name: item.food_name, quantity: totalQty + 'g/ml' });
+            return acc;
+        }, {});
+
+        res.json({ success: true, days: daysMultiplier, shoppingList });
+    } catch (error) {
+        console.error("Erro ao gerar lista de compras:", error);
+        res.status(500).json({ success: false, message: 'Erro interno ao gerar lista.' });
+    }
+}
+
+export async function generatePatientRecipeAI(req, res) {
+    const patientId = req.session.user.id;
+    const apiKey = process.env.GEMINI_API_KEY;
+    const { mealName } = req.body; // Ex: "Almoço" ou "Jantar"
+
+    if (!apiKey) return res.status(500).json({ success: false, message: 'API Key não configurada.' });
+
+    try {
+        // Busca APENAS os alimentos daquela refeição específica do paciente
+        const query = `
+            SELECT f.name as food_name, mi.quantity 
+            FROM meal_plans mp
+            JOIN meals m ON mp.id = m.meal_plan_id
+            JOIN meal_items mi ON m.id = mi.meal_id
+            JOIN foods f ON mi.food_id = f.id
+            WHERE mp.patient_id = ? AND m.name LIKE ?;
+        `;
+        const [foods] = await pool.query(query, [patientId, `%${mealName}%`]);
+
+        if (foods.length === 0) {
+            return res.status(400).json({ success: false, message: `Nenhum alimento encontrado para a refeição: ${mealName}.` });
+        }
+
+        const ingredientsList = foods.map(f => `${f.quantity}g de ${f.food_name}`).join(', ');
+
+        const prompt = `
+        Atue como um Chef de Cozinha Saudável. O paciente tem a seguinte lista estrita de ingredientes liberados para o ${mealName}:
+        [${ingredientsList}]
+        
+        Crie uma receita inovadora, saborosa e prática usando APENAS os ingredientes listados (o uso de água, sal, pimenta e ervas naturais é livre). 
+        Retorne em HTML formatado com <h3>Título da Receita</h3>, <p><b>Modo de Preparo:</b>...</p>. Seja criativo para tirar o paciente da rotina chata da dieta!
+        `;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        const data = await response.json();
+        res.json({ success: true, recipe: data.candidates[0].content.parts[0].text.replace(/```html/g, '').replace(/```/g, '') });
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            return res.status(504).json({ success: false, message: 'A Inteligência Artificial demorou muito para responder (Timeout). Tente novamente.' });
+        }
+        console.error("Erro na IA do Paciente:", error);
+        res.status(500).json({ success: false, message: 'Falha ao gerar receita.' });
     }
 }

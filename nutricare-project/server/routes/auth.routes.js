@@ -21,7 +21,16 @@ import {
     getScheduleConfig,
     updateScheduleConfig,
     getTodayAppointment, saveAppointmentNotes, getPatientInvoices, getPatientDocuments,
-    forgotPassword, resetPassword
+    forgotPassword, resetPassword,
+    getNutriNotifications,
+    getExamInsight,
+    generateDietAI,
+    mpWebhook,
+    generatePatientShoppingList,
+    generatePatientRecipeAI,
+    markInvoiceAsPaid,
+    notifyPatientMealPlan,
+    updateAnamnese
 } from '../controllers/auth.controller.js';
 
 import checkAuth from '../middlewares/checkAuth.js';
@@ -57,6 +66,7 @@ router.get('/metrics', checkAuth, getMetrics);
 router.get('/patientList', checkAuth, patientList);
 router.get('/patientDetails/:id', checkAuth, patientDetails);
 router.get('/anamneseDetails/:id', checkAuth, anamneseDetails);
+router.put('/anamnese/:patientId', checkAuth, updateAnamnese);
 router.get('/generateLink', checkAuth, generateLink);
 router.get('/sendMsg/:id', sendMsg);
 
@@ -64,11 +74,13 @@ router.get('/sendMsg/:id', sendMsg);
 router.get('/foods', checkAuth, getFoods);
 router.post('/mealplan', checkAuth, saveMealPlan);
 router.get('/mealplan/:patientId', checkAuth, getMealPlan);
+router.post('/mealplan/:patientId/notify', checkAuth, notifyPatientMealPlan);
 
 // --- ROTAS DO NUTRICIONISTA (PERFIL E AGENDA) ---
 router.get('/nutricionista/details', checkAuth, getNutricionistaDetails);
 router.put('/nutricionista/details', checkAuth, updateNutricionistaDetails);
 router.put('/nutricionista/password', checkAuth, updateNutricionistaPassword);
+router.get('/nutricionista/notifications', checkAuth, getNutriNotifications);
 
 // Agenda Profissional (Visualização e Geração)
 router.get('/nutricionista/appointments', checkAuth, getAppointmentsForDay);
@@ -77,6 +89,10 @@ router.put('/nutricionista/generateAgenda', checkAuth, generateAgenda);
 // --- [NOVO] Configurações de Intervalos e Pausas ---
 router.get('/schedule/config', checkAuth, getScheduleConfig);
 router.post('/schedule/config/update', checkAuth, updateScheduleConfig);
+
+// Rota de IA (Gemini)
+router.post('/exam-insight', checkAuth, getExamInsight);
+router.post('/nutricionista/ai-diet', checkAuth, generateDietAI);
 
 // Rotas de Aprovação de Consultas
 router.get('/nutricionista/appointments/pending', checkAuth, getPendingAppointments);
@@ -90,6 +106,8 @@ router.post('/appointments/schedule-return', checkAuth, scheduleReturnAppointmen
 // Rotas de Faturamento
 router.get('/invoices', checkAuth, getInvoices);
 router.post('/invoices', checkAuth, createInvoice);
+router.post('/invoices/webhook', mpWebhook);
+router.put('/invoices/:id/paid', checkAuth, markInvoiceAsPaid);
 
 // --- ROTAS PÚBLICAS/PACIENTE (AGENDAMENTO) ---
 router.get('/schedule/available', getNutriSchedule);
@@ -101,6 +119,8 @@ router.get('/patient/notifications', checkAuth, getPatientNotifications);
 router.get('/patient/appointments', checkAuth, getPatientAppointments);
 router.delete('/patient/appointments', checkAuth, cancelAppointment);
 router.post('/patient/submit-survey', checkAuth, submitSurvey);
+router.get('/patient/shopping-list', checkAuth, generatePatientShoppingList);
+router.post('/patient/ai-recipe', checkAuth, generatePatientRecipeAI);
 
 // Rota auxiliar para pegar nome do Nutri na tela de agendamento público
 router.get('/nutricionista/:id', async (req, res) => {

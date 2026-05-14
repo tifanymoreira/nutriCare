@@ -39,14 +39,6 @@ app.use('/api/auth', authRoutes);
 app.use('/api/anthropometry', anthropometryRoutes);
 app.use('/api/ai', aiRoutes); // Rota de Inteligência Artificial implementada
 
-// SERVIR ARQUIVOS ESTÁTICOS DO FRONTEND
-const clientPublicPath = path.join(__dirname, '../client/public');
-app.use(express.static(clientPublicPath));
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(clientPublicPath, 'pages/index.html'));
-});
-
 // REDIRECIONAMENTOS DE SEGURANÇA SE NÃO LOGADO
 app.get('/pages/nutricionista/*', (req, res, next) => {
     if (!req.session.user || req.session.user.role !== 'nutricionista') {
@@ -60,6 +52,14 @@ app.get('/pages/paciente/*', (req, res, next) => {
         return res.redirect('/pages/login.html');
     }
     next();
+});
+
+// SERVIR ARQUIVOS ESTÁTICOS DO FRONTEND (DEVE FICAR ABAIXO DA SEGURANÇA)
+const clientPublicPath = path.join(__dirname, '../client/public');
+app.use(express.static(clientPublicPath));
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(clientPublicPath, 'pages/index.html'));
 });
 
 const PORT = process.env.PORT;

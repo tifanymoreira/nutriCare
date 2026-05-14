@@ -337,6 +337,42 @@ body {
     transition: var(--transition);
 }
 
+/* =================================================================== */
+/* ===================== ESTILOS DA SEÇÃO IDEALIZADORAS ============== */
+/* =================================================================== */
+
+.creator-card {
+    background-color: var(--white);
+    border: 1px solid rgba(42, 157, 143, 0.15);
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+}
+
+.creator-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 35px rgba(42, 157, 143, 0.1);
+    border-color: var(--primary-green);
+}
+
+.creator-img-wrapper img {
+    object-fit: cover;
+    border: 4px solid var(--white);
+    transition: transform 0.4s ease;
+}
+
+.creator-card:hover .creator-img-wrapper img {
+    transform: scale(1.05);
+    border-color: #e9f9f7;
+}
+
+.creator-role {
+    color: var(--secondary-orange);
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 .footer a:hover {
     color: var(--primary-green) !important;
 }
@@ -603,6 +639,8 @@ body {
 
 .dashboard-sidebar {
     width: 260px;
+    min-width: 260px;
+    flex-shrink: 0;
     background: var(--dark-charcoal);
     display: flex;
     flex-direction: column;
@@ -665,6 +703,7 @@ body {
 
 .dashboard-main {
     flex-grow: 1;
+    min-width: 0;
     background: linear-gradient(135deg, #f4f8f7, #fdf8f3);
     /* Gradiente sutil */
     padding: 2rem;
@@ -1496,6 +1535,93 @@ body {
     border-radius: 6px;
     padding: 0.25rem 0.5rem;
 }
+
+/* =================================================================== */
+/* ==============     EDITOR DE PLANOS ULTRA PREMIUM    ============== */
+/* =================================================================== */
+.meal-card-pro {
+    background: var(--white);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    border: 1px solid rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+    overflow: hidden;
+    transition: var(--transition);
+}
+.meal-card-pro:hover {
+    box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+    border-color: rgba(42, 157, 143, 0.3);
+}
+.meal-card-header-pro {
+    background: #f8fafc;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+.meal-title-input {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--dark-charcoal);
+    border: none;
+    background: transparent;
+    border-bottom: 2px solid transparent;
+    padding: 2px 4px;
+    transition: 0.2s;
+    width: 100%;
+    max-width: 250px;
+}
+.meal-title-input:focus {
+    border-bottom-color: var(--primary-green);
+    outline: none;
+}
+.meal-time-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(42, 157, 143, 0.2);
+}
+.meal-option-container-pro {
+    position: relative;
+}
+.dropzone-pro {
+    border: 2px dashed #cbd5e1;
+    transition: all 0.2s;
+}
+.dropzone-pro.drag-over {
+    background-color: rgba(42, 157, 143, 0.05) !important;
+    border-color: var(--primary-green) !important;
+    transform: scale(1.01);
+}
+.meal-food-row-pro {
+    cursor: grab;
+    border: 1px solid #e2e8f0;
+}
+.meal-food-row-pro:active {
+    cursor: grabbing;
+}
+.meal-food-row-pro:hover {
+    background-color: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+    transform: translateX(4px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03) !important;
+}
+.hover-bg-danger-light:hover {
+    background-color: #fee2e2 !important;
+    color: #dc2626 !important;
+}
+.hover-text-danger:hover {
+    color: #dc2626 !important;
+}
+.focus-ring:focus {
+    box-shadow: 0 0 0 3px rgba(42, 157, 143, 0.15);
+    outline: none;
+    background-color: #fff !important;
+}
+.hover-primary:hover {
+    border-color: var(--primary-green) !important;
+    box-shadow: 0 4px 10px rgba(42, 157, 143, 0.1) !important;
+}
+.cursor-grab {
+    cursor: grab;
+}
+.border-dashed { border-style: dashed !important; }
 
 /* =================================================================== */
 /* ======================== DASH PACIENTE ====================== */
@@ -2646,6 +2772,127 @@ body {
     font-size: 1.5rem;
 }
 
+/* =================================================================== */
+/* ============= UX/UI PACIENTE PREMIUM (MOBILE FIRST) =============== */
+/* =================================================================== */
+
+.patient-bg {
+    background: #f8f9fc;
+    min-height: 100vh;
+    padding-bottom: 90px; /* Espaço para a barra inferior */
+}
+
+.patient-header-glass {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 1rem 1.5rem;
+}
+
+.glass-card {
+    background: #ffffff;
+    border-radius: 24px;
+    border: 1px solid rgba(0,0,0,0.03);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+    overflow: hidden;
+}
+
+.bg-gradient-ai { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); }
+.bg-gradient-list { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+.bg-gradient-diet { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+
+.premium-action-card {
+    padding: 1.5rem 1rem;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.premium-action-card:hover { transform: translateY(-5px); }
+
+/* Gamificação - Rastreador de Água */
+.water-tracker-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.water-glass {
+    width: 38px; 
+    height: 50px;
+    border-radius: 4px 4px 12px 12px;
+    border: 2px solid #0dcaf0;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    color: #0dcaf0; 
+    font-size: 1.2rem; 
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+    background: #fff;
+}
+.water-glass.filled {
+    background: #0dcaf0; 
+    color: white;
+    border-color: #0dcaf0;
+    transform: scale(1.1);
+}
+.water-glass:hover { transform: translateY(-2px); }
+
+/* Bottom Navigation Bar App-Style */
+.mobile-bottom-nav {
+    position: fixed; 
+    bottom: 0; 
+    left: 0; 
+    width: 100%;
+    background: rgba(255, 255, 255, 0.95); 
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(0,0,0,0.05);
+    display: flex; 
+    justify-content: space-around; 
+    padding: 0.75rem 0;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+    z-index: 1000; 
+    box-shadow: 0 -5px 25px rgba(0,0,0,0.05);
+}
+.mobile-bottom-nav .nav-item {
+    display: flex; 
+    flex-direction: column; 
+    align-items: center;
+    color: #a0aec0; 
+    text-decoration: none; 
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+.mobile-bottom-nav .nav-item.active { 
+    color: var(--primary-green); 
+}
+.mobile-bottom-nav .nav-item i { 
+    font-size: 1.5rem; 
+    margin-bottom: 2px; 
+    transition: transform 0.2s;
+}
+.mobile-bottom-nav .nav-item.active i {
+    transform: translateY(-2px);
+}
+
+.shopping-category-title { font-weight: 800; color: var(--dark-charcoal); border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-top: 1.5rem; }
+.shopping-item { display: flex; align-items: center; padding: 0.75rem 0; border-bottom: 1px dashed #e2e8f0; }
+.shopping-item input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--primary-green); cursor: pointer; }
+
 /* nutricare-project/client/public/css/survey.css */
 
 .survey-section {
@@ -3264,6 +3511,7 @@ body {
 
 .modal-backdrop.show {
     opacity: 0.8 !important; /* Força a opacidade */
+    visibility: visible !important; /* Força o fundo do Bootstrap a aparecer */
     backdrop-filter: blur(8px) !important;
     -webkit-backdrop-filter: blur(8px) !important;
 }
@@ -3360,3 +3608,465 @@ body {
     70% { transform: scale(1.1); }
     100% { transform: scale(1); opacity: 1; }
 }
+
+/* =================================================================== */
+/* ============= MANUAL DO USUÁRIO (AJUDA) =========================== */
+/* =================================================================== */
+
+.custom-manual-accordion .accordion-button {
+    background-color: #f8f9fa;
+    color: var(--dark-charcoal);
+    transition: var(--transition);
+}
+.custom-manual-accordion .accordion-button:not(.collapsed) {
+    background-color: rgba(42, 157, 143, 0.1);
+    color: var(--primary-green);
+}
+.custom-manual-accordion .accordion-button:focus {
+    box-shadow: none;
+    border-color: rgba(0,0,0,.125);
+}
+
+/* =================================================================== */
+/* ==================== WIDGET DE AJUDA (FLUTUANTE) ================== */
+/* =================================================================== */
+.help-widget {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background-color: var(--dark-charcoal);
+    color: #FFF;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    z-index: 1045; /* Abaixo do modal, mas acima do restante do conteúdo */
+    transition: all 0.3s ease-in-out;
+}
+
+.help-widget:hover {
+    transform: scale(1.1) rotate(10deg);
+    background-color: var(--primary-green);
+    color: var(--white);
+    box-shadow: 0 6px 20px rgba(42, 157, 143, 0.4);
+}
+
+/* =================================================================== */
+/* =================== MODAL DE AJUDA NO CANTO ======================= */
+/* =================================================================== */
+.modal.fade .modal-dialog-bottom-right {
+    position: absolute;
+    bottom: 100px;
+    right: 30px;
+    margin: 0;
+    width: 100%;
+    max-width: 420px;
+    transform: translateY(50px) scale(0.9) !important;
+    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.modal.show .modal-dialog-bottom-right {
+    transform: translateY(0) scale(1) !important;
+}
+
+.modal-dialog-bottom-right .modal-content {
+    border-radius: 20px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+/* =================================================================== */
+/* ================== PATIENT CARD PRO (LISTA CRM) =================== */
+/* =================================================================== */
+.patient-card-pro {
+    background: var(--white);
+    border-radius: 20px;
+    border: 1px solid rgba(0,0,0,0.06);
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+}
+
+.patient-card-pro:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 15px 35px rgba(42, 157, 143, 0.08);
+    border-color: rgba(42, 157, 143, 0.3);
+}
+
+.card-status-badge {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 50px;
+    z-index: 2;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.patient-avatar-pro {
+    width: 85px;
+    height: 85px;
+    border-radius: 50%;
+    border: 4px solid var(--white);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    background-color: #f1f3f5;
+    transition: transform 0.3s ease;
+}
+
+.patient-card-pro:hover .patient-avatar-pro {
+    transform: scale(1.05);
+}
+
+.action-btn-sq {
+    width: 44px;
+    height: 44px;
+    font-size: 1.1rem;
+    border-radius: 12px !important;
+    transition: all 0.2s ease;
+    background-color: #fff;
+}
+.action-btn-sq:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+}
+
+/* =================================================================== */
+/* ========================== DARK MODE UX =========================== */
+/* =================================================================== */
+[data-theme="dark"] body { 
+    background-color: #121212 !important; 
+    color: #e0e0e0 !important; 
+}
+
+[data-theme="dark"] .dashboard-sidebar { 
+    background: #1a1a1a !important; 
+    border-right: 1px solid #333 !important; 
+}
+
+[data-theme="dark"] .dashboard-main, 
+[data-theme="dark"] .editor-wrapper, 
+[data-theme="dark"] .canvas-panel-pro,
+[data-theme="dark"] .agenda-container { 
+    background: #121212 !important; 
+}
+
+[data-theme="dark"] .card, 
+[data-theme="dark"] .data-card, 
+[data-theme="dark"] .stat-card, 
+[data-theme="dark"] .kpi-card,
+[data-theme="dark"] .kpi-card-pro, 
+[data-theme="dark"] .card-panel-pro, 
+[data-theme="dark"] .welcome-banner,
+[data-theme="dark"] .topbar-pro .bg-white, 
+[data-theme="dark"] .patient-card-pro, 
+[data-theme="dark"] .modal-content,
+[data-theme="dark"] .bg-white, 
+[data-theme="dark"] .library-panel-pro, 
+[data-theme="dark"] .canvas-header-pro, 
+[data-theme="dark"] .nutrition-panel-pro, 
+[data-theme="dark"] .settings-container, 
+[data-theme="dark"] .settings-content-view,
+[data-theme="dark"] .config-nav-card, 
+[data-theme="dark"] .meal-card-pro, 
+[data-theme="dark"] .meal-card-header,
+[data-theme="dark"] .prontuario-header,
+[data-theme="dark"] .patient-header-glass,
+[data-theme="dark"] .glass-card,
+[data-theme="dark"] .mobile-bottom-nav,
+[data-theme="dark"] .card-elevated,
+[data-theme="dark"] .pro-settings-panel,
+[data-theme="dark"] .booking-summary,
+[data-theme="dark"] .form-question {
+    background-color: #1e1e1e !important; border-color: #333 !important; color: #e0e0e0 !important;
+}
+
+[data-theme="dark"] .text-dark, 
+[data-theme="dark"] h1, 
+[data-theme="dark"] h2, 
+[data-theme="dark"] h3, 
+[data-theme="dark"] h4, 
+[data-theme="dark"] h5, 
+[data-theme="dark"] h6 { color: #f8f9fa !important; }
+
+[data-theme="dark"] .form-control, 
+[data-theme="dark"] .form-select, 
+[data-theme="dark"] input:not([type="radio"]):not([type="checkbox"]) { 
+    background-color: #2a2a2a !important; color: #fff !important; border-color: #444 !important; 
+}
+[data-theme="dark"] .form-control:focus, 
+[data-theme="dark"] .form-select:focus { 
+    background-color: #333 !important; border-color: var(--primary-green) !important; color: #fff !important;
+}
+
+[data-theme="dark"] .table-light, 
+[data-theme="dark"] thead th { background-color: #2a2a2a !important; color: #ccc !important; border-color: #444 !important;}
+[data-theme="dark"] .table-hover tbody tr:hover, 
+[data-theme="dark"] .table-hover>tbody>tr:hover { background-color: #333 !important; }
+[data-theme="dark"] td { background-color: #1e1e1e !important; color: #e0e0e0 !important; border-color: #333 !important;}
+
+/* =================================================================== */
+/* ========================== DARK MODE FIXES ======================== */
+/* =================================================================== */
+[data-theme="dark"] .text-muted, 
+[data-theme="dark"] .text-secondary { color: #a0a0a0 !important; }
+[data-theme="dark"] .form-control::placeholder, 
+[data-theme="dark"] input::placeholder { color: #888 !important; }
+
+[data-theme="dark"] .dropdown-menu { background-color: #1e1e1e !important; border: 1px solid #444 !important; }
+[data-theme="dark"] .dropdown-item { color: #e0e0e0 !important; }
+[data-theme="dark"] .dropdown-item:hover { background-color: #333 !important; color: #fff !important; }
+
+[data-theme="dark"] .badge.bg-light { background-color: #333 !important; color: #e0e0e0 !important; border-color: #555 !important; }
+[data-theme="dark"] .input-group-text { background-color: #2a2a2a !important; color: #a0a0a0 !important; border-color: #444 !important; }
+[data-theme="dark"] .border-bottom { border-color: #333 !important; }
+[data-theme="dark"] .border-top { border-color: #333 !important; }
+[data-theme="dark"] .border-start { border-left-color: #333 !important; }
+[data-theme="dark"] .border-end { border-right-color: #333 !important; }
+[data-theme="dark"] .border { border-color: #333 !important; }
+
+[data-theme="dark"] .bg-light { background-color: #2a2a2a !important; border-color: #444 !important; color: #e0e0e0 !important; }
+
+[data-theme="dark"] .accordion-item, 
+[data-theme="dark"] .accordion-body { background-color: #1e1e1e !important; color: #e0e0e0 !important; border-color: #333 !important; }
+[data-theme="dark"] .accordion-button { background-color: #2a2a2a !important; color: #e0e0e0 !important; }
+[data-theme="dark"] .accordion-button:not(.collapsed) { background-color: #1e1e1e !important; color: var(--primary-green) !important; }
+[data-theme="dark"] .accordion-button::after { filter: invert(1) grayscale(100%) brightness(200%); }
+
+[data-theme="dark"] .list-group-item { background-color: #1e1e1e !important; border-color: #333 !important; color: #e0e0e0 !important; }
+[data-theme="dark"] .empty-state-card, 
+[data-theme="dark"] .empty-state-pro { background-color: #1e1e1e !important; border-color: #333 !important; }
+[data-theme="dark"] .timeline-modern-item .service-title { color: #e0e0e0 !important; }
+[data-theme="dark"] .read-only-box { background-color: #2a2a2a !important; border-color: #444 !important; color: #e0e0e0 !important; }
+[data-theme="dark"] .btn-light { background-color: #333 !important; color: #e0e0e0 !important; border-color: #444 !important; }
+[data-theme="dark"] .btn-light:hover { background-color: #444 !important; color: #fff !important;}
+[data-theme="dark"] .btn-outline-light { border-color: #444 !important; color: #e0e0e0 !important; }
+[data-theme="dark"] .btn-outline-light:hover { background-color: #444 !important; color: #fff !important; }
+
+[data-theme="dark"] .nav-pills-custom .nav-link { color: #a0a0a0 !important; }
+[data-theme="dark"] .nav-pills-custom .nav-link.active { color: #fff !important; background-color: var(--primary-green) !important; }
+[data-theme="dark"] .nav-pills-custom .nav-link:hover:not(.active) { background-color: #333 !important; }
+
+[data-theme="dark"] .form-control-soap { background-color: #2a2a2a !important; color: #fff !important; border-color: #555 !important; }
+[data-theme="dark"] .file-card { background-color: #2a2a2a !important; border-color: #444 !important; }
+[data-theme="dark"] .soap-section { background-color: #2a2a2a !important; border-color: #444 !important; }
+
+/* =================================================================== */
+/* ======================= AUTOCOMPLETE BUSCA GLOBAL ================= */
+/* =================================================================== */
+.search-suggestion-item { white-space: normal; transition: all 0.2s ease; }
+.search-suggestion-item:hover { background-color: #f8f9fa; }
+
+[data-theme="dark"] .search-suggestion-item .text-dark { color: #f8f9fa !important; }
+[data-theme="dark"] .search-suggestion-item:hover { background-color: #333 !important; }
+[data-theme="dark"] #searchSuggestions .bg-light { background-color: #2a2a2a !important; border-color: #333 !important; }
+
+[data-theme="dark"] .modal-header, 
+[data-theme="dark"] .modal-footer { background-color: #1e1e1e !important; border-color: #333 !important; }
+[data-theme="dark"] .modal-close { color: #a0a0a0; }
+
+/* =================================================================== */
+/* ================== TABLE MODERN PRO (LISTA INTUITIVA) ============= */
+/* =================================================================== */
+.table-modern-pro {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.table-modern-pro thead th {
+    border-bottom: 2px solid #f1f3f5;
+    color: #868e96;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    padding-top: 1.5rem;
+    padding-bottom: 1rem;
+    background-color: #fff;
+}
+
+.table-modern-pro tbody tr {
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.table-modern-pro tbody tr:hover {
+    background-color: #f8f9fa !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+}
+
+.table-modern-pro tbody td {
+    vertical-align: middle;
+    border: none;
+}
+
+/* =================================================================== */
+/* ================= FIX: DASHBOARD, EDITOR E MANUAIS ================ */
+/* =================================================================== */
+
+/* Fix: Manuais (Accordion) */
+[data-theme="dark"] .accordion-item, [data-theme="dark"] .accordion-body { background-color: #1e1e1e !important; color: #e0e0e0 !important; border-color: #333 !important; }
+[data-theme="dark"] .accordion-button { background-color: #2a2a2a !important; color: #e0e0e0 !important; }
+[data-theme="dark"] .accordion-button:not(.collapsed) { background-color: #1e1e1e !important; color: var(--primary-green) !important; }
+[data-theme="dark"] .accordion-button::after { filter: invert(1) grayscale(100%) brightness(200%); }
+[data-theme="dark"] .modal-header, [data-theme="dark"] .modal-footer { background-color: #1e1e1e !important; border-color: #333 !important; }
+
+/* Fix: Dashboard Principal */
+[data-theme="dark"] .card-panel-header { background-color: #1e1e1e !important; border-bottom-color: #333 !important; }
+[data-theme="dark"] .card-panel-title { color: #f8f9fa !important; }
+[data-theme="dark"] .card-panel-body { background-color: #121212 !important; }
+[data-theme="dark"] .pending-item-pro { background-color: #2a2a2a !important; border-color: #444 !important; }
+[data-theme="dark"] .pending-item-pro:hover { background-color: #333 !important; border-color: var(--primary-green) !important; }
+[data-theme="dark"] .pending-item-pro .details { color: #a0a0a0 !important; }
+[data-theme="dark"] .attention-item-pro { border-bottom-color: #333 !important; }
+[data-theme="dark"] .agenda-timeline::before { background-color: #333 !important; }
+[data-theme="dark"] .agenda-item-card { background-color: #2a2a2a !important; border-color: #444 !important; }
+[data-theme="dark"] .appointment-block-pro { background-color: #2a2a2a !important; border-color: #444 !important; border-left-color: var(--primary-green) !important;}
+[data-theme="dark"] .appointment-block-pro.type-retorno { border-left-color: var(--secondary-orange) !important;}
+[data-theme="dark"] .appointment-block-pro.type-online { border-left-color: var(--danger-red) !important;}
+[data-theme="dark"] .appointment-patient-name { color: #e0e0e0 !important; }
+[data-theme="dark"] .timeline-line { border-top-color: #444 !important; }
+
+/* Fix: Editor de Dieta */
+[data-theme="dark"] .meal-card-pro { background-color: #1e1e1e !important; border-color: #333 !important; }
+[data-theme="dark"] .meal-card-header-pro { background-color: #2a2a2a !important; border-bottom-color: #333 !important; }
+[data-theme="dark"] .meal-title-input { color: #f8f9fa !important; }
+[data-theme="dark"] .meal-food-row-pro { background-color: #2a2a2a !important; border-color: #444 !important; }
+[data-theme="dark"] .meal-food-row-pro .food-name { color: #f8f9fa !important; }
+[data-theme="dark"] .meal-food-row-pro:hover { background-color: #333 !important; }
+[data-theme="dark"] .meal-option-container-pro .bg-light { background-color: #1e1e1e !important; }
+[data-theme="dark"] .dropzone-pro { border-color: #444 !important; }
+[data-theme="dark"] .bg-white { background-color: #1e1e1e !important; }
+[data-theme="dark"] .food-item-pro { background-color: #2a2a2a !important; border-color: #444 !important; }
+[data-theme="dark"] .food-item-pro:hover { background-color: #333 !important; }
+[data-theme="dark"] .food-item-pro .text-dark { color: #e0e0e0 !important; }
+[data-theme="dark"] .time-wrapper { background-color: #2a2a2a !important; border-color: #444 !important; }
+[data-theme="dark"] .meal-notes-input, [data-theme="dark"] .meal-recipes-input { background-color: #2a2a2a !important; color:#fff !important; }
+
+[data-theme="dark"] .info-pill { background-color: #2a2a2a !important; border-color: #444 !important; color: #e0e0e0 !important; }
+[data-theme="dark"] .timeline-modern-item::before { background-color: #2a2a2a !important; border-color: #444 !important; }
+[data-theme="dark"] .timeline-modern-item.active::before { background-color: var(--primary-green) !important; border-color: var(--primary-green) !important; }
+[data-theme="dark"] .timeline-modern-item:hover::before { border-color: var(--primary-green) !important; }
+[data-theme="dark"] .patient-badge { background-color: #2a2a2a !important; border-color: #444 !important; }
+[data-theme="dark"] .patient-badge span { color: #e0e0e0 !important; }
+[data-theme="dark"] .progress { background-color: #333 !important; }
+
+[data-theme="dark"] .calendar-pro-day.other-month { color: #555 !important; }
+[data-theme="dark"] .calendar-pro-day:not(.other-month):hover { background-color: #333 !important; }
+[data-theme="dark"] .calendar-pro-day.selected { background-color: var(--primary-green) !important; color: #fff !important; }
+
+[data-theme="dark"] .month-navigator-btn { background-color: #333 !important; color: #e0e0e0 !important; }
+[data-theme="dark"] .month-navigator-btn:hover { background-color: #444 !important; }
+
+[data-theme="dark"] .duration-selector { background-color: #333 !important; }
+[data-theme="dark"] .duration-selector label { color: #e0e0e0 !important; }
+[data-theme="dark"] .duration-selector input:checked+label { background-color: #444 !important; color: var(--primary-green) !important; }
+
+[data-theme="dark"] .mini-calendar-days .day:not(.other-month):hover { background-color: #333 !important; }
+[data-theme="dark"] .mini-calendar-days .day.other-month { color: #555 !important; }
+
+[data-theme="dark"] .section-header { background-color: #1e1e1e !important; border-bottom-color: #333 !important; }
+[data-theme="dark"] .btn-back { background-color: #2a2a2a !important; border-color: #444 !important; color: #e0e0e0 !important; }
+[data-theme="dark"] .btn-back:hover { background-color: #333 !important; }
+[data-theme="dark"] .break-list-item { background-color: #2a2a2a !important; border-color: #444 !important; }
+[data-theme="dark"] .break-list-item:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
+
+[data-theme="dark"] .micro-table th { border-bottom-color: #444 !important; color: #a0a0a0 !important; }
+[data-theme="dark"] .micro-table td { border-bottom-color: #333 !important; color: #e0e0e0 !important; }
+[data-theme="dark"] .micro-table td:last-child { color: #f8f9fa !important; }
+[data-theme="dark"] .kpi-info h6 { color: #a0a0a0 !important; }
+
+[data-theme="dark"] .chart-header { border-bottom-color: #333 !important; }
+[data-theme="dark"] .period-filters { background-color: #1e1e1e !important; border-color: #333 !important; }
+[data-theme="dark"] .period-filters button { color: #a0a0a0 !important; }
+[data-theme="dark"] .period-filters button:hover { color: var(--primary-green) !important; }
+[data-theme="dark"] .period-filters button.active { background-color: var(--primary-green) !important; color: #fff !important; }
+
+[data-theme="dark"] .invoice-item .form-control { background-color: #2a2a2a !important; color: #fff !important; }
+[data-theme="dark"] .status-badge-invoice { color: #fff !important; }
+
+[data-theme="dark"] .patient-bg { background-color: #121212 !important; }
+[data-theme="dark"] .mobile-bottom-nav { background-color: rgba(30, 30, 30, 0.95) !important; border-top-color: #333 !important; }
+[data-theme="dark"] .mobile-bottom-nav .nav-item { color: #888 !important; }
+[data-theme="dark"] .mobile-bottom-nav .nav-item.active { color: var(--primary-green) !important; }
+[data-theme="dark"] .shopping-category-title { color: #e0e0e0 !important; border-bottom-color: #333 !important; }
+[data-theme="dark"] .shopping-item { border-bottom-color: #333 !important; color: #e0e0e0 !important;}
+
+[data-theme="dark"] .water-glass { background: #2a2a2a; border-color: #0dcaf0; color: #0dcaf0;}
+[data-theme="dark"] .water-glass.filled { background: #0dcaf0; color: #fff; }
+
+[data-theme="dark"] .highlight-appointment-card { background: linear-gradient(90deg, #1a2e2b 0%, #1e1e1e 30%) !important; border-color: rgba(42, 157, 143, 0.4) !important; }
+[data-theme="dark"] .meal-item { background-color: #2a2a2a !important; border-left-color: var(--secondary-orange) !important;}
+[data-theme="dark"] .meal-item-details .food-name { color: #f8f9fa !important; }
+
+[data-theme="dark"] .survey-section-title { color: #f8f9fa !important; }
+[data-theme="dark"] .survey-section { border-bottom-color: #333 !important; }
+[data-theme="dark"] .nps-score { background-color: #2a2a2a !important; border-color: #444 !important; color: #a0a0a0 !important; }
+[data-theme="dark"] .nps-score:hover { border-color: var(--primary-green) !important; color: var(--primary-green) !important; }
+[data-theme="dark"] .nps-score.selected { background-color: var(--primary-green) !important; border-color: var(--primary-green) !important; color: #fff !important; }
+
+[data-theme="dark"] .patient-card-pro { background-color: #1e1e1e !important; border-color: #333 !important; }
+[data-theme="dark"] .action-btn-sq { background-color: #2a2a2a !important; border-color: #444 !important; color: #e0e0e0 !important; }
+[data-theme="dark"] .action-btn-sq:hover { background-color: #333 !important; }
+[data-theme="dark"] .patient-avatar-pro { border-color: #1e1e1e !important; background-color: #333 !important; }
+
+[data-theme="dark"] .anamnese-card { background-color: #1e1e1e !important; border-color: #333 !important; }
+
+[data-theme="dark"] .table-modern-pro thead th { border-bottom-color: #333 !important; background-color: #1e1e1e !important; color: #a0a0a0 !important; }
+[data-theme="dark"] .table-modern-pro tbody tr { border-bottom-color: #333 !important; }
+[data-theme="dark"] .table-modern-pro tbody tr:hover { background-color: #2a2a2a !important; }
+
+/* =================================================================== */
+/* ================= PWA INSTALL PROMPT (PACIENTE) =================== */
+/* =================================================================== */
+.pwa-install-prompt {
+    position: fixed;
+    bottom: -150px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 400px;
+    background: var(--white);
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    padding: 15px;
+    z-index: 1050;
+    transition: bottom 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.pwa-install-prompt.show {
+    bottom: 90px; /* Acima do menu de navegação inferior (.mobile-bottom-nav) */
+}
+
+.pwa-prompt-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.pwa-icon img {
+    width: 45px;
+    height: 45px;
+    border-radius: 12px;
+    object-fit: cover;
+}
+
+.pwa-actions {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 5px;
+}
+[data-theme="dark"] .pwa-install-prompt { background-color: #1e1e1e !important; border-color: #333 !important; }

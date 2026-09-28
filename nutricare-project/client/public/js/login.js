@@ -1,15 +1,21 @@
 // nutricare-project/client/public/js/login.js
 document.addEventListener("DOMContentLoaded", async function () {
-    // --- REGISTRO DO SERVICE WORKER (PWA) ---
+    // --- ANIQUILADOR DE CACHE FANTASMA (Resolve o loop de redirecionamento do PWA) ---
+    if ('caches' in window) {
+        try {
+            const cacheNames = await caches.keys();
+            for (let name of cacheNames) { await caches.delete(name); }
+        } catch (e) { console.error(e); }
+    }
+
+    // --- REMOÇÃO FORÇADA DO SERVICE WORKER (PWA) ---
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js')
-                .then((registration) => {
-                    console.log('Service Worker registrado com sucesso no escopo:', registration.scope);
-                }).catch((error) => {
-                    console.log('Falha ao registrar o Service Worker:', error);
-                });
-        });
+        try {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (let registration of registrations) {
+                await registration.unregister();
+            }
+        } catch (e) { console.error(e); }
     }
 
     await checkIfAlreadyLoggedIn();
@@ -148,6 +154,10 @@ document.addEventListener("DOMContentLoaded", async function () {
             e.preventDefault();
             flipper.classList.add('is-flipped');
             registerForm.reset();
+            Object.values(requirements).forEach(req => {
+                req.classList.remove('valid');
+                req.querySelector('i').classList.replace('bi-check-circle-fill', 'bi-x-circle');
+            });
         });
 
         showLoginLink.addEventListener('click', (e) => {
@@ -226,6 +236,12 @@ document.addEventListener("DOMContentLoaded", async function () {
                 body: JSON.stringify({ email })
             });
             
+            if (response.status === 429) {
+                showMessage(recoveryMessageContainer, 'Muitas tentativas de recuperação. Aguarde um momento e tente novamente.', false);
+                toggleLoadingState('recoveryBtn', false);
+                return;
+            }
+
             const result = await response.json();
             
             // Por segurança (Anti-enumeração), a boa prática é mostrar sucesso mesmo se o email não existir.
@@ -257,6 +273,13 @@ document.addEventListener("DOMContentLoaded", async function () {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
+
+            // if (response.status === 429) {
+            //     showMessage(loginMessageContainer, 'Muitas tentativas de login. Por segurança, aguarde alguns minutos.', false);
+            //     toggleLoadingState('loginBtn', false);
+            //     return;
+            // }
+
             const result = await response.json();
             if (result.success) {
                 window.location.href = result.redirectUrl;

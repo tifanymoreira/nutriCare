@@ -1,6 +1,11 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
-dotenv.config();
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Carrega o .env a partir da pasta /server, independente de onde o `node` foi iniciado.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const dbConfig = {
   host: process.env.DB_HOST,

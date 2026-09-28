@@ -43,6 +43,11 @@
         
         /* Estilos Leitura Prontuário */
         .read-only-box { background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; margin-bottom: 15px; font-size: 0.95rem; color: #495057; line-height: 1.6; }
+        /* Faixa de destaque (apenas borda esquerda) por seção do SOAP — funciona em tema claro e escuro */
+        .read-only-box.accent-primary { border-left: 4px solid var(--bs-primary, #0d6efd) !important; }
+        .read-only-box.accent-info    { border-left: 4px solid var(--bs-info, #0dcaf0) !important; }
+        .read-only-box.accent-warning { border-left: 4px solid var(--bs-warning, #ffc107) !important; }
+        .read-only-box.accent-success { border-left: 4px solid var(--bs-success, #198754) !important; }
         .file-card { transition: all 0.2s ease; cursor: pointer; }
         .file-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important; border-color: var(--primary-color, #2a9d8f) !important; }
     </style>
@@ -69,6 +74,7 @@
                     <li class="nav-item"><a href="nutriMetrics.html" class="nav-link"><i class="bi bi-graph-up-arrow"></i> Minhas Métricas</a></li>
                     <li class="nav-item"><a href="nutriConfig.html" class="nav-link"><i class="bi bi-person-fill-gear"></i> Meus Detalhes</a></li>
                     <li class="nav-item"><a href="nutriInvoicing.html" class="nav-link"><i class="bi bi-cash-stack"></i> Faturamento</a></li>
+                    <li class="nav-item"><a href="anamneseConfig.html" class="nav-link"><i class="bi bi-ui-checks"></i> Configurar Ficha</a></li>
                 </ul>
             </nav>
             <div class="sidebar-footer">
@@ -102,9 +108,14 @@
 
             <!-- Área de Busca -->
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-                <div class="input-group input-group-lg shadow-sm rounded w-100 bg-white" style="max-width: 600px; border: 1px solid #e9ecef;">
+                <div class="input-group input-group-lg shadow-sm rounded w-100 bg-white" style="max-width: 500px; border: 1px solid #e9ecef;">
                     <span class="input-group-text bg-transparent border-0 text-muted pe-1"><i class="bi bi-search"></i></span>
                     <input type="text" class="form-control border-0 bg-transparent ps-2 shadow-none" id="patientSearchInput" placeholder="Buscar paciente por nome ou e-mail...">
+                </div>
+                <div class="d-flex gap-1 p-1 bg-white rounded-pill border shadow-sm flex-shrink-0" id="typeFilterGroup">
+                    <button class="btn btn-sm rounded-pill fw-bold px-3 btn-primary-custom active-filter" data-type="">Todos</button>
+                    <button class="btn btn-sm rounded-pill fw-semibold px-3 btn-light text-muted" data-type="particular"><i class="bi bi-person-fill me-1"></i>Particular</button>
+                    <button class="btn btn-sm rounded-pill fw-semibold px-3 btn-light text-muted" data-type="convenio"><i class="bi bi-shield-check me-1"></i>Convênio</button>
                 </div>
             </div>
 
@@ -158,13 +169,11 @@
                                     <div class="info-pill"><i class="bi bi-calendar-event"></i> Nascimento: <span id="patientBirthdate"></span> (<span id="patientAge"></span> anos)</div>
                                 </div>
                             </div>
-                            <!-- <div class="text-end d-none d-lg-block">
-                                <p class="text-muted small mb-1 fw-bold text-uppercase">Próxima Consulta</p>
-                                <div class="fs-5 fw-bold text-primary" id="patientAppointmentDate"></div>
-                                <button class="btn btn-sm btn-outline-primary mt-2 rounded-pill fw-semibold shadow-sm" id="btnScheduleReturn">
+                            <div class="text-end">
+                                <button class="btn btn-outline-primary rounded-pill fw-semibold shadow-sm" id="btnScheduleReturn">
                                     <i class="bi bi-calendar-plus me-1"></i> Agendar Retorno
                                 </button>
-                            </div> -->
+                            </div>
                         </div>
                     </div>
 
@@ -203,10 +212,27 @@
                                 <div class="tab-pane fade show active" id="followup-pane" role="tabpanel">
                                     <div class="row g-4 h-100">
                                         <div class="col-lg-4 col-xl-3 border-end">
-                                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                                <h6 class="fw-bold text-secondary mb-0"><i class="bi bi-clock-history me-2"></i>Histórico</h6>
+                                            <div class="timeline-filter-wrapper bg-light p-3 rounded-4 mb-4 border shadow-sm me-2">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <h6 class="fw-bold text-dark mb-0 fs-6"><i class="bi bi-journal-text text-primary me-2"></i>Histórico</h6>
+                                                    <button id="clear-timeline-filter" class="btn btn-sm btn-white text-danger shadow-sm rounded-circle d-flex align-items-center justify-content-center bg-white border" style="width: 32px; height: 32px; transition: all 0.2s;" title="Limpar Filtros" data-bs-toggle="tooltip"><i class="bi bi-eraser-fill"></i></button>
+                                                </div>
+                                                <div class="position-relative mb-2">
+                                                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted small"></i>
+                                                    <input type="text" id="timeline-search-filter" class="form-control form-control-sm bg-white border-0 shadow-sm rounded-pill ps-5 py-2" placeholder="Buscar palavra-chave...">
+                                                </div>
+                                                <div class="d-flex flex-column gap-2 mt-3">
+                                                    <div class="position-relative" title="Filtrar por Mês" data-bs-toggle="tooltip">
+                                                        <label class="form-label text-muted fw-semibold mb-1 ms-2" style="font-size:0.7rem;"><i class="bi bi-calendar-month me-1"></i>Mês</label>
+                                                        <input type="month" id="timeline-month-filter" class="form-control form-control-sm bg-white border-0 shadow-sm rounded-pill px-3 py-2 text-muted w-100" style="font-size: 0.78rem;">
+                                                    </div>
+                                                    <div class="position-relative" title="Filtrar por Dia Exato" data-bs-toggle="tooltip">
+                                                        <label class="form-label text-muted fw-semibold mb-1 ms-2" style="font-size:0.7rem;"><i class="bi bi-calendar-day me-1"></i>Dia exato</label>
+                                                        <input type="date" id="timeline-date-filter" class="form-control form-control-sm bg-white border-0 shadow-sm rounded-pill px-3 py-2 text-muted w-100" style="font-size: 0.78rem;">
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div class="timeline-modern pe-2" id="consultation-history-timeline" style="max-height: 60vh; overflow-y: auto;">
+                                            <div class="timeline-modern pe-2" id="consultation-history-timeline" style="max-height: 50vh; overflow-y: auto;">
                                             </div>
                                         </div>
                                         <div class="col-lg-8 col-xl-9">
@@ -458,6 +484,45 @@
             
             <div class="modal-backdrop" id="scheduleReturnModal"><div class="modal-content pro-modal modal-lg"><button class="modal-close" id="closeScheduleReturnModal">&times;</button><div class="modal-icon"><i class="bi bi-calendar2-plus"></i></div><h4 class="modal-title-pro">Agendar Retorno</h4><div id="return-schedule-flow"><div class="row gx-4"><div class="col-md-6"><div id="returnDatePicker" class="mb-4"></div></div><div class="col-md-6"><div class="time-slots-container"><h6 class="text-center mb-3" id="returnSelectedDate">Escolha uma data</h6><div class="time-slots-list" id="returnTimeSlots"></div><div id="return-slots-loader" class="text-center mt-3" style="display: none;"><span class="spinner-border spinner-border-sm text-primary"></span></div></div></div></div><div class="d-flex justify-content-end mt-3"><button type="button" class="btn btn-primary-custom" id="confirmReturnScheduleBtn" disabled><i class="bi bi-check-circle-fill me-2"></i> Confirmar</button></div></div></div></div>
             
+            <!-- Modal Editar Cadastro -->
+            <div class="modal-backdrop" id="editPatientModal" style="z-index: 1060;">
+                <div class="modal-content pro-modal">
+                    <button type="button" class="modal-close" id="closeEditPatientModal">&times;</button>
+                    <div class="modal-icon text-primary bg-primary bg-opacity-10"><i class="bi bi-person-vcard"></i></div>
+                    <h4 class="modal-title-pro mb-4">Editar Cadastro</h4>
+                    <form id="editPatientForm">
+                        <input type="hidden" id="editPatientId">
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Nome Completo</label>
+                            <input type="text" class="form-control bg-white shadow-sm" id="editPatientName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">E-mail</label>
+                            <input type="email" class="form-control bg-white shadow-sm" id="editPatientEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Celular (WhatsApp)</label>
+                            <input type="text" class="form-control bg-white shadow-sm" id="editPatientPhone">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label small text-muted d-block mb-2">Tipo de Atendimento</label>
+                            <div class="btn-group w-100" id="editPatientType" role="group">
+                                <button type="button" class="type-btn btn btn-outline-secondary fw-bold active" data-type="particular">
+                                    <i class="bi bi-person-fill me-1"></i> Particular
+                                </button>
+                                <button type="button" class="type-btn btn btn-outline-info fw-bold" data-type="convenio">
+                                    <i class="bi bi-shield-check me-1"></i> Convênio
+                                </button>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2 mt-4 border-top pt-4">
+                            <button type="button" class="btn btn-light fw-bold px-4 border" id="cancelEditPatientBtn">Cancelar</button>
+                            <button type="submit" class="btn btn-primary-custom px-4" id="saveEditPatientBtn">Salvar Alterações</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <!-- Widget Flutuante de Ajuda -->
             <div class="help-widget" data-bs-toggle="modal" data-bs-target="#helpManualModal" title="Central de Ajuda">
                 <i class="bi bi-question-lg"></i>

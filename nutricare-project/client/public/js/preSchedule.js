@@ -1,5 +1,21 @@
 // nutricare-project/client/public/js/preSchedule.js
 document.addEventListener("DOMContentLoaded", () => {
+    // --- ANIQUILADOR DE CACHE FANTASMA ---
+    if ('caches' in window) {
+        caches.keys().then(names => {
+            for (let name of names) caches.delete(name);
+        }).catch(e => console.error(e));
+    }
+
+    // --- REMOÇÃO FORÇADA DO SERVICE WORKER ---
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+            for (let registration of registrations) {
+                registration.unregister();
+            }
+        });
+    }
+
     const urlParams = new URLSearchParams(window.location.search);
     const nutriId = urlParams.get('nutriId');
     if (!nutriId) {
@@ -36,6 +52,8 @@ document.addEventListener("DOMContentLoaded", () => {
         slotDuration: null,
     };
 
+    let nutriServicePrices = {};
+
     let datepickerInstance = null;
 
     // FUNÇÕES DE UI
@@ -58,16 +76,34 @@ document.addEventListener("DOMContentLoaded", () => {
     const loadNutriName = async () => {
         toggleLoader(true);
         try {
-            const response = await fetch(`/api/auth/nutricionista/${nutriId}`);
+            const response = await fetch(`/api/auth/public/nutricionista/${nutriId}`);
             const result = await response.json();
-            if (result.success && elements.nutriNameDisplay) {
-                elements.nutriNameDisplay.textContent = `Dra. ${result.nutricionista.name}`;
+            const card = document.getElementById('nutriProfileCard');
+            if (result.success && result.nutricionista) {
+                const n = result.nutricionista;
+                const fullName = `Dra. ${n.name}`;
+                if (elements.nutriNameDisplay) elements.nutriNameDisplay.textContent = fullName;
+                const crnEl = document.getElementById('nutriCrn');
+                if (crnEl) crnEl.textContent = n.crnCode ? `CRN: ${n.crnCode}` : 'Nutricionista Clínica';
+                const avatarEl = document.getElementById('nutriAvatar');
+                if (avatarEl) {
+                    avatarEl.src = n.photo_url
+                        ? n.photo_url
+                        : `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(n.name)}`;
+                }
+                // Carrega preços dos serviços
+                if (n.service_prices) {
+                    nutriServicePrices = typeof n.service_prices === 'string'
+                        ? JSON.parse(n.service_prices)
+                        : n.service_prices;
+                }
+                if (card) card.classList.remove('d-none');
             } else {
-                elements.nutriNameDisplay.textContent = `Nutricionista (ID: ${nutriId})`;
+                if (elements.nutriNameDisplay) elements.nutriNameDisplay.textContent = 'Nutricionista';
+                if (card) card.classList.remove('d-none');
             }
         } catch (error) {
-            console.error('Erro ao buscar nome da Nutri:', error);
-            elements.nutriNameDisplay.textContent = `Nutricionista (Erro)`;
+            console.error('Erro ao buscar dados da Nutri:', error);
         } finally {
             toggleLoader(false);
         }
@@ -190,6 +226,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     patientName: encodeURIComponent(patientData.name),
                     patientEmail: encodeURIComponent(patientData.email),
                     patientPhone: encodeURIComponent(patientData.phone),
+                    t: new Date().getTime()
                 });
 
                 elements.anamneseLink.href = `/pages/paciente/anamnese.html?${urlParams.toString()}`;
@@ -208,14 +245,17 @@ document.addEventListener("DOMContentLoaded", () => {
     // INICIALIZAÇÃO E EVENT LISTENERS
     elements.serviceItems.forEach(item => {
         item.addEventListener('click', () => {
+            const serviceName = item.querySelector('h5').textContent;
+            const price = nutriServicePrices[serviceName];
             bookingState.service = {
-                name: item.querySelector('h5').textContent,
+                name: serviceName,
                 duration: parseInt(item.dataset.duration, 10),
-                // price: item.querySelector('strong').textContent
             };
 
-            elements.summaryService.textContent = bookingState.service.name;
-            elements.summaryPrice.textContent = bookingState.service.price;
+            elements.summaryService.textContent = serviceName;
+            elements.summaryPrice.textContent = price
+                ? price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                : 'A combinar';
 
             bookingState.date = null;
             bookingState.time = null;

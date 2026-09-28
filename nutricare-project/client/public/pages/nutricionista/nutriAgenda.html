@@ -47,6 +47,9 @@
                     <li class="nav-item">
                         <a href="nutriInvoicing.html" class="nav-link"><i class="bi bi-cash-stack"></i> Faturamento</a>
                     </li>
+                    <li class="nav-item">
+                        <a href="anamneseConfig.html" class="nav-link"><i class="bi bi-ui-checks"></i> Configurar Ficha</a>
+                    </li>
                 </ul>
             </nav>
             <div class="sidebar-footer">
@@ -85,11 +88,11 @@
             <div class="card data-card calendar-card-pro">
                 <div class="calendar-header-pro">
                     <div class="d-flex align-items-center gap-3">
-                        <h2 id="currentDayHeader" class="mb-0">Hoje</h2>
                         <div class="calendar-nav-pro">
                             <button id="prevDayBtn" class="btn btn-icon"><i class="bi bi-chevron-left"></i></button>
                             <button id="nextDayBtn" class="btn btn-icon"><i class="bi bi-chevron-right"></i></button>
                         </div>
+                        <h2 id="currentDayHeader" class="mb-0">Hoje</h2>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                          <input type="date" id="datePicker" class="form-control form-control-sm" style="width: auto;">
@@ -132,10 +135,13 @@
                 <span id="modalPatientEmail" class="fw-bold"></span>
             </div>
 
-            <a id="btnWppContact" class="btn-wpp-large w-100" target="_blank">
-                <i class="bi bi-whatsapp me-2"></i> Chamar no WhatsApp
+            <a id="btnWppContact" class="btn btn-primary-custom btn-lg w-100 mt-2 text-decoration-none d-flex align-items-center justify-content-center" target="_blank">
+                <i class="bi bi-envelope-fill me-2"></i> Enviar E-mail
             </a>
-            
+            <button id="btnCancelAppointment" class="btn btn-outline-danger w-100 mt-2 fw-bold rounded-pill">
+                <i class="bi bi-x-circle me-2"></i> Cancelar Consulta
+            </button>
+
             <p class="text-muted small mt-3">A mensagem de saudação será preenchida automaticamente.</p>
         </div>
     </div>
@@ -143,9 +149,9 @@
     <div class="modal-backdrop" id="scheduleSettingsModal">
         <div class="modal-content pro-modal modal-lg">
             <button class="modal-close" id="closeScheduleSettingsModal">&times;</button>
-            <div class="modal-icon"><i class="bi bi-calendar2-heart"></i></div>
+            <!-- <div class="modal-icon"><i class="bi bi-calendar2-heart"></i></div> -->
             <h4 class="modal-title-pro">Gerador de Agenda Recorrente</h4>
-            <p class="modal-subtitle-pro">Vamos organizar o seu mês! 🗓️ Clique nos dias em que irá atender e defina os seus horários de trabalho. <br>Uma dica de ouro 💎: Faça isso sempre no <strong>início de cada mês</strong> para manter a sua agenda impecável! ✨</p>
+            <p class="modal-subtitle-pro">Vamos organizar o seu mês! 🗓️ Clique nos dias em que irá atender e defina os seus horários de trabalho.</p>
             
             <form id="scheduleSettingsForm">
                 <div class="row">
@@ -181,7 +187,36 @@
                                 <input type="radio" name="slotDuration" id="d45" value="45"><label for="d45">45 min</label>
                                 <input type="radio" name="slotDuration" id="d60" value="60" checked><label for="d60">60 min</label>
                             </div>
-                            
+
+                            <h6 class="pro-form-label">Intervalo entre consultas</h6>
+                            <div class="input-group input-group-sm mb-4" style="max-width: 170px;">
+                                <input type="number" class="form-control pro-form-control" id="bufferTime" min="0" max="60" value="0">
+                                <span class="input-group-text">min</span>
+                            </div>
+
+                            <h6 class="pro-form-label">Pausas <span class="text-muted fw-normal small">(almoço, café...)</span></h6>
+                            <div class="row g-2 align-items-end mb-2">
+                                <div class="col-12">
+                                    <input type="text" class="form-control form-control-sm pro-form-control" id="breakName" placeholder="Nome (ex: Almoço)" list="breakSuggestions" autocomplete="off">
+                                    <datalist id="breakSuggestions">
+                                        <option value="Café da Manhã"></option>
+                                        <option value="Almoço"></option>
+                                        <option value="Café da Tarde"></option>
+                                        <option value="Jantar"></option>
+                                    </datalist>
+                                </div>
+                                <div class="col-5">
+                                    <input type="time" class="form-control form-control-sm pro-form-control" id="breakStart" step="300" aria-label="Início da pausa">
+                                </div>
+                                <div class="col-5">
+                                    <input type="time" class="form-control form-control-sm pro-form-control" id="breakEnd" step="300" aria-label="Fim da pausa">
+                                </div>
+                                <div class="col-2 d-grid">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="addBreakBtn" title="Adicionar pausa"><i class="bi bi-plus-lg"></i></button>
+                                </div>
+                            </div>
+                            <div id="breaksList" class="mb-4"></div>
+
                             <div id="schedule-settings-message" class="form-message-container mb-3"></div>
                             
                             <button type="submit" class="btn btn-primary-custom w-100 mt-2 position-relative" id="generateScheduleBtn">
@@ -220,9 +255,9 @@
                             </div>
                         </div>
                         <div class="accordion-item mb-3 border rounded shadow-sm">
-                            <h2 class="accordion-header"><button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#manualAgenda2"><i class="bi bi-whatsapp text-success me-3 fs-5"></i> Como confirmar a consulta com o paciente?</button></h2>
+                            <h2 class="accordion-header"><button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#manualAgenda2"><i class="bi bi-envelope text-primary me-3 fs-5"></i> Como confirmar a consulta com o paciente?</button></h2>
                             <div id="manualAgenda2" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
-                                <div class="accordion-body text-secondary">Na sua timeline diária, clique sobre o card de qualquer consulta marcada. Um modal se abrirá com os detalhes do paciente e um botão <strong>"Chamar no WhatsApp"</strong>, que já inclui uma mensagem automática de confirmação!</div>
+                                <div class="accordion-body text-secondary">Na sua timeline diária, clique sobre o card de qualquer consulta marcada. Um modal se abrirá com os detalhes do paciente e um botão <strong>"Enviar E-mail"</strong>, que já inclui uma mensagem automática de confirmação!</div>
                             </div>
                         </div>
                     </div>

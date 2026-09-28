@@ -51,6 +51,9 @@
                     <li class="nav-item">
                         <a href="nutriInvoicing.html" class="nav-link"><i class="bi bi-cash-stack"></i> Faturamento</a>
                     </li>
+                    <li class="nav-item">
+                        <a href="anamneseConfig.html" class="nav-link"><i class="bi bi-ui-checks"></i> Configurar Ficha</a>
+                    </li>
                 </ul>
             </nav>
             <div class="sidebar-footer">
@@ -109,16 +112,6 @@
                                 <p class="config-card-desc">Alteração de senha e proteção da conta.</p>
                             </div>
                         </div>
-
-                        <div class="col-md-4">
-                            <div class="config-nav-card" onclick="openSection('agenda')">
-                                <div class="config-icon-wrapper">
-                                    <i class="bi bi-calendar-range"></i>
-                                </div>
-                                <h3 class="config-card-title">Pausas</h3>
-                                <p class="config-card-desc">Intervalos entre consultas, horário de almoço e cafés.</p>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -132,6 +125,26 @@
                         </div>
                         <div class="section-body">
                             <form id="detailsForm" class="row g-3" style="max-width: 800px; margin: 0 auto;">
+
+                                <!-- Foto de perfil -->
+                                <div class="col-12 d-flex align-items-center gap-4 mb-2">
+                                    <div class="position-relative" style="width:90px;height:90px;">
+                                        <img id="profilePhotoPreview" src="https://api.dicebear.com/8.x/initials/svg?seed=N"
+                                            class="rounded-circle border border-3 shadow object-fit-cover"
+                                            style="width:90px;height:90px;object-fit:cover;" alt="Foto de perfil">
+                                        <button type="button" id="btnChangePhoto"
+                                            class="btn btn-sm btn-primary rounded-circle position-absolute bottom-0 end-0 shadow"
+                                            style="width:28px;height:28px;padding:0;" title="Alterar foto">
+                                            <i class="bi bi-camera-fill" style="font-size:0.75rem;"></i>
+                                        </button>
+                                    </div>
+                                    <div>
+                                        <p class="fw-bold text-dark mb-0">Foto de Perfil</p>
+                                        <small class="text-muted">Exibida no pré-agendamento e no sistema. JPG ou PNG, máx. 5MB.</small>
+                                    </div>
+                                    <input type="file" id="photoFileInput" class="d-none" accept="image/jpeg,image/png">
+                                </div>
+
                                 <div class="col-12">
                                     <label class="form-label">Nome Completo</label>
                                     <input type="text" class="form-control" id="name" required>
@@ -144,14 +157,51 @@
                                     <label class="form-label">Celular (WhatsApp)</label>
                                     <input type="tel" class="form-control" id="phone" required>
                                 </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">CRN <span class="text-muted small fw-normal">(Conselho Regional de Nutrição)</span></label>
+                                    <input type="text" class="form-control" id="crnCode" placeholder="Ex: CRN-3 12345">
+                                </div>
+                                <div class="col-12 mt-3">
+                                    <label class="form-label d-flex align-items-center"><i class="bi bi-geo-alt-fill text-danger me-2"></i> Endereço de Atendimento</label>
+                                    <input type="text" class="form-control" id="address" placeholder="Ex: Rua das Flores, 123, Sala 4 - São Paulo/SP">
+                                    <div class="form-text">Será enviado automaticamente nos e-mails de confirmação de consulta para o paciente.</div>
+                                </div>
                             <div class="col-12 mt-4">
-                                <label class="form-label d-flex align-items-center"><i class="bi bi-whatsapp text-success me-2"></i> Mensagem Padrão do WhatsApp</label>
-                                <textarea class="form-control" id="wppMessage" rows="3" placeholder="Olá, {paciente}! Aqui é a nutri {nutri}. Vi que temos uma consulta de {servico} no dia {data} às {hora}. Podemos confirmar?"></textarea>
+                                <label class="form-label d-flex align-items-center"><i class="bi bi-envelope-at-fill text-primary me-2"></i> Mensagem Padrão (Enviada por E-mail)</label>
+                                <textarea class="form-control" id="wppMessage" rows="3" placeholder="Olá, {paciente}! Aqui é a Dra. {nutri}. Vi que temos uma consulta de {servico} no dia {data} às {hora}. Podemos confirmar?"></textarea>
                                 <div class="form-text mt-2">
                                     Variáveis automáticas que você pode usar: <br>
                                     <span class="badge bg-light text-dark border">{paciente}</span> <span class="badge bg-light text-dark border">{nutri}</span> <span class="badge bg-light text-dark border">{servico}</span> <span class="badge bg-light text-dark border">{data}</span> <span class="badge bg-light text-dark border">{hora}</span>
                                 </div>
                             </div>
+                                <!-- Preços dos Serviços -->
+                                <div class="col-12 mt-4">
+                                    <label class="form-label fw-bold"><i class="bi bi-tag-fill text-primary me-2"></i>Preços dos Serviços <span class="text-muted fw-normal small">(opcional — exibido no pré-agendamento)</span></label>
+                                    <div class="row g-2 mt-1">
+                                        <div class="col-md-4">
+                                            <label class="form-label small text-muted">Primeira Consulta</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light border-0">R$</span>
+                                                <input type="number" min="0" step="0.01" class="form-control service-price-input" data-service="Primeira Consulta" placeholder="0,00">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small text-muted">Consulta de Retorno</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light border-0">R$</span>
+                                                <input type="number" min="0" step="0.01" class="form-control service-price-input" data-service="Consulta de Retorno" placeholder="0,00">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small text-muted">Acompanhamento Online</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light border-0">R$</span>
+                                                <input type="number" min="0" step="0.01" class="form-control service-price-input" data-service="Acompanhamento Online" placeholder="0,00">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="col-12 mt-4">
                                     <button type="submit" class="btn btn-primary-custom">
                                         <i class="bi bi-check-circle"></i> Salvar Alterações
@@ -188,114 +238,9 @@
                         </div>
                     </div>
 
-                    <div class="config-section d-none" id="section-agenda">
-                        <div class="section-header">
-                            <button class="btn btn-back" onclick="closeSection()"><i
-                                    class="bi bi-arrow-left"></i></button>
-                            <h4 class="mb-0">Configuração de Agenda e Intervalos</h4>
-                        </div>
-
-                        <div class="section-body">
-                            <form id="agendaConfigForm" style="max-width: 800px; margin: 0 auto;">
-
-                                <div class="card bg-light border-0 mb-4">
-                                    <div class="card-body">
-                                        <div class="d-flex align-items-center mb-3">
-                                            <div class="bg-white p-2 rounded-circle shadow-sm me-3 text-primary-green">
-                                                <i class="bi bi-hourglass-split fs-4"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="fw-bold mb-0">Intervalo entre Consultas</h6>
-                                                <small class="text-muted">Tempo de preparação pós-atendimento.</small>
-                                            </div>
-                                        </div>
-                                        <div class="input-group" style="max-width: 200px;">
-                                            <input type="number" class="form-control" id="bufferTime" min="0" max="60"
-                                                value="0">
-                                            <span class="input-group-text">minutos</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h5 class="fw-bold m-0"><i class="bi bi-cup-hot me-2"></i>Pausas de Alimentação</h5>
-                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3"
-                                        onclick="openBreakModal()">
-                                        <i class="bi bi-plus-lg"></i> Adicionar Pausa
-                                    </button>
-                                </div>
-
-
-                                <div id="breaksList" class="mb-4">
-                                    <div class="text-center py-5 text-muted border border-dashed rounded bg-light"
-                                        id="emptyBreaksState">
-                                        <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
-                                        Nenhuma pausa configurada.<br>Clique em "Adicionar Pausa" para começar.
-                                    </div>
-                                </div>
-
-                                <hr class="my-4">
-
-                                <div class="d-flex justify-content-end">
-                                    <button type="submit" class="btn btn-primary-custom px-4 py-2">
-                                        <span class="btn-text"><i class="bi bi-save"></i> Salvar Configurações</span>
-                                    </button>
-                                </div>
-
-                            </form>
-                        </div>
-                    </div>
-
                 </div>
             </div>
         </main>
-    </div>
-
-    <div class="modal fade" id="addBreakModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content pro-modal modal-lg">
-                <div class="modal-header border-bottom-0 pb-0">
-                    <h5 class="modal-title fw-bold">Adicionar Pausa</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body pt-4">
-                    <form id="addBreakForm">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Tipo de Pausa</label>
-                            <select class="form-select" id="breakType" required onchange="toggleCustomType(this)">
-                                <option value="" selected disabled>Selecione...</option>
-                                <option value="Café da Manhã">Café da Manhã</option>
-                                <option value="Almoço">Almoço</option>
-                                <option value="Café da Tarde">Café da Tarde</option>
-                                <option value="Jantar">Jantar</option>
-                                <option value="Outro">Outro (Personalizado)</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3 d-none" id="customTypeDiv">
-                            <label class="form-label">Nome da Pausa</label>
-                            <input type="text" class="form-control" id="customBreakName"
-                                placeholder="Ex: Buscar filhos">
-                        </div>
-
-                        <div class="row">
-                            <div class="col-6">
-                                <label class="form-label">Início</label>
-                                <input type="time" class="form-control" id="breakStart" required>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label">Fim</label>
-                                <input type="time" class="form-control" id="breakEnd" required>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer border-top-0">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary-custom" onclick="confirmAddBreak()">Confirmar</button>
-                </div>
-            </div>
-        </div>
     </div>
 
     <div id="systemToast" class="custom-toast">
@@ -347,7 +292,7 @@
                             </h2>
                             <div id="manualConfig1" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
                                 <div class="accordion-body text-secondary">
-                                    Acesse o card <strong>"Pausas"</strong>. Lá você pode definir o tempo de intervalo entre consultas (ex: 10 min para limpar a sala) e clicar em <strong>"Adicionar Pausa"</strong> para bloquear horários da sua agenda pública como Almoço, Café da Tarde ou imprevistos pessoais.
+                                    As pausas (almoço, café) e o intervalo entre consultas agora são definidos direto na tela <strong>"Minha Agenda"</strong>, no botão <strong>"Gerar Horários"</strong>. Ali você bloqueia horários da sua agenda pública ao mesmo tempo em que gera os dias de atendimento.
                                 </div>
                             </div>
                         </div>
@@ -371,337 +316,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script type="module">
-        // Variáveis globais do módulo
-        let currentBreaks = [];
-        let breakModalInstance = null;
-
-        // ================= INICIALIZAÇÃO =================
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Inicializa o Modal do Bootstrap
-            const modalEl = document.getElementById('addBreakModal');
-            if (modalEl) {
-                breakModalInstance = new bootstrap.Modal(modalEl);
-            }
-
-            // Carrega os dados iniciais
-            await loadNutriData();
-
-            // Configura o Logout
-            setupLogout();
-        });
-
-        function setupLogout() {
-            const logoutBtn = document.getElementById('logoutBtn');
-            const logoutModal = document.getElementById('logoutModal');
-            const btnYes = document.getElementById('btnYes');
-            const btnNo = document.getElementById('btnNo');
-            const closeLogoutModal = document.getElementById('closeLogoutModal');
-
-            if (logoutBtn) logoutBtn.addEventListener('click', () => logoutModal.classList.add('is-visible'));
-            if (closeLogoutModal) closeLogoutModal.addEventListener('click', () => logoutModal.classList.remove('is-visible'));
-            if (btnNo) btnNo.addEventListener('click', () => logoutModal.classList.remove('is-visible'));
-            if (btnYes) btnYes.addEventListener('click', async () => {
-                try {
-                    await fetch('/api/auth/logout', { method: 'POST' });
-                    window.location.href = '../login.html';
-                } catch (error) {
-                    console.error('Erro ao sair:', error);
-                    window.location.href = '../login.html';
-                }
-            });
-        }
-
-        // ================= FUNÇÕES DE NAVEGAÇÃO =================
-
-        window.openSection = (sectionId) => {
-            const menu = document.getElementById('settingsMenu');
-            const content = document.getElementById('settingsContent');
-
-            menu.classList.add('hidden');
-            content.classList.add('active');
-            document.querySelectorAll('.config-section').forEach(el => el.classList.add('d-none'));
-
-            const target = document.getElementById(`section-${sectionId}`);
-            if (target) {
-                target.classList.remove('d-none');
-            }
-        };
-
-        window.closeSection = () => {
-            document.getElementById('settingsContent').classList.remove('active');
-            document.getElementById('settingsMenu').classList.remove('hidden');
-        };
-
-        // ================= GESTÃO DE DADOS =================
-
-        async function loadNutriData() {
-            try {
-                const resProfile = await fetch('/api/auth/nutricionista/details');
-                console.log("resProfile = ", resProfile)
-                if (!resProfile.ok) throw new Error(`Erro: ${resProfile.status}`);
-                const resultProfile = await resProfile.json();
-
-                if (resultProfile.success) {
-                    const data = resultProfile.data;
-                    if (document.getElementById('name')) document.getElementById('name').value = data.name || '';
-                    if (document.getElementById('email')) document.getElementById('email').value = data.email || '';
-                    if (document.getElementById('phone')) document.getElementById('phone').value = data.phone || '';
-                    if (document.getElementById('wppMessage')) document.getElementById('wppMessage').value = data.wppMessage || '';
-                }
-
-                // 2. Carregar Configurações de Agenda
-                const resAgenda = await fetch('/api/auth/schedule/config');
-                if (resAgenda.ok) {
-                    const dataAgenda = await resAgenda.json();
-                    if (dataAgenda.success && dataAgenda.config) {
-                        if (document.getElementById('bufferTime')) {
-                            document.getElementById('bufferTime').value = dataAgenda.config.bufferTime || 0;
-                        }
-                        currentBreaks = dataAgenda.config.breakTimes || [];
-                        renderBreaksList();
-                    }
-                }
-            } catch (error) {
-                console.error('Erro ao carregar dados:', error);
-                showToast('Erro ao carregar dados. Verifique a conexão.', 'error');
-            }
-        }
-
-        // ================= LÓGICA DE PAUSAS =================
-
-        window.openBreakModal = () => {
-            const form = document.getElementById('addBreakForm');
-            if (form) form.reset();
-            const customDiv = document.getElementById('customTypeDiv');
-            if (customDiv) customDiv.classList.add('d-none');
-            if (breakModalInstance) breakModalInstance.show();
-        };
-
-        window.toggleCustomType = (select) => {
-            const customDiv = document.getElementById('customTypeDiv');
-            const customInput = document.getElementById('customBreakName');
-            if (select.value === 'Outro') {
-                customDiv.classList.remove('d-none');
-                customInput.required = true;
-            } else {
-                customDiv.classList.add('d-none');
-                customInput.required = false;
-            }
-        };
-
-        window.confirmAddBreak = () => {
-            const typeSelect = document.getElementById('breakType');
-            const start = document.getElementById('breakStart').value;
-            const end = document.getElementById('breakEnd').value;
-            const customInput = document.getElementById('customBreakName');
-
-            let name = typeSelect.value;
-            if (name === 'Outro') {
-                name = customInput.value;
-            }
-
-            // Validação com Toast em vez de Alert
-            if (!name || !start || !end) {
-                showToast('Preencha todos os campos obrigatórios.', 'error');
-                return;
-            }
-            if (start >= end) {
-                showToast('O horário final deve ser maior que o inicial.', 'error');
-                return;
-            }
-
-            // Adicionar ao array
-            currentBreaks.push({ name, start, end });
-            // Ordenar por horário de início
-            currentBreaks.sort((a, b) => a.start.localeCompare(b.start));
-
-            renderBreaksList();
-            if (breakModalInstance) breakModalInstance.hide();
-            showToast('Pausa adicionada com sucesso!', 'success');
-        };
-
-        window.removeBreak = (index) => {
-            window.showConfirm('Remover Pausa', 'Tem certeza que deseja remover esta pausa?', 'Sim, remover', 'danger', () => {
-                currentBreaks.splice(index, 1);
-                renderBreaksList();
-                showToast('Pausa removida.', 'success');
-            });
-        };
-
-        function renderBreaksList() {
-            const container = document.getElementById('breaksList');
-            const emptyState = document.getElementById('emptyBreaksState');
-            container.innerHTML = '';
-
-            if (currentBreaks.length === 0) {
-                container.appendChild(emptyState);
-                emptyState.style.display = 'block';
-                return;
-            }
-
-            emptyState.style.display = 'none';
-            container.appendChild(emptyState);
-
-            currentBreaks.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = 'break-list-item';
-                div.innerHTML = `
-                    <div class="break-info">
-                        <h6>${item.name}</h6>
-                        <span><i class="bi bi-clock"></i> ${item.start} - ${item.end}</span>
-                    </div>
-                    <button type="button" class="btn btn-outline-danger btn-sm border-0" onclick="removeBreak(${index})" title="Remover">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        // ================= SUBMISSÕES DE FORMULÁRIO =================
-
-        // 1. Configuração da Agenda (CORRIGIDO)
-        const agendaForm = document.getElementById('agendaConfigForm');
-        if (agendaForm) {
-            agendaForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const btn = e.target.querySelector('button[type="submit"]');
-                const originalContent = btn.innerHTML;
-
-                // Feedback visual de carregamento
-                btn.disabled = true;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
-
-                const payload = {
-                    bufferTime: parseInt(document.getElementById('bufferTime').value) || 0,
-                    breakTimes: currentBreaks
-                };
-
-                try {
-                    const res = await fetch('/api/auth/schedule/config/update', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    const result = await res.json();
-
-                    if (result.success) {
-                        showToast('Configurações salvas com sucesso!', 'success');
-                    } else {
-                        showToast(result.message || 'Erro ao salvar.', 'error');
-                    }
-                } catch (err) {
-                    console.error(err);
-                    showToast('Erro de conexão ao salvar.', 'error');
-                } finally {
-                    // Restaura o botão
-                    setTimeout(() => {
-                        btn.disabled = false;
-                        btn.innerHTML = originalContent;
-                    }, 500); // Pequeno delay para usuário ver o estado
-                }
-            });
-        }
-
-        // 2. Perfil
-        const detailsForm = document.getElementById('detailsForm');
-        if (detailsForm) {
-            detailsForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const btn = e.target.querySelector('button[type="submit"]');
-                const originalContent = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...';
-
-                const payload = {
-                    name: document.getElementById('name').value,
-                    email: document.getElementById('email').value,
-                    phone: document.getElementById('phone').value,
-                    wppMessage: document.getElementById('wppMessage').value
-                };
-
-                try {
-                    const res = await fetch('/api/auth/me/update', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    const result = await res.json();
-                    if (result.success) showToast('Perfil atualizado!', 'success');
-                    else showToast('Erro ao atualizar.', 'error');
-                } catch (e) {
-                    showToast('Erro de conexão.', 'error');
-                } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = originalContent;
-                }
-            });
-        }
-
-        // 3. Senha
-        const passwordForm = document.getElementById('passwordForm');
-        if (passwordForm) {
-            passwordForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const current = document.getElementById('currentPassword').value;
-                const newPass = document.getElementById('newPassword').value;
-                const confirmPass = document.getElementById('confirmPassword').value;
-
-                if (newPass !== confirmPass) {
-                    showToast('As senhas não coincidem.', 'error');
-                    return;
-                }
-
-                const btn = e.target.querySelector('button[type="submit"]');
-                const originalContent = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processando...';
-
-                try {
-                    const res = await fetch('/api/auth/me/password', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ currentPassword: current, newPassword: newPass })
-                    });
-                    const result = await res.json();
-
-                    if (result.success) {
-                        showToast('Senha alterada com sucesso!', 'success');
-                        e.target.reset();
-                    } else {
-                        showToast(result.message || 'Erro ao alterar senha.', 'error');
-                    }
-                } catch (e) {
-                    showToast('Erro de conexão.', 'error');
-                } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = originalContent;
-                }
-            });
-        }
-
-        // ================= SISTEMA DE TOAST (FEEDBACK) =================
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('systemToast');
-            const msgEl = document.getElementById('toastMessage');
-            const iconEl = toast.querySelector('.toast-icon');
-
-            msgEl.textContent = message;
-            toast.className = `custom-toast show ${type}`;
-
-            if (type === 'success') {
-                iconEl.className = 'bi bi-check-circle-fill toast-icon';
-            } else {
-                iconEl.className = 'bi bi-exclamation-triangle-fill toast-icon';
-            }
-
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3500);
-        }
-    </script>
+    <script type="module" src="../../js/dashboard-nutricionista.js"></script>
 </body>
 
 </html>

@@ -485,6 +485,7 @@ body {
 
 .auth-card-back {
     transform: rotateY(180deg);
+    overflow-y: auto;
 }
 
 .auth-title {
@@ -1029,6 +1030,13 @@ body {
     font-weight: 700;
     font-size: 1.5rem;
     color: var(--dark-charcoal);
+    white-space: nowrap;
+}
+
+.calendar-nav-pro {
+    display: flex;
+    gap: 0.5rem;
+    flex: 0 0 auto;
 }
 
 .calendar-nav-pro .btn-icon {
@@ -3524,7 +3532,6 @@ body {
 /* =================================================================== */
 
 .auth-card-front {
-    position: relative;
     overflow: hidden; /* Mantém as views ocultas sem quebrar o layout */
 }
 
@@ -3859,6 +3866,7 @@ body {
 [data-theme="dark"] .form-control-soap { background-color: #2a2a2a !important; color: #fff !important; border-color: #555 !important; }
 [data-theme="dark"] .file-card { background-color: #2a2a2a !important; border-color: #444 !important; }
 [data-theme="dark"] .soap-section { background-color: #2a2a2a !important; border-color: #444 !important; }
+[data-theme="dark"] .soap-section-title { color: #cfd3d7 !important; }
 
 /* =================================================================== */
 /* ======================= AUTOCOMPLETE BUSCA GLOBAL ================= */
@@ -4019,6 +4027,9 @@ body {
 [data-theme="dark"] .action-btn-sq:hover { background-color: #333 !important; }
 [data-theme="dark"] .patient-avatar-pro { border-color: #1e1e1e !important; background-color: #333 !important; }
 
+[data-theme="dark"] .timeline-filter-wrapper { background-color: #1e1e1e !important; border-color: #333 !important; }
+[data-theme="dark"] .timeline-filter-wrapper input { background-color: #2a2a2a !important; color: #fff !important; }
+
 [data-theme="dark"] .anamnese-card { background-color: #1e1e1e !important; border-color: #333 !important; }
 
 [data-theme="dark"] .table-modern-pro thead th { border-bottom-color: #333 !important; background-color: #1e1e1e !important; color: #a0a0a0 !important; }
@@ -4070,3 +4081,177 @@ body {
     margin-top: 5px;
 }
 [data-theme="dark"] .pwa-install-prompt { background-color: #1e1e1e !important; border-color: #333 !important; }
+
+/* =================================================================== */
+/* FAIXA DE DESTAQUE LATERAL (ACCENT)                                   */
+/* Corrige o uso de "border-start border-4 border-X" do Bootstrap, que  */
+/* pintava os 4 lados do card. Aqui só a borda esquerda recebe a cor,   */
+/* mantendo o visual de card suave. Classes com 2 seletores para vencer */
+/* os overrides do tema escuro.                                         */
+/* =================================================================== */
+.glass-card.accent-primary    { border-left: 4px solid var(--bs-primary, #0d6efd) !important; }
+.glass-card.accent-info       { border-left: 4px solid var(--bs-info, #0dcaf0) !important; }
+.glass-card.accent-success    { border-left: 4px solid var(--bs-success, #198754) !important; }
+.glass-card.accent-warning    { border-left: 4px solid var(--bs-warning, #ffc107) !important; }
+.glass-card.accent-danger     { border-left: 4px solid var(--bs-danger, #dc3545) !important; }
+.form-question.accent-warning { border-left: 4px solid var(--bs-warning, #ffc107) !important; }
+.question-card.accent-warning { border-left: 4px solid var(--bs-warning, #ffc107) !important; }
+
+/* =================================================================== */
+/* PLANO ALIMENTAR (visão do paciente) - cardápio redesenhado          */
+/* =================================================================== */
+.meal-plan-hero {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem 1.4rem;
+    border-radius: 22px;
+    background: linear-gradient(135deg, #2a9d8f 0%, #21867a 100%);
+    color: #fff;
+    box-shadow: 0 12px 30px rgba(42, 157, 143, 0.28);
+}
+.meal-plan-hero h5 { color: #fff; }
+.meal-plan-hero-icon {
+    flex: 0 0 auto;
+    width: 52px; height: 52px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.18);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem;
+}
+.meal-card {
+    background: #fff;
+    border-radius: 20px;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+.meal-card-head {
+    display: flex; align-items: center; gap: 0.85rem;
+    padding: 0.9rem 1.2rem;
+    border-bottom: 1px solid #f1f5f9;
+    background: #fcfdfe;
+}
+.meal-icon-badge {
+    flex: 0 0 auto;
+    width: 44px; height: 44px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem;
+    color: var(--primary-green, #2a9d8f);
+    background: rgba(42, 157, 143, 0.10);
+}
+.meal-card-title {
+    margin: 0;
+    font-weight: 700;
+    color: var(--dark-charcoal, #264653);
+    font-size: 1.02rem;
+    line-height: 1.2;
+}
+.meal-time-pill {
+    display: inline-flex; align-items: center;
+    font-size: 0.72rem; font-weight: 600;
+    color: var(--primary-green, #2a9d8f);
+    background: rgba(42, 157, 143, 0.10);
+    padding: 0.12rem 0.6rem; border-radius: 999px;
+    margin-top: 0.3rem;
+}
+.meal-card-body { padding: 1rem 1.2rem 1.2rem; }
+.meal-food-list { display: flex; flex-direction: column; gap: 0.4rem; }
+.meal-food-row {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0.8rem;
+    background: #f8fafc;
+    border-radius: 12px;
+}
+.meal-food-name { font-weight: 500; color: #334155; }
+.meal-food-qty {
+    flex: 0 0 auto;
+    font-weight: 700; font-size: 0.8rem;
+    color: var(--primary-green, #2a9d8f);
+    background: rgba(42, 157, 143, 0.10);
+    padding: 0.2rem 0.7rem; border-radius: 999px;
+    white-space: nowrap;
+}
+.meal-option-block {
+    border: 1px dashed #d8e0e6;
+    border-radius: 14px;
+    padding: 0.85rem;
+}
+.meal-option-label {
+    font-size: 0.68rem; font-weight: 800; letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--primary-green, #2a9d8f);
+    margin-bottom: 0.5rem;
+}
+.meal-option-divider {
+    text-align: center; position: relative; margin: 0.7rem 0;
+}
+.meal-option-divider::before {
+    content: ""; position: absolute; top: 50%; left: 0; right: 0;
+    height: 1px; background: #e2e8f0;
+}
+.meal-option-divider span {
+    position: relative;
+    background: #fff; padding: 0 0.7rem;
+    font-size: 0.7rem; font-weight: 800; color: #94a3b8;
+}
+.meal-note-box, .meal-recipe-box {
+    display: flex; gap: 0.6rem; align-items: flex-start;
+    margin-top: 0.85rem;
+    padding: 0.75rem 0.9rem;
+    border-radius: 12px;
+    font-size: 0.85rem; line-height: 1.45;
+    color: #475569;
+}
+.meal-note-box { background: rgba(13, 202, 240, 0.08); }
+.meal-note-box i { color: #0dcaf0; font-size: 1rem; margin-top: 0.1rem; }
+.meal-recipe-box { background: rgba(231, 111, 81, 0.08); }
+.meal-recipe-box i { color: #e76f51; font-size: 1rem; margin-top: 0.1rem; }
+.meal-box-label {
+    display: block; font-weight: 700; font-size: 0.72rem; text-transform: uppercase;
+    letter-spacing: 0.03em; color: #64748b; margin-bottom: 0.15rem;
+}
+
+/* Tema escuro - cardápio */
+[data-theme="dark"] .meal-card { background: #1e1e1e !important; border-color: #333 !important; }
+[data-theme="dark"] .meal-card-head { background: #242424 !important; border-bottom-color: #333 !important; }
+[data-theme="dark"] .meal-card-title { color: #f1f5f9 !important; }
+[data-theme="dark"] .meal-food-row { background: #262626 !important; }
+[data-theme="dark"] .meal-food-name { color: #d0d0d0 !important; }
+[data-theme="dark"] .meal-option-block { border-color: #3a3a3a !important; }
+[data-theme="dark"] .meal-option-divider::before { background: #3a3a3a !important; }
+[data-theme="dark"] .meal-option-divider span { background: #1e1e1e !important; color: #888 !important; }
+[data-theme="dark"] .meal-note-box, [data-theme="dark"] .meal-recipe-box { color: #c0c0c0 !important; }
+[data-theme="dark"] .meal-box-label { color: #9aa4ad !important; }
+
+/* Seletor de seções da tela de Dieta (Cardápio / Compras / Chef IA) */
+.diet-segment {
+    display: flex;
+    gap: 0.3rem;
+    padding: 0.3rem;
+    background: #eef2f6;
+    border-radius: 999px;
+}
+.diet-segment-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    border-radius: 999px;
+    padding: 0.5rem 0.4rem;
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: #64748b;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+.diet-segment-btn i { margin-right: 0.25rem; }
+.diet-segment-btn.active {
+    background: #fff;
+    color: var(--primary-green, #2a9d8f);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+[data-theme="dark"] .diet-segment { background: #262626; }
+[data-theme="dark"] .diet-segment-btn { color: #9aa4ad; }
+[data-theme="dark"] .diet-segment-btn.active { background: #1e1e1e; color: var(--primary-green, #2a9d8f); }

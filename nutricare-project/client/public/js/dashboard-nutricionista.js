@@ -68,9 +68,33 @@ window.showConfirm = function(title, message, confirmText, confirmClass, onConfi
 
 document.addEventListener('DOMContentLoaded', async () => {
 
+    // --- REMOÇÃO FORÇADA DO SERVICE WORKER (PWA) — só uma vez, sem bloquear a navegação ---
+    if ('serviceWorker' in navigator && !localStorage.getItem('swCleaned')) {
+        navigator.serviceWorker.getRegistrations()
+            .then(regs => regs.forEach(r => r.unregister()))
+            .catch(() => {});
+        localStorage.setItem('swCleaned', '1');
+    }
+
+    const pathLower = window.location.pathname.toLowerCase();
+    const searchLower = window.location.search.toLowerCase();
+    const publicPaths = ['preschedule', 'pre-schedule', 'pre_schedule', 'preagendamento', 'pre-agendamento', 'preanamnese', 'pre-anamnese', 'pre_anamnese', 'anamnese', 'login', 'register'];
+    
+    // BALA DE PRATA: Se a URL tiver nutriId, é garantido que é página pública!
+    const isPublicPage = publicPaths.some(p => pathLower.includes(p)) || searchLower.includes('nutriid=') || searchLower.includes('appointmentid=');
+
     const user = await verifySession();
     if (!user) {
-        window.location.href = '/pages/login.html';
+        if (!isPublicPage) {
+            // Se cair aqui indevidamente, limpamos o cache do SW para evitar loops fantasma
+            if ('caches' in window) {
+                try {
+                    const cacheNames = await caches.keys();
+                    for (let name of cacheNames) { await caches.delete(name); }
+                } catch (e) {}
+            }
+            window.location.replace('/pages/login.html');
+        }
         return;
     }
     const nutriName = user.name;
@@ -89,73 +113,112 @@ document.addEventListener('DOMContentLoaded', async () => {
             toggleBtn.innerHTML = newTheme === 'dark' ? '<i class="bi bi-sun-fill text-warning"></i>' : '<i class="bi bi-moon-stars-fill text-dark"></i>';
         });
     }
+    // --- Sidebar: destaque automático do item atual + navegação instantânea ---
+    (() => {
+        const current = window.location.pathname.split('/').pop().toLowerCase();
+        const links = document.querySelectorAll('.sidebar-nav .nav-link');
+        links.forEach(link => {
+            const href = (link.getAttribute('href') || '').split('/').pop().toLowerCase();
+            const li = link.closest('.nav-item');
+            if (li) li.classList.toggle('active', !!href && href === current);
+        });
+        // Pré-carrega as demais páginas da sidebar quando o navegador estiver ocioso,
+        // para que a troca de página seja praticamente instantânea.
+        const prefetchSiblings = () => {
+            links.forEach(link => {
+                const href = link.getAttribute('href');
+                if (!href || href.startsWith('#') || href.split('/').pop().toLowerCase() === current) return;
+                const l = document.createElement('link');
+                l.rel = 'prefetch';
+                l.href = href;
+                document.head.appendChild(l);
+            });
+        };
+        if ('requestIdleCallback' in window) requestIdleCallback(prefetchSiblings, { timeout: 2000 });
+        else setTimeout(prefetchSiblings, 800);
+    })();
+
     const topbarName = document.getElementById('topbarNutriName');
     if(topbarName) topbarName.textContent = user.name.split(' ')[0];
     
     const topAvatar = document.getElementById('topbarAvatar');
-    if (topAvatar) topAvatar.src = `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(user.name)}`;
+    if (topAvatar) {
+        topAvatar.src = `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(user.name)}`;
+        // Busca foto real em background
+        fetch('/api/auth/nutricionista/details').then(r => r.json()).then(d => {
+            if (d.success && d.data?.photo_url && topAvatar) topAvatar.src = d.data.photo_url;
+        }).catch(() => {});
+    }
 
     // --- UX: Lógica de Busca Global e Autocomplete ---
     const globalSearchInput = document.getElementById('globalSearchInput');
     const searchSuggestions = document.getElementById('searchSuggestions');
     if (globalSearchInput && searchSuggestions) {
-        let searchTimeout;
         const systemPages = [
             { name: 'Visão Geral', url: 'dashboard.html', icon: 'bi-grid-1x2-fill' },
             { name: 'Meus Pacientes', url: 'patientsList.html', icon: 'bi-people-fill' },
             { name: 'Minha Agenda', url: 'nutriAgenda.html', icon: 'bi-calendar2-week-fill' },
             { name: 'Minhas Métricas', url: 'nutriMetrics.html', icon: 'bi-graph-up-arrow' },
             { name: 'Configurações', url: 'nutriConfig.html', icon: 'bi-person-fill-gear' },
-            { name: 'Faturamento', url: 'nutriInvoicing.html', icon: 'bi-cash-stack' }
+            { name: 'Faturamento', url: 'nutriInvoicing.html', icon: 'bi-cash-stack' },
+            { name: 'Configurar Ficha', url: 'anamneseConfig.html', icon: 'bi-ui-checks' }
         ];
 
-        globalSearchInput.addEventListener('input', (e) => {
+        // Cache dos pacientes: busca UMA vez no servidor; o filtro é local (instantâneo).
+        let patientCache = null;
+        const ensurePatientCache = async () => {
+            if (patientCache) return patientCache;
+            try {
+                const r = await fetch('/api/auth/patientList?page=1&limit=10000');
+                const d = await r.json();
+                patientCache = (d.success && Array.isArray(d.patients)) ? d.patients : [];
+            } catch (e) { patientCache = []; }
+            return patientCache;
+        };
+        // Pré-carrega ao focar, para a primeira tecla já ser instantânea.
+        globalSearchInput.addEventListener('focus', () => { ensurePatientCache(); }, { once: true });
+
+        const renderSuggestions = (term) => {
+            let resultsHtml = '';
+            const matchedPages = systemPages.filter(p => p.name.toLowerCase().includes(term));
+            if (matchedPages.length > 0) {
+                resultsHtml += `<div class="px-3 py-2 bg-light border-bottom"><small class="text-muted fw-bold" style="font-size: 0.7rem; text-transform: uppercase;">Páginas do Sistema</small></div>`;
+                matchedPages.forEach(p => {
+                    resultsHtml += `<a href="${p.url}" class="dropdown-item d-flex align-items-center gap-2 py-2 search-suggestion-item"><div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width:30px; height:30px;"><i class="bi ${p.icon}"></i></div> <span class="fw-medium text-dark">${p.name}</span></a>`;
+                });
+            }
+
+            const matchedPatients = (patientCache || [])
+                .filter(p => (p.nome || '').toLowerCase().includes(term) || (p.email || '').toLowerCase().includes(term))
+                .slice(0, 5);
+            if (matchedPatients.length > 0) {
+                resultsHtml += `<div class="px-3 py-2 bg-light border-bottom"><small class="text-muted fw-bold" style="font-size: 0.7rem; text-transform: uppercase;">Pacientes</small></div>`;
+                matchedPatients.forEach(p => {
+                    resultsHtml += `<a href="patientsList.html?q=${encodeURIComponent(p.nome)}" class="dropdown-item d-flex align-items-center gap-2 py-2 search-suggestion-item">
+                        <img src="https://api.dicebear.com/8.x/bottts/svg?seed=${p.id}" width="32" height="32" class="rounded-circle border bg-white shadow-sm">
+                        <div>
+                            <div class="fw-bold text-dark mb-0 lh-sm" style="font-size: 0.85rem;">${p.nome}</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">${p.email}</div>
+                        </div>
+                    </a>`;
+                });
+            }
+
+            if (resultsHtml === '') {
+                resultsHtml = `<div class="p-4 text-center text-muted small"><i class="bi bi-search d-block fs-4 mb-2 opacity-50"></i>Nenhum resultado para "${term}"</div>`;
+            }
+            searchSuggestions.innerHTML = resultsHtml;
+            searchSuggestions.classList.add('show');
+        };
+
+        globalSearchInput.addEventListener('input', async (e) => {
             const term = e.target.value.toLowerCase().trim();
-            clearTimeout(searchTimeout);
-            
             if (term.length < 2) {
                 searchSuggestions.classList.remove('show');
                 return;
             }
-
-            searchTimeout = setTimeout(async () => {
-                let resultsHtml = '';
-                
-                const matchedPages = systemPages.filter(p => p.name.toLowerCase().includes(term));
-                if (matchedPages.length > 0) {
-                    resultsHtml += `<div class="px-3 py-2 bg-light border-bottom"><small class="text-muted fw-bold" style="font-size: 0.7rem; text-transform: uppercase;">Páginas do Sistema</small></div>`;
-                    matchedPages.forEach(p => {
-                        resultsHtml += `<a href="${p.url}" class="dropdown-item d-flex align-items-center gap-2 py-2 search-suggestion-item"><div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width:30px; height:30px;"><i class="bi ${p.icon}"></i></div> <span class="fw-medium text-dark">${p.name}</span></a>`;
-                    });
-                }
-
-                try {
-                    const response = await fetch(`/api/auth/patientList`);
-                    const data = await response.json();
-                    if (data.success && data.patients) {
-                        const matchedPatients = data.patients.filter(p => p.nome.toLowerCase().includes(term) || p.email.toLowerCase().includes(term)).slice(0, 5);
-                        if (matchedPatients.length > 0) {
-                            resultsHtml += `<div class="px-3 py-2 bg-light border-bottom"><small class="text-muted fw-bold" style="font-size: 0.7rem; text-transform: uppercase;">Pacientes</small></div>`;
-                            matchedPatients.forEach(p => {
-                                resultsHtml += `<a href="patientsList.html?q=${encodeURIComponent(p.nome)}" class="dropdown-item d-flex align-items-center gap-2 py-2 search-suggestion-item">
-                                    <img src="https://api.dicebear.com/8.x/bottts/svg?seed=${p.id}" width="32" height="32" class="rounded-circle border bg-white shadow-sm">
-                                    <div>
-                                        <div class="fw-bold text-dark mb-0 lh-sm" style="font-size: 0.85rem;">${p.nome}</div>
-                                        <div class="text-muted" style="font-size: 0.75rem;">${p.email}</div>
-                                    </div>
-                                </a>`;
-                            });
-                        }
-                    }
-                } catch (err) { console.error('Erro no autocomplete de pacientes', err); }
-
-                if (resultsHtml === '') {
-                    resultsHtml = `<div class="p-4 text-center text-muted small"><i class="bi bi-search d-block fs-4 mb-2 opacity-50"></i>Nenhum resultado para "${term}"</div>`;
-                }
-
-                searchSuggestions.innerHTML = resultsHtml;
-                searchSuggestions.classList.add('show');
-            }, 300);
+            await ensurePatientCache();
+            renderSuggestions(term);
         });
 
         globalSearchInput.addEventListener('keypress', (e) => {
@@ -179,30 +242,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- UX: Notificações Reais ---
-    async function loadGlobalNotifications() {
+    let sseEvtSource = null;
+    
+    function loadGlobalNotifications() {
         const badge = document.getElementById('notificationBadge');
         const countBadge = document.getElementById('notificationCountBadge');
         const list = document.getElementById('notificationList');
         if (!list) return;
-        try {
-            const res = await fetch('/api/auth/nutricionista/notifications');
-            const data = await res.json();
-            if (data.success) {
-                const notifs = data.notifications;
-                if (notifs.length > 0) {
-                    badge.classList.remove('d-none');
-                    countBadge.textContent = `${notifs.length} nova${notifs.length > 1 ? 's' : ''}`;
-                    list.innerHTML = notifs.map(n => `<div class="p-3 border-bottom notification-item bg-white" style="cursor:pointer;" onclick="window.location.href='dashboard.html'"><p class="small text-dark fw-bold mb-1"><i class="bi ${n.icon} ${n.color} me-1"></i> ${n.title}</p><p class="small text-muted mb-0">${n.message}</p></div>`).join('');
-                } else {
-                    badge.classList.add('d-none');
-                    countBadge.textContent = '0';
-                    list.innerHTML = '<div class="p-4 text-center text-muted small">Nenhuma notificação pendente.</div>';
+        
+        if (sseEvtSource) sseEvtSource.close();
+        
+        sseEvtSource = new EventSource('/api/auth/nutricionista/notifications');
+        
+        sseEvtSource.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.success) {
+                    const notifs = data.notifications;
+                    if (notifs.length > 0) {
+                        badge.classList.remove('d-none');
+                        countBadge.textContent = `${notifs.length} nova${notifs.length > 1 ? 's' : ''}`;
+                        list.innerHTML = notifs.map(n => `<div class="p-3 border-bottom notification-item bg-white" style="cursor:pointer;" onclick="window.location.href='dashboard.html'"><p class="small text-dark fw-bold mb-1"><i class="bi ${n.icon} ${n.color} me-1"></i> ${n.title}</p><p class="small text-muted mb-0">${n.message}</p></div>`).join('');
+                    } else {
+                        badge.classList.add('d-none');
+                        countBadge.textContent = '0';
+                        list.innerHTML = '<div class="p-4 text-center text-muted small">Nenhuma notificação pendente.</div>';
+                    }
                 }
-            }
-        } catch(e) { console.error('Erro notificações', e); }
+            } catch(e) { console.error('Erro ao processar notificação via SSE', e); }
+        };
+        
+        sseEvtSource.onerror = function() {
+            sseEvtSource.close();
+            setTimeout(loadGlobalNotifications, 15000); // Tenta reconectar em 15s em caso de falha de conexão
+        };
     }
     loadGlobalNotifications();
-    setInterval(loadGlobalNotifications, 10000); // Atualiza a cada 10s
 
     if (!sessionStorage.getItem('hasAnimated')) {
         const sr = ScrollReveal({ distance: '40px', duration: 2200, delay: 200, reset: false });
@@ -296,7 +371,8 @@ function initializeGenerateLinkModal(nutriId) {
     const generateUrl = () => {
         const selectedType = document.querySelector('input[name="linkType"]:checked').value;
         const baseUrl = window.location.origin || 'http://localhost:3000';
-        return `${baseUrl}/pages/paciente/preSchedule.html?nutriId=${nutriId}&type=${selectedType}`;
+        const timestamp = new Date().getTime();
+        return `${baseUrl}/pages/paciente/preSchedule.html?nutriId=${nutriId}&type=${selectedType}&t=${timestamp}`;
     };
 
     openBtn.addEventListener('click', () => {
@@ -334,7 +410,7 @@ async function fetchPendingAppointments() {
     } catch (error) { return []; }
 }
 
-async function handleStatusUpdate(appointmentId, status, rejectionType = null, rejectionMessage = null) {
+async function handleStatusUpdate(appointmentId, status, rejectionType = null, rejectionMessage = null, videoLink = null) {
     const modal = document.getElementById('pendingAppointmentDetailsModal');
     if (modal) modal.classList.remove('is-visible');
 
@@ -343,6 +419,7 @@ async function handleStatusUpdate(appointmentId, status, rejectionType = null, r
         payload.rejectionType = rejectionType;
         payload.rejectionMessage = rejectionMessage;
     }
+    if (videoLink) payload.videoLink = videoLink;
 
     try {
         const response = await fetch('/api/auth/nutricionista/appointments/status', {
@@ -427,6 +504,13 @@ function openPendingAppointmentDetailsModal(apt) {
     const dateBR = new Date(apt.date + 'T00:00:00').toLocaleDateString('pt-BR');
     document.getElementById('modalPendingDateTime').textContent = `${dateBR} às ${apt.time}`;
 
+    // Mostrar campo de link apenas para consultas online
+    const isOnline = apt.service_type.toLowerCase().includes('online');
+    const videoSection = document.getElementById('videoLinkSection');
+    const videoInput = document.getElementById('videoLinkInput');
+    if (videoSection) videoSection.style.display = isOnline ? 'block' : 'none';
+    if (videoInput) videoInput.value = '';
+
     const btnApprove = document.getElementById('btnApprovePending');
     const btnReject = document.getElementById('btnRejectPending');
     const closeBtn = document.getElementById('closePendingAppointmentModal');
@@ -436,7 +520,10 @@ function openPendingAppointmentDetailsModal(apt) {
     btnApprove.parentNode.replaceChild(newBtnApprove, btnApprove);
     btnReject.parentNode.replaceChild(newBtnReject, btnReject);
 
-    newBtnApprove.addEventListener('click', () => handleStatusUpdate(apt.id, 'Confirmada'));
+    newBtnApprove.addEventListener('click', () => {
+        const videoLink = document.getElementById('videoLinkInput')?.value.trim() || null;
+        handleStatusUpdate(apt.id, 'Confirmada', null, null, videoLink);
+    });
     newBtnReject.addEventListener('click', () => {
         modal.classList.remove('is-visible');
         openRejectActionModal(apt.id);
@@ -547,8 +634,39 @@ function openPatientContactModal(apt, date, nutriName, customMessage = "") {
         message = `Olá, ${patientFirstName}! Eu sou a Dra. ${nutriFirstName} do NutriCare. Vi que temos uma consulta de ${apt.title.toLowerCase()} marcada para o dia ${date} às ${apt.time}. Gostaria de confirmar se está tudo certo ou se precisa de alguma orientação prévia? Estou à disposição!`;
     }
 
-    const wppLink = `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
-    document.getElementById('btnWppContact').href = wppLink;
+    const mailtoLink = `mailto:${apt.email || ''}?subject=${encodeURIComponent('Confirmação de Consulta - ' + apt.title)}&body=${encodeURIComponent(message)}`;
+    const btnWppContact = document.getElementById('btnWppContact');
+    btnWppContact.href = mailtoLink;
+    btnWppContact.innerHTML = '<i class="bi bi-envelope-fill me-2"></i> Enviar E-mail de Contato';
+
+    const btnCancel = document.getElementById('btnCancelAppointment');
+    if (btnCancel) {
+        const newBtn = btnCancel.cloneNode(true);
+        btnCancel.parentNode.replaceChild(newBtn, btnCancel);
+        newBtn.addEventListener('click', () => {
+            modal.classList.remove('is-visible');
+            window.showConfirm(
+                'Cancelar Consulta',
+                `Deseja cancelar a consulta de ${apt.patientName} em ${date} às ${apt.time}? O paciente será notificado por e-mail.`,
+                'Sim, cancelar', 'danger',
+                async () => {
+                    try {
+                        const res = await fetch('/api/auth/nutricionista/appointments/cancel', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ appointmentId: apt.id })
+                        });
+                        const data = await res.json();
+                        window.showToast(data.message, data.success ? 'success' : 'error');
+                        if (data.success) {
+                            // Recarrega a agenda para remover o bloco cancelado
+                            document.dispatchEvent(new CustomEvent('agenda-refresh'));
+                        }
+                    } catch(e) { window.showToast('Erro ao cancelar.', 'error'); }
+                }
+            );
+        });
+    }
 
     modal.classList.add('is-visible');
     closeBtn.onclick = () => modal.classList.remove('is-visible');
@@ -583,9 +701,8 @@ async function initializeProfessionalAgenda(nutriId, nutriName) {
         return `${year}-${month}-${day}`;
     };
 
-    const workHours = { start: 8, end: 18 };
-    const totalMinutes = (workHours.end - workHours.start) * 60;
     const minutesPerPixel = 1;
+    const HOUR_PX = 60 * minutesPerPixel;
 
     const renderDayView = async () => {
         timelineContainer.innerHTML = '';
@@ -595,42 +712,97 @@ async function initializeProfessionalAgenda(nutriId, nutriName) {
 
         const appointments = await getAppointmentsForDay(nutriId, dateStr);
 
-        for (let hour = workHours.start; hour <= workHours.end; hour++) {
-            const slot = document.createElement('div');
-            slot.className = 'timeline-slot';
-            slot.style.minHeight = `${60 * minutesPerPixel}px`;
-            slot.innerHTML = `<div class="timeline-time">${String(hour).padStart(2, '0')}:00</div><div class="timeline-line"></div>`;
-            timelineContainer.appendChild(slot);
-        }
-
         if (appointments.length === 0) {
             timelineContainer.style.display = 'none';
             emptyState.style.display = 'flex';
             return;
         }
-
         timelineContainer.style.display = 'block';
-        timelineContainer.style.height = `${totalMinutes * minutesPerPixel + 60}px`;
         emptyState.style.display = 'none';
 
-        appointments.forEach(apt => {
+        // Normaliza horários/durações em minutos.
+        const items = appointments.map(apt => {
+            const [h, m] = apt.time.split(':').map(Number);
+            const start = h * 60 + m;
+            const dur = apt.duration || 60;
+            return { apt, start, end: start + dur, dur };
+        }).sort((a, b) => a.start - b.start || a.end - b.end);
+
+        // Janela de exibição que "abraça" as consultas do dia, para máxima
+        // visibilidade (inclusive atendimentos noturnos que cruzam a meia-noite).
+        const minStart = Math.min(...items.map(i => i.start));
+        const maxEnd = Math.max(...items.map(i => i.end));
+        const startHour = Math.floor(minStart / 60);
+        let endHour = Math.ceil(maxEnd / 60);
+        if (endHour - startHour < 3) endHour = startHour + 3; // respiro mínimo
+        const windowStartMin = startHour * 60;
+
+        // Régua de horas (rótulo seguro para horas após a meia-noite: 24h → 00h).
+        for (let hour = startHour; hour <= endHour; hour++) {
+            const slot = document.createElement('div');
+            slot.className = 'timeline-slot';
+            slot.style.minHeight = `${HOUR_PX}px`;
+            slot.innerHTML = `<div class="timeline-time">${String(hour % 24).padStart(2, '0')}:00</div><div class="timeline-line"></div>`;
+            timelineContainer.appendChild(slot);
+        }
+        timelineContainer.style.height = `${(endHour - startHour) * HOUR_PX + 60}px`;
+
+        // Agrupa consultas que se sobrepõem no tempo e distribui cada grupo em
+        // colunas lado a lado, para que nenhuma fique escondida atrás de outra.
+        const clusters = [];
+        let cluster = [];
+        let clusterMaxEnd = -1;
+        items.forEach(it => {
+            if (cluster.length && it.start >= clusterMaxEnd) {
+                clusters.push(cluster);
+                cluster = [];
+                clusterMaxEnd = -1;
+            }
+            cluster.push(it);
+            clusterMaxEnd = Math.max(clusterMaxEnd, it.end);
+        });
+        if (cluster.length) clusters.push(cluster);
+
+        clusters.forEach(group => {
+            const colEnds = [];
+            group.forEach(it => {
+                let col = colEnds.findIndex(end => it.start >= end);
+                if (col === -1) { col = colEnds.length; colEnds.push(it.end); }
+                else { colEnds[col] = it.end; }
+                it.col = col;
+            });
+            group.forEach(it => { it.cols = colEnds.length; });
+        });
+
+        const GUTTER_L = 80;   // espaço da régua de horas
+        const GUTTER_R = 16;   // 1rem à direita
+        const GAP = 6;
+
+        items.forEach(({ apt, start, dur, col, cols }) => {
             const aptBlock = document.createElement('div');
             const typeClass = apt.title.toLowerCase().includes('retorno') ? 'type-retorno' :
                 (apt.title.toLowerCase().includes('online') ? 'type-online' : 'type-primeira');
-
             aptBlock.className = `appointment-block-pro ${typeClass}`;
-            const [aptHour, aptMinute] = apt.time.split(':').map(Number);
-            const topPosition = (((aptHour - workHours.start) * 60) + aptMinute) * minutesPerPixel;
-            const duration = apt.duration || 60;
 
-            aptBlock.style.top = `${topPosition}px`;
-            aptBlock.style.height = `${duration * minutesPerPixel}px`;
+            aptBlock.style.top = `${(start - windowStartMin) * minutesPerPixel}px`;
+            aptBlock.style.height = `${Math.max(dur * minutesPerPixel, 38)}px`;
+            aptBlock.style.left = `calc(${GUTTER_L}px + (100% - ${GUTTER_L + GUTTER_R}px) * ${col} / ${cols})`;
+            aptBlock.style.right = 'auto';
+            aptBlock.style.width = `calc((100% - ${GUTTER_L + GUTTER_R}px) / ${cols} - ${GAP}px)`;
+
+            if (cols > 1) {
+                aptBlock.style.flexDirection = 'column';
+                aptBlock.style.alignItems = 'flex-start';
+                aptBlock.style.justifyContent = 'center';
+                aptBlock.style.gap = '2px';
+                aptBlock.style.padding = '0.5rem 0.75rem';
+                aptBlock.style.overflow = 'hidden';
+            }
 
             aptBlock.innerHTML = `
                 <div class="appointment-patient-name">${apt.patientName}</div>
-                <div class="appointment-details-pro">${apt.title} - ${apt.time} (${duration} min)</div>
+                <div class="appointment-details-pro">${apt.title} - ${apt.time} (${dur} min)</div>
             `;
-
             aptBlock.addEventListener('click', () => openPatientContactModal(apt, readableDate, nutriName, globalWppMessage));
             timelineContainer.appendChild(aptBlock);
         });
@@ -659,6 +831,7 @@ async function initializeProfessionalAgenda(nutriId, nutriName) {
     renderDayView();
     startOrStopPolling();
 
+    document.addEventListener('agenda-refresh', () => renderDayView());
     window.addEventListener('beforeunload', () => { if (pollingInterval) clearInterval(pollingInterval); });
 }
 
@@ -732,6 +905,61 @@ function initializeAgendaModals(nutriId) {
 
     const navigateMonth = (direction) => { calendarDate.setMonth(calendarDate.getMonth() + direction); renderCalendar(); };
 
+    // --- Pausas e intervalo entre consultas (configurados no próprio gerador de agenda) ---
+    let currentBreaks = [];
+    const breaksListEl = document.getElementById('breaksList');
+    const bufferEl = document.getElementById('bufferTime');
+
+    const renderBreaks = () => {
+        if (!breaksListEl) return;
+        if (currentBreaks.length === 0) {
+            breaksListEl.innerHTML = '<div class="text-muted small text-center py-2 border border-dashed rounded">Nenhuma pausa adicionada.</div>';
+            return;
+        }
+        breaksListEl.innerHTML = currentBreaks.map((b, i) => `
+            <div class="break-list-item">
+                <div class="break-info">
+                    <h6 class="mb-0 fw-bold small">${b.name}</h6>
+                    <span class="text-muted small"><i class="bi bi-clock me-1"></i>${b.start} – ${b.end}</span>
+                </div>
+                <button type="button" class="btn btn-outline-danger btn-sm border-0 rounded-circle" data-remove-break="${i}" title="Remover"><i class="bi bi-trash"></i></button>
+            </div>`).join('');
+    };
+
+    breaksListEl?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-remove-break]');
+        if (!btn) return;
+        currentBreaks.splice(parseInt(btn.dataset.removeBreak), 1);
+        renderBreaks();
+    });
+
+    document.getElementById('addBreakBtn')?.addEventListener('click', () => {
+        const nameEl = document.getElementById('breakName');
+        const startEl = document.getElementById('breakStart');
+        const endEl = document.getElementById('breakEnd');
+        const name = nameEl.value.trim();
+        const start = startEl.value;
+        const end = endEl.value;
+        if (!name || !start || !end) { showMessage('schedule-settings-message', 'Preencha nome, início e fim da pausa.', false); return; }
+        if (start >= end) { showMessage('schedule-settings-message', 'O fim da pausa deve ser maior que o início.', false); return; }
+        currentBreaks.push({ name, start, end });
+        currentBreaks.sort((a, b) => a.start.localeCompare(b.start));
+        renderBreaks();
+        nameEl.value = ''; startEl.value = ''; endEl.value = '';
+    });
+
+    const loadScheduleConfig = async () => {
+        try {
+            const res = await fetch('/api/auth/schedule/config');
+            const data = await res.json();
+            if (data.success && data.config) {
+                if (bufferEl) bufferEl.value = data.config.bufferTime || 0;
+                currentBreaks = data.config.breakTimes || [];
+            }
+        } catch (e) { currentBreaks = []; }
+        renderBreaks();
+    };
+
     const setButtonLoading = (btn, isLoading) => {
         const btnText = btn.querySelector('.btn-text');
         const spinner = btn.querySelector('.spinner-container');
@@ -755,7 +983,9 @@ function initializeAgendaModals(nutriId) {
             dates: Array.from(selectedDates),
             startTime: form.querySelector('#startTime').value,
             endTime: form.querySelector('#endTime').value,
-            slotDuration: form.querySelector('input[name="slotDuration"]:checked').value
+            slotDuration: form.querySelector('input[name="slotDuration"]:checked').value,
+            bufferTime: parseInt(bufferEl?.value) || 0,
+            breakTimes: currentBreaks
         };
 
         if (formData.dates.length === 0) {
@@ -778,13 +1008,14 @@ function initializeAgendaModals(nutriId) {
         finally { setButtonLoading(generateBtn, false); }
     };
 
-    openModalBtn.addEventListener('click', () => { calendarDate = new Date(); selectedDates.clear(); loadSelectedDates(); modal.classList.add('is-visible'); });
+    openModalBtn.addEventListener('click', () => { calendarDate = new Date(); selectedDates.clear(); loadSelectedDates(); loadScheduleConfig(); modal.classList.add('is-visible'); });
     closeModalBtn.addEventListener('click', () => modal.classList.remove('is-visible'));
     prevMonthBtn.addEventListener('click', () => navigateMonth(-1));
     nextMonthBtn.addEventListener('click', () => navigateMonth(1));
     form.addEventListener('submit', handleFormSubmit);
 
     setButtonLoading(generateBtn, false);
+    renderBreaks();
 }
   
 
@@ -792,6 +1023,7 @@ let globalPatientData = null;
 let globalAnamneseData = null;
 let patientCharts = { evolution: null, radar: null };
 const premiumColors = { primary: '#2a9d8f', secondary: '#f4a261', info: '#0dcaf0', danger: '#e76f51', dark: '#264653', lightGray: '#e9ecef' };
+let currentPatientAllAppts = [];
 
 async function initializePatientList(nutriId) {
     const tableBody = document.getElementById('patientTableBody');
@@ -803,33 +1035,124 @@ async function initializePatientList(nutriId) {
 
     if(!tableBody) return;
 
-    // --- EXAMS UPLOAD SIMULATION ---
+    // --- EXAMES: upload real + listagem ---
     const fileUploadExame = document.getElementById('fileUploadExame');
-    if (fileUploadExame) {
-        fileUploadExame.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                const emptyState = document.getElementById('empty-exams');
+
+    const renderExamCard = (exam) => {
+        const date = new Date(exam.uploaded_at).toLocaleDateString('pt-BR');
+        const isPdf = exam.file_type?.includes('pdf') || exam.file_name?.toLowerCase().endsWith('.pdf');
+        const icon = isPdf ? 'bi-file-earmark-pdf-fill text-danger' : 'bi-file-earmark-image-fill text-info';
+        const div = document.createElement('div');
+        div.className = 'col-md-6 col-lg-4';
+        div.dataset.examId = exam.id;
+        div.innerHTML = `
+            <div class="p-3 bg-white border rounded-4 shadow-sm d-flex align-items-center gap-3 file-card">
+                <div class="bg-danger bg-opacity-10 p-3 rounded-circle flex-shrink-0"><i class="bi ${icon} fs-4"></i></div>
+                <div class="flex-grow-1 overflow-hidden">
+                    <h6 class="fw-bold text-dark mb-1 text-truncate" title="${exam.file_name}">${exam.file_name}</h6>
+                    <p class="text-muted small mb-0">Enviado: ${date}</p>
+                </div>
+                <div class="d-flex gap-1">
+                    <a href="${exam.file_url}" target="_blank" class="btn btn-sm btn-light text-primary border rounded-circle" title="Baixar"><i class="bi bi-download"></i></a>
+                    <button class="btn btn-sm btn-light text-danger border rounded-circle btn-delete-exam" data-id="${exam.id}" title="Remover"><i class="bi bi-trash3"></i></button>
+                </div>
+            </div>`;
+        return div;
+    };
+
+    window.loadExamsForPatient = async (patientId) => {
+        const container = document.getElementById('exams-list-container');
+        const emptyState = document.getElementById('empty-exams');
+        if (!container) return;
+        try {
+            const res = await fetch(`/api/auth/nutricionista/exams/${patientId}`);
+            const data = await res.json();
+            const existingCards = container.querySelectorAll('[data-exam-id]');
+            existingCards.forEach(c => c.remove());
+            if (data.success && data.exams.length > 0) {
                 if (emptyState) emptyState.style.display = 'none';
-                const container = document.getElementById('exams-list-container');
-                const file = e.target.files[0];
-                const date = new Date().toLocaleDateString('pt-BR');
-                container.innerHTML += `
-                    <div class="col-md-6 col-lg-4">
-                        <div class="p-3 bg-white border rounded-4 shadow-sm d-flex align-items-center gap-3" style="animation: fadeIn 0.4s ease-out;">
-                            <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle"><i class="bi bi-file-earmark-pdf-fill fs-4"></i></div>
-                            <div class="flex-grow-1 overflow-hidden"><h6 class="fw-bold text-dark mb-1 text-truncate">${file.name}</h6><p class="text-muted small mb-0">Enviado: ${date}</p></div>
-                            <button class="btn btn-light text-primary border rounded-circle"><i class="bi bi-download"></i></button>
-                        </div>
-                    </div>`;
+                data.exams.forEach(exam => container.appendChild(renderExamCard(exam)));
+            } else {
+                if (emptyState) emptyState.style.display = 'block';
             }
+        } catch(e) {}
+    };
+
+    if (fileUploadExame) {
+        fileUploadExame.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file || !currentPatientId) {
+                if (!currentPatientId) window.showToast('Selecione um paciente primeiro.', 'error');
+                return;
+            }
+            // Limite de 20MB
+            if (file.size > 20 * 1024 * 1024) {
+                window.showToast('Arquivo muito grande. Limite: 20MB.', 'error');
+                fileUploadExame.value = '';
+                return;
+            }
+            const uploadBtn = document.querySelector('[onclick*="fileUploadExame"]') ||
+                              document.querySelector('button[onclick*="fileUploadExame.click"]');
+            if (uploadBtn) { uploadBtn.disabled = true; uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Enviando...'; }
+
+            try {
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    try {
+                        const res = await fetch('/api/auth/nutricionista/exams', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                patientId: currentPatientId,
+                                fileName: file.name,
+                                fileData: ev.target.result,
+                                fileType: file.type
+                            })
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            window.showToast('Exame anexado com sucesso!', 'success');
+                            await window.loadExamsForPatient(currentPatientId);
+                        } else {
+                            window.showToast(data.message || 'Erro ao enviar.', 'error');
+                        }
+                    } catch(err) { window.showToast('Erro de conexão.', 'error'); }
+                    finally {
+                        fileUploadExame.value = '';
+                        if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.innerHTML = '<i class="bi bi-cloud-arrow-up-fill me-1"></i> Anexar Exame'; }
+                    }
+                };
+                reader.readAsDataURL(file);
+            } catch(err) { window.showToast('Erro ao ler o arquivo.', 'error'); }
         });
     }
 
-    let allPatients = [];
+    // Delegação: remover exame
+    document.getElementById('exams-list-container')?.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.btn-delete-exam');
+        if (!btn) return;
+        const examId = btn.dataset.id;
+        window.showConfirm('Remover Exame', 'Deseja remover este exame permanentemente?', 'Sim, remover', 'danger', async () => {
+            try {
+                const res = await fetch(`/api/auth/nutricionista/exams/${examId}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    document.querySelector(`[data-exam-id="${examId}"]`)?.remove();
+                    window.showToast('Exame removido.', 'success');
+                    if (!document.querySelector('[data-exam-id]')) {
+                        document.getElementById('empty-exams').style.display = 'block';
+                    }
+                }
+            } catch(e) { window.showToast('Erro ao remover.', 'error'); }
+        });
+    });
+
     let currentPatientId = null;
     let filteredPatients = [];
     let currentPage = 1;
     const itemsPerPage = 5;
+    let currentSearchTerm = '';
+    let totalPatientsCount = 0;
 
     const openAnthropometryModal = (patientId) => {
         const anthroModal = document.getElementById('anthropometryModal');
@@ -902,16 +1225,19 @@ async function initializePatientList(nutriId) {
         const pagCont = document.getElementById('paginationContainer');
         if(pagCont) pagCont.style.setProperty('display', 'flex', 'important');
         
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
-        const paginatedPatients = filteredPatients.slice(startIndex, endIndex);
+        // A paginação já vem processada pelo backend, logo usamos o array diretamente
+        const paginatedPatients = filteredPatients;
 
         paginatedPatients.forEach((patient, index) => {
             const tr = document.createElement('tr');
             tr.style.animation = `fadeIn 0.3s ease-out ${index * 0.05}s both`;
 
             const statusClass = (patient.status === 'Inativo' || patient.status === 'Cancelado') ? 'bg-secondary text-secondary' : 'bg-success text-success border-success';
-            
+            const isConvenio = patient.patient_type === 'convenio';
+            const typeBadge = isConvenio
+                ? `<span class="badge bg-info text-info bg-opacity-10 border border-info border-opacity-25 rounded-pill px-2 py-1" style="font-size:0.7rem;"><i class="bi bi-shield-check me-1"></i>Convênio</span>`
+                : `<span class="badge bg-secondary text-secondary bg-opacity-10 border border-secondary border-opacity-25 rounded-pill px-2 py-1" style="font-size:0.7rem;"><i class="bi bi-person-fill me-1"></i>Particular</span>`;
+
             tr.innerHTML = `
                 <td class="ps-4 py-3">
                     <div class="d-flex align-items-center gap-3">
@@ -926,16 +1252,21 @@ async function initializePatientList(nutriId) {
                     <div class="text-dark fw-medium small"><i class="bi bi-telephone text-primary me-1 opacity-75"></i>${patient.phone || 'N/A'}</div>
                 </td>
                 <td class="py-3">
-                    <span class="badge ${statusClass} bg-opacity-10 border border-opacity-25 rounded-pill px-3 py-2"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> ${patient.status || 'Ativo'}</span>
+                    <div class="d-flex flex-column gap-1">
+                        <span class="badge ${statusClass} bg-opacity-10 border border-opacity-25 rounded-pill px-3 py-2"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem; vertical-align: middle;"></i> ${patient.status || 'Ativo'}</span>
+                        ${typeBadge}
+                    </div>
                 </td>
                 <td class="py-3">
                     <div class="text-primary fw-bold small bg-primary bg-opacity-10 d-inline-block px-3 py-2 rounded-3"><i class="bi bi-calendar-event me-1"></i>${patient.appointmentDate || 'Não agendada'}</div>
                 </td>
                 <td class="text-end pe-4 py-3">
-                    <div class="d-flex justify-content-end gap-2">
+                    <div class="d-flex justify-content-end gap-1">
                         <button class="btn btn-sm btn-light text-primary border shadow-sm btn-ver-detalhes fw-semibold" data-patient-id="${patient.id}"><i class="bi bi-journal-medical me-1"></i> Prontuário</button>
                         <button class="btn btn-sm btn-light text-info border shadow-sm btn-open-anthro px-2" data-patient-id="${patient.id}" data-bs-toggle="tooltip" title="Calculadora Científica"><i class="bi bi-calculator"></i></button>
                         <a href="planeEditor.html?patientId=${patient.id}" class="btn btn-sm btn-light text-success border shadow-sm px-2" data-bs-toggle="tooltip" title="Editor de Dieta"><i class="bi bi-apple"></i></a>
+                        <button class="btn btn-sm btn-light text-secondary border shadow-sm btn-edit-patient px-2" data-patient='${JSON.stringify(patient).replace(/'/g, "&#39;")}' data-bs-toggle="tooltip" title="Editar Cadastro"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-light ${patient.status !== 'Inativo' && patient.status !== 'Cancelado' ? 'text-danger' : 'text-success'} border shadow-sm btn-toggle-status px-2" data-patient-id="${patient.id}" data-current-status="${patient.status || 'Ativo'}" data-bs-toggle="tooltip" title="${patient.status !== 'Inativo' && patient.status !== 'Cancelado' ? 'Inativar' : 'Ativar'} Paciente"><i class="bi ${patient.status !== 'Inativo' && patient.status !== 'Cancelado' ? 'bi-person-fill-slash' : 'bi-person-fill-check'}"></i></button>
                     </div>
                 </td>
             `;
@@ -951,15 +1282,20 @@ async function initializePatientList(nutriId) {
     };
 
     const renderPaginationControls = () => {
-        const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
+        const totalPages = Math.ceil(totalPatientsCount / itemsPerPage);
         const paginationList = document.getElementById('paginationList');
         const paginationInfo = document.getElementById('paginationInfo');
         
         if (!paginationList || !paginationInfo) return;
         
         const startIndex = (currentPage - 1) * itemsPerPage + 1;
-        const endIndex = Math.min(startIndex + itemsPerPage - 1, filteredPatients.length);
-        paginationInfo.textContent = `Mostrando ${startIndex} a ${endIndex} de ${filteredPatients.length} pacientes`;
+        const endIndex = Math.min(startIndex + itemsPerPage - 1, totalPatientsCount);
+        
+        if (totalPatientsCount === 0) {
+            paginationInfo.textContent = `Mostrando 0 a 0 de 0 pacientes`;
+        } else {
+            paginationInfo.textContent = `Mostrando ${startIndex} a ${endIndex} de ${totalPatientsCount} pacientes`;
+        }
 
         let html = '';
         html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><a class="page-link" href="#" data-page="${currentPage - 1}"><i class="bi bi-chevron-left"></i></a></li>`;
@@ -968,7 +1304,7 @@ async function initializePatientList(nutriId) {
             html += `<li class="page-item ${currentPage === i ? 'active' : ''}"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
         }
         
-        html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link" href="#" data-page="${currentPage + 1}"><i class="bi bi-chevron-right"></i></a></li>`;
+        html += `<li class="page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}"><a class="page-link" href="#" data-page="${currentPage + 1}"><i class="bi bi-chevron-right"></i></a></li>`;
         
         paginationList.innerHTML = html;
         
@@ -978,58 +1314,71 @@ async function initializePatientList(nutriId) {
                 const page = parseInt(e.currentTarget.getAttribute('data-page'));
                 if (page >= 1 && page <= totalPages) {
                     currentPage = page;
-                    renderTable();
+                    getPatientData(currentPage, currentSearchTerm);
                 }
             });
         });
     };
 
-    const getPatientData = async () => {
+    let currentTypeFilter = '';
+
+    // Wire type filter buttons
+    document.querySelectorAll('#typeFilterGroup button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#typeFilterGroup button').forEach(b => {
+                b.classList.remove('btn-primary-custom', 'active-filter');
+                b.classList.add('btn-light', 'text-muted');
+            });
+            btn.classList.add('btn-primary-custom', 'active-filter');
+            btn.classList.remove('btn-light', 'text-muted');
+            currentTypeFilter = btn.dataset.type;
+            currentPage = 1;
+            getPatientData(1, currentSearchTerm);
+        });
+    });
+
+    // Carrega TODOS os pacientes uma única vez; busca/filtro/paginação acontecem
+    // no cliente — instantâneo, sem ir ao servidor a cada tecla.
+    let allPatientsCache = null;
+
+    const getPatientData = async (page = 1, search = '') => {
         tableElement.style.display = 'table';
         emptyState.style.display = 'none';
         const pagCont = document.getElementById('paginationContainer');
         if(pagCont) pagCont.style.setProperty('display', 'none', 'important');
-        tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="text-muted mt-3 mb-0">Carregando lista de pacientes...</p></td></tr>';
-        try {
-            const response = await fetch(`/api/auth/patientList`);
-            const data = await response.json();
-            if (data.success && Array.isArray(data.patients)) { 
-                allPatients = data.patients; 
-                
-                const thirtyDaysAgo = new Date();
-                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-                allPatients.sort((a, b) => {
-                    const dateA = a.lastUpdateDate ? new Date(a.lastUpdateDate) : new Date(0);
-                    const dateB = b.lastUpdateDate ? new Date(b.lastUpdateDate) : new Date(0);
-                    
-                    const aRecent = a.status === 'Ativo' && dateA >= thirtyDaysAgo;
-                    const bRecent = b.status === 'Ativo' && dateB >= thirtyDaysAgo;
-
-                    // Prioridade para ativos + com retorno nos ultimos 30 dias
-                    if (aRecent && !bRecent) return -1;
-                    if (!aRecent && bRecent) return 1;
-                    
-                    // Desempate: quem atualizou há menos tempo fica por cima
-                    return dateB - dateA;
-                });
-
-                filteredPatients = [...allPatients];
-                currentPage = 1;
-                renderTable(); 
-            } else { 
-                allPatients = []; 
-                filteredPatients = [];
-                renderTable(); 
+        if (!allPatientsCache) {
+            tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="text-muted mt-3 mb-0">Carregando lista de pacientes...</p></td></tr>';
+            try {
+                const response = await fetch(`/api/auth/patientList?page=1&limit=10000`);
+                const data = await response.json();
+                allPatientsCache = (data.success && Array.isArray(data.patients)) ? data.patients : [];
+            } catch (error) {
+                emptyState.style.display = 'block';
+                tableBody.innerHTML = '';
+                return;
             }
-        } catch (error) { emptyState.style.display = 'block'; tableBody.innerHTML = ''; }
-        
-        // UX: Filtro de paciente se vindo da Busca Global
+        }
+
+        const term = (search || '').toLowerCase().trim();
+        let list = allPatientsCache;
+        if (currentTypeFilter) list = list.filter(p => p.patient_type === currentTypeFilter);
+        if (term) list = list.filter(p => (p.nome || '').toLowerCase().includes(term) || (p.email || '').toLowerCase().includes(term));
+
+        totalPatientsCount = list.length;
+        const totalPages = Math.max(1, Math.ceil(totalPatientsCount / itemsPerPage));
+        currentPage = Math.min(Math.max(1, page), totalPages);
+        const start = (currentPage - 1) * itemsPerPage;
+        filteredPatients = list.slice(start, start + itemsPerPage);
+        renderTable();
+
+        // UX: Filtro de paciente se vindo da Busca Global (?q=)
         const urlParams = new URLSearchParams(window.location.search);
         const query = urlParams.get('q');
-        if (query && searchInput) {
+        if (query && searchInput && search === '') {
             searchInput.value = query;
-            setTimeout(() => { searchInput.dispatchEvent(new Event('input')); }, 300);
+            currentSearchTerm = query;
+            getPatientData(1, query);
         }
     };
 
@@ -1084,6 +1433,32 @@ async function initializePatientList(nutriId) {
                 document.getElementById('anamneseSono').innerHTML = val(globalAnamneseData.wake_up_time);
                 document.getElementById('anamneseExpectativas').innerHTML = val(globalAnamneseData.final_question);
 
+                // NOVO: Renderizar Respostas Dinâmicas na Visualização
+                let dynamicHtml = '';
+                if (globalAnamneseData.dynamic_answers) {
+                    try {
+                        const dynAns = typeof globalAnamneseData.dynamic_answers === 'string' 
+                            ? JSON.parse(globalAnamneseData.dynamic_answers) 
+                            : globalAnamneseData.dynamic_answers;
+                        for (const [key, value] of Object.entries(dynAns)) {
+                            let displayValue = Array.isArray(value) ? value.join(', ') : value;
+                            if (!displayValue) displayValue = '<span class="text-muted fst-italic">Não preenchido</span>';
+                            dynamicHtml += `<div class="mb-4"><h6 class="fw-bold text-dark small mb-1"><i class="bi bi-question-diamond text-primary me-1"></i> ${key}</h6><p class="text-muted small border-start border-3 border-primary ps-3 py-1 bg-light">${displayValue}</p></div>`;
+                        }
+                    } catch (e) { console.error("Erro ao analisar respostas dinâmicas:", e); }
+                }
+                
+                let containerDyn = document.getElementById('anamneseDynamicContainer');
+                if (containerDyn) containerDyn.remove();
+                if (dynamicHtml !== '') {
+                    const expectationsEl = document.getElementById('anamneseExpectativas').parentNode.parentNode;
+                    containerDyn = document.createElement('div');
+                    containerDyn.id = 'anamneseDynamicContainer';
+                    containerDyn.className = 'col-12 mt-4 pt-3 border-top';
+                    containerDyn.innerHTML = `<h5 class="fw-bold text-primary mb-4"><i class="bi bi-ui-checks-grid me-2"></i> Questionário Personalizado</h5><div id="dynamicAnswersList" class="ps-2">${dynamicHtml}</div>`;
+                    expectationsEl.parentNode.appendChild(containerDyn);
+                }
+
                 if (mResult.success && mResult.plan && mResult.plan.meals.length > 0) {
                     planPane.innerHTML = `<div class="text-center p-5 bg-white rounded-4 shadow-sm border"><div class="display-1 text-success mb-3"><i class="bi bi-file-earmark-check"></i></div><h4 class="fw-bold">Plano Ativo</h4><p class="text-muted mb-4">O paciente já possui uma dieta estruturada.</p><a href="planeEditor.html?patientId=${patientId}" class="btn btn-success btn-lg px-5 rounded-pill shadow-sm"><i class="bi bi-pencil-square me-2"></i> Abrir Editor de Dieta</a></div>`;
                 } else {
@@ -1093,21 +1468,9 @@ async function initializePatientList(nutriId) {
                 const allAppts = [...(cResult.pendingAppointments || []).map(p => ({ ...p, isHistory: false })), ...(cResult.history || []).map(h => ({ ...h, appointment_date: h.consultation_date, isHistory: true }))];
                 allAppts.sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
 
-                renderConsultationTimeline(allAppts, patientId);
-                renderRecordsTab(cResult.history || []);
-
-                if (allAppts.length > 0) {
-                    const todayStr = new Date().toISOString().split('T')[0];
-                    const apptDateStr = new Date(allAppts[0].appointment_date || allAppts[0].consultation_date).toISOString().split('T')[0];
-                    
-                    if (apptDateStr === todayStr) {
-                        renderConsultationForm(allAppts[0], patientId, false);
-                    } else {
-                        renderReadOnlyConsultation(allAppts[0]);
-                    }
-                } else {
-                    document.getElementById('consultation-form-container').innerHTML = '<div class="text-center py-5"><i class="bi bi-clipboard-x display-4 text-muted opacity-25"></i><p class="text-muted mt-3 fw-medium">Nenhum histórico de consulta.</p></div>';
-                }
+                renderRecordsTab(cResult.history || [], patientId);
+                renderConsultationTimeline(allAppts, patientId, null, true);
+                if (window.loadExamsForPatient) window.loadExamsForPatient(patientId);
 
                 loadingState.style.display = 'none'; detailsContent.style.display = 'block';
                 
@@ -1156,15 +1519,17 @@ async function initializePatientList(nutriId) {
         } catch (error) { loadingState.innerHTML = '<p class="text-danger fw-bold text-center mt-4"><i class="bi bi-exclamation-triangle"></i> Erro ao carregar prontuário.</p>'; }
     };
 
-    const renderConsultationTimeline = (allItems, patientId) => {
+    const renderConsultationTimeline = (filteredItems, patientId) => {
         const timelineContainer = document.getElementById('consultation-history-timeline');
         timelineContainer.innerHTML = '';
 
-        if (allItems.length === 0) {
-            timelineContainer.innerHTML = '<p class="text-muted small">Nenhum registro.</p>'; return;
+        if (filteredItems.length === 0) {
+            timelineContainer.innerHTML = '<p class="text-muted small">Nenhum registro encontrado para este filtro.</p>'; 
+            document.getElementById('consultation-form-container').innerHTML = '<div class="text-center py-5"><i class="bi bi-clipboard-x display-4 text-muted opacity-25"></i><p class="text-muted mt-3 fw-medium">Nenhum histórico para o filtro selecionado.</p></div>';
+            return;
         }
 
-        allItems.forEach(item => {
+        filteredItems.forEach((item, idx) => {
             const itemDiv = document.createElement('div');
             const dateStr = new Date(item.appointment_date || item.consultation_date).toLocaleDateString('pt-BR');
             const statusColor = item.isHistory ? '#adb5bd' : '#2a9d8f';
@@ -1173,6 +1538,7 @@ async function initializePatientList(nutriId) {
             const isToday = todayStr === itemDateStr;
 
             itemDiv.className = `timeline-modern-item`;
+            if (idx === 0) itemDiv.classList.add('active');
             itemDiv.innerHTML = `
                 <span class="date-badge">${dateStr} ${isToday ? '<span class="text-primary">(Hoje)</span>' : ''}</span>
                 <p class="service-title"><span class="status-dot" style="background:${statusColor};"></span>${item.service_type || 'Acompanhamento'}</p>
@@ -1186,14 +1552,25 @@ async function initializePatientList(nutriId) {
                 if (isToday) {
                     renderConsultationForm(item, patientId, false); 
                 } else {
-                    renderReadOnlyConsultation(item);               
+                    renderReadOnlyConsultation(item, patientId);
                 }
             });
         });
-        timelineContainer.firstChild.classList.add('active');
+
+        if (filteredItems.length > 0) {
+            const firstItem = filteredItems[0];
+            const todayStr = new Date().toISOString().split('T')[0];
+            const itemDateStr = new Date(firstItem.appointment_date || firstItem.consultation_date).toISOString().split('T')[0];
+            
+            if (itemDateStr === todayStr) {
+                renderConsultationForm(firstItem, patientId, false);
+            } else {
+                renderReadOnlyConsultation(firstItem, patientId);
+            }
+        }
     };
 
-    const renderReadOnlyConsultation = (appointment) => {
+    const renderReadOnlyConsultation = (appointment, patientId) => {
         const container = document.getElementById('consultation-form-container');
         const dateStr = new Date(appointment.appointment_date || appointment.consultation_date).toLocaleDateString('pt-BR');
         
@@ -1206,14 +1583,14 @@ async function initializePatientList(nutriId) {
                         Consulta do dia <strong>${dateStr}</strong>. Este é um registro histórico consolidado e está oculto para edições.
                     </p>
                 </div>
-                <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill shadow-sm"><i class="bi bi-lock-fill me-1"></i> Somente Leitura</span>
+                <button type="button" id="btn-edit-record" class="btn btn-outline-primary btn-sm px-3 py-2 rounded-pill fw-bold shadow-sm"><i class="bi bi-pencil-fill me-1"></i> Editar</button>
             </div>
-            
-            <div class="read-only-box border-start border-4 border-primary bg-light bg-opacity-50">
+
+            <div class="read-only-box accent-primary bg-light bg-opacity-50">
                 <h6 class="fw-bold text-primary mb-2 text-uppercase small">Subjetivo (Relatos)</h6>
                 <p class="mb-0 text-dark">${appointment.subjective_notes || '<span class="text-muted fst-italic">Nenhuma anotação subjetiva registrada na época.</span>'}</p>
             </div>
-            <div class="read-only-box border-start border-4 border-info bg-light bg-opacity-50 mt-3">
+            <div class="read-only-box accent-info bg-light bg-opacity-50 mt-3">
                 <h6 class="fw-bold text-info mb-2 text-uppercase small">Objetivo (Medidas)</h6>
                 <div class="d-flex gap-3 mb-3 small fw-bold text-dark border-bottom pb-2">
                     <span class="bg-white border px-2 py-1 rounded shadow-sm">Peso: ${appointment.weight || '--'}kg</span>
@@ -1222,29 +1599,40 @@ async function initializePatientList(nutriId) {
                 </div>
                 <p class="mb-0 text-dark">${appointment.objective_notes || '<span class="text-muted fst-italic">Sem anotações complementares.</span>'}</p>
             </div>
-            <div class="read-only-box border-start border-4 border-warning bg-light bg-opacity-50 mt-3">
+            <div class="read-only-box accent-warning bg-light bg-opacity-50 mt-3">
                 <h6 class="fw-bold text-warning mb-2 text-uppercase small">Avaliação (Diagnóstico)</h6>
                 <p class="mb-0 text-dark">${appointment.assessment_notes || '<span class="text-muted fst-italic">Nenhuma avaliação clínica registrada.</span>'}</p>
             </div>
-            <div class="read-only-box border-start border-4 border-success bg-light bg-opacity-50 mt-3">
+            <div class="read-only-box accent-success bg-light bg-opacity-50 mt-3">
                 <h6 class="fw-bold text-success mb-2 text-uppercase small">Plano (Conduta)</h6>
                 <p class="mb-0 text-dark">${appointment.plan_notes || '<span class="text-muted fst-italic">Nenhuma conduta ou plano registrado.</span>'}</p>
             </div>
         `;
+
+        // Permite reabrir o registro arquivado para edição (o backend faz upsert por consulta).
+        const editBtn = container.querySelector('#btn-edit-record');
+        if (editBtn) editBtn.addEventListener('click', () => renderConsultationForm(appointment, patientId, true));
     };
 
     const renderConsultationForm = (appointment, patientId, isHistory) => {
         const formContainer = document.getElementById('consultation-form-container');
-        const dateStr = new Date().toLocaleDateString('pt-BR');
+        // Registros do histórico vêm de "consultations" (têm appointment_id); a consulta
+        // de hoje vem de "appointments" (o próprio id já é o appointment_id).
+        const apptId = appointment.appointment_id || appointment.id;
+        const recordDate = appointment.appointment_date || appointment.consultation_date;
+        const dateStr = recordDate ? new Date(recordDate).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
+        const headerInfo = isHistory
+            ? `<strong>Editando registro de ${dateStr}:</strong> Ajuste as informações e salve para atualizar este prontuário.`
+            : `<strong>Consulta de Hoje (${dateStr}):</strong> Os campos abaixo estão livres para edição. Não se esqueça de salvar ao finalizar.`;
 
         formContainer.innerHTML = `
-            <form id="consultationForm" data-appointment-id="${appointment.id}" data-patient-id="${patientId}">
+            <form id="consultationForm" data-appointment-id="${apptId}" data-patient-id="${patientId}">
                 <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-primary border-opacity-25">
                     <div>
                         <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-pencil-square text-primary me-2"></i>Anotações da Consulta</h4>
                         <p class="text-primary small mb-0 mt-2 bg-primary bg-opacity-10 d-inline-block px-3 py-2 rounded">
                             <i class="bi bi-calendar-check-fill text-primary me-1"></i>
-                            <strong>Consulta de Hoje (${dateStr}):</strong> Os campos abaixo estão livres para edição. Não se esqueça de salvar ao finalizar.
+                            ${headerInfo}
                         </p>
                     </div>
                     <span class="badge bg-primary px-3 py-2 rounded-pill shadow-sm"><i class="bi bi-unlock-fill me-1"></i> Editando</span>
@@ -1295,7 +1683,7 @@ async function initializePatientList(nutriId) {
             btn.disabled = true;
 
             const payload = {
-                appointmentId: appointment.id,
+                appointmentId: apptId,
                 patientId: patientId,
                 subjectiveNotes: document.getElementById('subjective_notes').value,
                 objectiveNotes: document.getElementById('objective_notes').value,
@@ -1334,47 +1722,158 @@ async function initializePatientList(nutriId) {
         });
     };
 
-    const renderRecordsTab = (history) => {
+    const renderRecordsTab = async (history, patientId) => {
         const container = document.getElementById('records-container');
-        if (!history || history.length === 0) {
-            container.innerHTML = '<div class="col-12"><div class="text-center py-5"><i class="bi bi-folder-x display-4 text-muted opacity-25"></i><p class="text-muted mt-3">Nenhum histórico consolidado para exportação.</p></div></div>';
-            return;
-        }
 
-        container.innerHTML = history.map(item => `
-            <div class="col-md-6 col-lg-4">
-                <div class="file-card p-4 border rounded-4 bg-white shadow-sm h-100 d-flex flex-column">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div class="bg-primary bg-opacity-10 text-primary p-2 rounded-3"><i class="bi bi-file-earmark-medical fs-4"></i></div>
-                        <span class="badge bg-light text-secondary border">${item.service_type || 'Consulta'}</span>
+        // --- Prontuários (PDF export) ---
+        const historyHtml = (history && history.length > 0)
+            ? history.map(item => `
+                <div class="col-md-6 col-lg-4">
+                    <div class="file-card p-4 border rounded-4 bg-white shadow-sm h-100 d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="bg-primary bg-opacity-10 text-primary p-2 rounded-3"><i class="bi bi-file-earmark-medical fs-4"></i></div>
+                            <span class="badge bg-light text-secondary border">${item.service_type || 'Consulta'}</span>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-1">${new Date(item.consultation_date).toLocaleDateString('pt-BR')}</h5>
+                        <p class="small text-muted flex-grow-1">Prontuário completo contendo SOAP e métricas do paciente.</p>
+                        <button class="btn btn-outline-primary w-100 fw-bold rounded-pill export-pdf-btn mt-2" data-full='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
+                            <i class="bi bi-download me-1"></i> Baixar PDF
+                        </button>
                     </div>
-                    <h5 class="fw-bold text-dark mb-1">${new Date(item.consultation_date).toLocaleDateString('pt-BR')}</h5>
-                    <p class="small text-muted flex-grow-1">Prontuário completo contendo SOAP e métricas do paciente.</p>
-                    <button class="btn btn-outline-primary w-100 fw-bold rounded-pill export-pdf-btn mt-2" data-full='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
-                        <i class="bi bi-download me-1"></i> Baixar PDF
-                    </button>
-                </div>
-            </div>
-        `).join('');
+                </div>`).join('')
+            : '<div class="col-12"><div class="text-center py-4"><i class="bi bi-folder-x display-4 text-muted opacity-25"></i><p class="text-muted mt-3">Nenhum prontuário para exportação.</p></div></div>';
 
-        document.querySelectorAll('.export-pdf-btn').forEach(btn => {
+        container.innerHTML = `
+            <div class="row g-3 mb-2">${historyHtml}</div>
+
+            <div class="col-12 mt-2">
+                <hr class="my-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold m-0"><i class="bi bi-prescription2 text-success me-2"></i>Receituário & Encaminhamentos</h5>
+                </div>
+                <div class="bg-light p-3 rounded-4 border mb-4">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-muted mb-1">Tipo</label>
+                            <select class="form-select form-select-sm" id="newNoteType">
+                                <option value="prescription">Receituário (Suplemento / Fitoterápico)</option>
+                                <option value="referral">Encaminhamento (Outro Profissional)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-muted mb-1">Título (opcional)</label>
+                            <input type="text" class="form-control form-control-sm" id="newNoteTitle" placeholder="Ex: Vitamina D3, Psicólogo...">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label small fw-bold text-muted mb-1">Detalhes / Instrução</label>
+                            <input type="text" class="form-control form-control-sm" id="newNoteContent" placeholder="Ex: 2000 UI/dia, às refeições | Indicado para manejo emocional...">
+                        </div>
+                        <div class="col-md-1">
+                            <button class="btn btn-primary-custom btn-sm w-100 py-2" id="btnSaveClinicalNote" title="Adicionar"><i class="bi bi-plus-lg"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-3" id="clinicalNotesList">
+                    <div class="col-12 text-center py-3"><span class="spinner-border spinner-border-sm text-secondary"></span></div>
+                </div>
+            </div>`;
+
+        // Wire export buttons
+        container.querySelectorAll('.export-pdf-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const btnEl = e.currentTarget;
-                const originalHtml = btnEl.innerHTML;
-                btnEl.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando Relatório...';
+                const origHtml = btnEl.innerHTML;
+                btnEl.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando...';
                 btnEl.disabled = true;
-                
                 try {
                     const itemData = JSON.parse(btnEl.getAttribute('data-full'));
                     await exportConsultationToPDF(itemData, globalPatientData, globalAnamneseData);
                 } catch (err) {
-                    console.error("Erro ao exportar PDF:", err);
-                    window.showToast("Ocorreu um erro ao tentar gerar o PDF.", "error");
+                    window.showToast('Erro ao gerar o PDF.', 'error');
                 } finally {
-                    btnEl.innerHTML = originalHtml;
+                    btnEl.innerHTML = origHtml;
                     btnEl.disabled = false;
                 }
             });
+        });
+
+        // Load and render clinical notes
+        const loadAndRenderNotes = async () => {
+            const listEl = document.getElementById('clinicalNotesList');
+            if (!listEl) return;
+            try {
+                const res = await fetch(`/api/auth/nutricionista/clinical-notes/${patientId}`);
+                const data = await res.json();
+                if (!data.success || data.notes.length === 0) {
+                    listEl.innerHTML = '<div class="col-12 text-center text-muted small py-3 opacity-75">Nenhuma nota cadastrada ainda.</div>';
+                    return;
+                }
+                listEl.innerHTML = data.notes.map(n => `
+                    <div class="col-md-6" id="clinical-note-${n.id}">
+                        <div class="p-3 bg-white border rounded-4 shadow-sm h-100">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge ${n.type === 'prescription' ? 'bg-success bg-opacity-10 text-success border-success' : 'bg-info bg-opacity-10 text-info border-info'} border px-2 py-1 rounded-pill small fw-bold">
+                                    <i class="bi ${n.type === 'prescription' ? 'bi-capsule-pill' : 'bi-person-lines-fill'} me-1"></i>
+                                    ${n.type === 'prescription' ? 'Receituário' : 'Encaminhamento'}
+                                </span>
+                                <button class="btn btn-sm btn-outline-danger border-0 rounded-circle btn-delete-note" data-id="${n.id}" title="Remover"><i class="bi bi-trash3"></i></button>
+                            </div>
+                            ${n.title ? `<h6 class="fw-bold text-dark mb-1 small">${n.title}</h6>` : ''}
+                            <p class="small text-muted mb-1 lh-sm">${n.content}</p>
+                            <small class="text-muted opacity-75">${new Date(n.created_at).toLocaleDateString('pt-BR')}</small>
+                        </div>
+                    </div>`).join('');
+
+                listEl.querySelectorAll('.btn-delete-note').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const noteId = btn.dataset.id;
+                        window.showConfirm('Remover Nota', 'Tem certeza que deseja remover esta nota?', 'Sim, remover', 'danger', async () => {
+                            try {
+                                const r = await fetch(`/api/auth/nutricionista/clinical-notes/${noteId}`, { method: 'DELETE' });
+                                const d = await r.json();
+                                if (d.success) {
+                                    document.getElementById(`clinical-note-${noteId}`)?.remove();
+                                    window.showToast('Nota removida.', 'success');
+                                    if (!document.getElementById('clinicalNotesList').querySelector('[id^="clinical-note"]')) {
+                                        document.getElementById('clinicalNotesList').innerHTML = '<div class="col-12 text-center text-muted small py-3 opacity-75">Nenhuma nota cadastrada ainda.</div>';
+                                    }
+                                }
+                            } catch(e) { window.showToast('Erro ao remover.', 'error'); }
+                        });
+                    });
+                });
+            } catch(e) {
+                listEl.innerHTML = '<div class="col-12 text-center text-muted small py-3">Erro ao carregar notas.</div>';
+            }
+        };
+
+        await loadAndRenderNotes();
+
+        // Wire save button
+        document.getElementById('btnSaveClinicalNote')?.addEventListener('click', async () => {
+            const type    = document.getElementById('newNoteType')?.value;
+            const title   = document.getElementById('newNoteTitle')?.value.trim();
+            const content = document.getElementById('newNoteContent')?.value.trim();
+            if (!content) { window.showToast('Preencha os detalhes da nota.', 'error'); return; }
+            const btn = document.getElementById('btnSaveClinicalNote');
+            btn.disabled = true;
+            try {
+                const res = await fetch('/api/auth/nutricionista/clinical-notes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ patientId, type, title, content })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('newNoteTitle').value = '';
+                    document.getElementById('newNoteContent').value = '';
+                    window.showToast('Nota salva!', 'success');
+                    await loadAndRenderNotes();
+                } else {
+                    window.showToast(data.message || 'Erro ao salvar.', 'error');
+                }
+            } catch(e) { window.showToast('Erro de conexão.', 'error'); }
+            finally { btn.disabled = false; }
         });
     };
 
@@ -1537,11 +2036,11 @@ async function initializePatientList(nutriId) {
         if (btnBanner) openAnthropometryModal(btnBanner.getAttribute('data-patient-id'));
     });
 
-    searchInput.addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        filteredPatients = allPatients.filter(p => p.nome.toLowerCase().includes(term) || p.email.toLowerCase().includes(term));
+    if (searchInput) searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.trim();
+        currentSearchTerm = term;
         currentPage = 1;
-        renderTable();
+        getPatientData(1, term); // filtro client-side: instantâneo
     });
 
     tableBody.addEventListener('click', (event) => {
@@ -1551,17 +2050,138 @@ async function initializePatientList(nutriId) {
             modal.classList.add('is-visible');
             initPatientDetails(btn.getAttribute('data-patient-id'));
         }
+
+        const btnEdit = event.target.closest('.btn-edit-patient');
+        if (btnEdit) {
+            const p = JSON.parse(btnEdit.getAttribute('data-patient'));
+            document.getElementById('editPatientId').value = p.id;
+            document.getElementById('editPatientName').value = p.nome;
+            document.getElementById('editPatientEmail').value = p.email;
+            document.getElementById('editPatientPhone').value = p.phone || '';
+            // Pré-seleciona o tipo do paciente
+            const currentType = p.patient_type || 'particular';
+            document.querySelectorAll('#editPatientType .type-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.type === currentType);
+            });
+            document.getElementById('editPatientModal').classList.add('is-visible');
+        }
+
+        const btnToggle = event.target.closest('.btn-toggle-status');
+        if (btnToggle) {
+            const pid = btnToggle.getAttribute('data-patient-id');
+            const cStatus = btnToggle.getAttribute('data-current-status');
+            const newStatus = (cStatus === 'Inativo' || cStatus === 'Cancelado') ? 'Ativo' : 'Inativo';
+            
+            window.showConfirm('Alterar Status', `Deseja realmente ${newStatus === 'Ativo' ? 'ativar' : 'inativar'} o cadastro do paciente? O histórico será preservado.`, 'Sim, confirmar', newStatus === 'Ativo' ? 'primary' : 'danger', async () => {
+                try {
+                    const res = await fetch(`/api/auth/patients/${pid}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
+                    const data = await res.json();
+                    if (data.success) { window.showToast(data.message, 'success'); getPatientData(currentPage, currentSearchTerm); } 
+                    else { window.showToast(data.message, 'error'); }
+                } catch(e) { window.showToast('Erro de comunicação', 'error'); }
+            });
+        }
     });
 
     closeModalBtn.addEventListener('click', () => modal.classList.remove('is-visible'));
+    if (document.getElementById('closeEditPatientModal')) document.getElementById('closeEditPatientModal').addEventListener('click', () => document.getElementById('editPatientModal').classList.remove('is-visible'));
+    if (document.getElementById('cancelEditPatientBtn')) document.getElementById('cancelEditPatientBtn').addEventListener('click', () => document.getElementById('editPatientModal').classList.remove('is-visible'));
 
+    // --- AGENDAR RETORNO (data nativa + horários livres da agenda da nutri) ---
+    const scheduleReturnModal = document.getElementById('scheduleReturnModal');
     const scheduleReturnBtn = document.getElementById('btnScheduleReturn');
-    if(scheduleReturnBtn) {
-        scheduleReturnBtn.addEventListener('click', () => { if (currentPatientId) document.getElementById('scheduleReturnModal').classList.add('is-visible'); });
+    const returnState = { date: null, time: null };
+
+    const loadReturnSlots = async (dateStr) => {
+        const slotsEl = document.getElementById('returnTimeSlots');
+        const loader = document.getElementById('return-slots-loader');
+        const confirmBtn = document.getElementById('confirmReturnScheduleBtn');
+        returnState.time = null;
+        confirmBtn.disabled = true;
+        slotsEl.innerHTML = '';
+        document.getElementById('returnSelectedDate').textContent =
+            new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+        if (loader) loader.style.display = 'block';
+        try {
+            const res = await fetch(`/api/auth/schedule/available?nutriId=${nutriId}&date=${dateStr}`);
+            const data = await res.json();
+            if (loader) loader.style.display = 'none';
+            if (!data.success || !data.availableSlots || data.availableSlots.length === 0) {
+                slotsEl.innerHTML = `<p class="text-muted small text-center m-0">${data.message || 'Nenhum horário disponível nesta data.'}</p>`;
+                return;
+            }
+            data.availableSlots.forEach(t => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'btn btn-outline-primary btn-sm rounded-pill m-1';
+                b.textContent = t;
+                b.addEventListener('click', () => {
+                    slotsEl.querySelectorAll('button').forEach(x => x.classList.remove('active', 'btn-primary'));
+                    b.classList.add('active', 'btn-primary');
+                    returnState.time = t;
+                    confirmBtn.disabled = false;
+                });
+                slotsEl.appendChild(b);
+            });
+        } catch (e) {
+            if (loader) loader.style.display = 'none';
+            slotsEl.innerHTML = '<p class="text-danger small text-center m-0">Erro ao carregar horários.</p>';
+        }
+    };
+
+    if (scheduleReturnBtn && scheduleReturnModal) {
+        scheduleReturnBtn.addEventListener('click', () => {
+            if (!currentPatientId) { window.showToast('Abra um paciente primeiro.', 'error'); return; }
+            returnState.date = null;
+            returnState.time = null;
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('returnDatePicker').innerHTML =
+                `<label class="form-label fw-bold small text-muted mb-2"><i class="bi bi-calendar-event me-1"></i>Data do retorno</label>
+                 <input type="date" id="returnDateInput" class="form-control" min="${today}">`;
+            document.getElementById('returnTimeSlots').innerHTML = '';
+            document.getElementById('returnSelectedDate').textContent = 'Escolha uma data';
+            document.getElementById('confirmReturnScheduleBtn').disabled = true;
+            document.getElementById('returnDateInput').addEventListener('change', (e) => {
+                if (e.target.value) { returnState.date = e.target.value; loadReturnSlots(e.target.value); }
+            });
+            scheduleReturnModal.classList.add('is-visible');
+        });
     }
+
     const closeReturnModalBtn = document.getElementById('closeScheduleReturnModal');
-    if(closeReturnModalBtn) {
-        closeReturnModalBtn.addEventListener('click', () => document.getElementById('scheduleReturnModal').classList.remove('is-visible'));
+    if (closeReturnModalBtn) {
+        closeReturnModalBtn.addEventListener('click', () => scheduleReturnModal.classList.remove('is-visible'));
+    }
+
+    const confirmReturnBtn = document.getElementById('confirmReturnScheduleBtn');
+    if (confirmReturnBtn) {
+        confirmReturnBtn.addEventListener('click', async () => {
+            if (!currentPatientId || !returnState.date || !returnState.time) return;
+            const original = confirmReturnBtn.innerHTML;
+            confirmReturnBtn.disabled = true;
+            confirmReturnBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Agendando...';
+            try {
+                const res = await fetch('/api/auth/appointments/schedule-return', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ patientId: currentPatientId, returnDate: returnState.date, returnTime: returnState.time })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    scheduleReturnModal.classList.remove('is-visible');
+                    const quando = new Date(returnState.date + 'T' + returnState.time).toLocaleDateString('pt-BR') + ' às ' + returnState.time;
+                    window.showToast(`Consulta de retorno agendada para ${quando}!`, 'success');
+                } else {
+                    window.showToast(data.message || 'Erro ao agendar retorno.', 'error');
+                    confirmReturnBtn.disabled = false;
+                }
+            } catch (e) {
+                window.showToast('Erro de comunicação ao agendar.', 'error');
+                confirmReturnBtn.disabled = false;
+            } finally {
+                confirmReturnBtn.innerHTML = original;
+            }
+        });
     }
 
     // --- NOVA LÓGICA: EDIÇÃO DE ANAMNESE (FICHA BASE) ---
@@ -1640,6 +2260,108 @@ async function initializePatientList(nutriId) {
                 submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
             }
+        });
+    }
+
+    const monthFilterInput = document.getElementById('timeline-month-filter');
+    const dateFilterInput = document.getElementById('timeline-date-filter');
+    const searchFilterInput = document.getElementById('timeline-search-filter');
+    const clearFilterBtn = document.getElementById('clear-timeline-filter');
+
+    const applyTimelineFilters = () => {
+        const monthVal = monthFilterInput ? monthFilterInput.value : '';
+        const dateVal = dateFilterInput ? dateFilterInput.value : '';
+        const searchVal = searchFilterInput ? searchFilterInput.value.toLowerCase() : '';
+        
+        let filtered = currentPatientAllAppts;
+        
+        if (dateVal) {
+            filtered = filtered.filter(item => {
+                const d = new Date(item.appointment_date || item.consultation_date).toISOString().split('T')[0];
+                return d === dateVal;
+            });
+        } else if (monthVal) {
+            filtered = filtered.filter(item => {
+                const d = new Date(item.appointment_date || item.consultation_date);
+                const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                return ym === monthVal;
+            });
+        }
+        
+        if (searchVal) {
+            filtered = filtered.filter(item => {
+                const str = `${item.service_type || ''} ${item.subjective_notes || ''} ${item.objective_notes || ''} ${item.assessment_notes || ''} ${item.plan_notes || ''}`.toLowerCase();
+                return str.includes(searchVal);
+            });
+        }
+
+        if (clearFilterBtn) {
+            if (monthVal || dateVal || searchVal) {
+                clearFilterBtn.classList.remove('btn-white', 'text-danger');
+                clearFilterBtn.classList.add('btn-danger', 'text-white');
+            } else {
+                clearFilterBtn.classList.add('btn-white', 'text-danger');
+                clearFilterBtn.classList.remove('btn-danger', 'text-white');
+            }
+        }
+        
+        renderConsultationTimeline(filtered, currentPatientId);
+    };
+
+    let timelineSearchTimeout;
+    if (monthFilterInput) monthFilterInput.addEventListener('change', applyTimelineFilters);
+    if (dateFilterInput) dateFilterInput.addEventListener('change', applyTimelineFilters);
+    if (searchFilterInput) {
+        searchFilterInput.addEventListener('input', () => {
+            clearTimeout(timelineSearchTimeout);
+            timelineSearchTimeout = setTimeout(applyTimelineFilters, 300);
+        });
+    }
+    if (clearFilterBtn) {
+        clearFilterBtn.addEventListener('click', () => {
+            if(monthFilterInput) monthFilterInput.value = '';
+            if(dateFilterInput) dateFilterInput.value = '';
+            if(searchFilterInput) searchFilterInput.value = '';
+            applyTimelineFilters();
+        });
+    }
+
+    // Toggle de tipo de paciente
+    document.querySelectorAll('#editPatientType .type-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#editPatientType .type-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        });
+    });
+
+    const editPatientForm = document.getElementById('editPatientForm');
+    if (editPatientForm) {
+        editPatientForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btnSave = document.getElementById('saveEditPatientBtn');
+            const originalText = btnSave.innerHTML;
+            btnSave.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            btnSave.disabled = true;
+
+            const pid = document.getElementById('editPatientId').value;
+            const activeTypeBtn = document.querySelector('#editPatientType .type-btn.active');
+            const payload = {
+                name: document.getElementById('editPatientName').value,
+                email: document.getElementById('editPatientEmail').value,
+                phone: document.getElementById('editPatientPhone').value,
+                patient_type: activeTypeBtn?.dataset.type || 'particular'
+            };
+
+            try {
+                const res = await fetch(`/api/auth/patients/${pid}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const data = await res.json();
+                if (data.success) {
+                    window.showToast('Cadastro atualizado!', 'success');
+                    document.getElementById('editPatientModal').classList.remove('is-visible');
+                    getPatientData(currentPage, currentSearchTerm);
+                } else { window.showToast(data.message, 'error'); }
+            } catch(err) { window.showToast('Erro ao atualizar.', 'error'); } 
+            finally { btnSave.innerHTML = originalText; btnSave.disabled = false; }
         });
     }
 
@@ -1810,6 +2532,8 @@ function initializeMetricsPage(nutriId) {
     if (!filterButtons) return;
 
     let chartInstances = {};
+    let lastMetricsData = null;
+    let lastPeriodDays = 30;
     const colors = { primary: '#2a9d8f', primaryLight: 'rgba(42, 157, 143, 0.2)', secondary: '#f4a261', warning: '#e9c46a', dark: '#264653', gray: '#e9ecef' };
 
     const fetchDataForPeriod = async (days) => {
@@ -1829,11 +2553,37 @@ function initializeMetricsPage(nutriId) {
         }
     };
 
+    const renderTrend = (id, trend) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (!trend || trend.pct === null) { el.classList.add('d-none'); return; }
+        if (trend.direction === 'up') {
+            el.className = 'kpi-trend trend-up';
+            el.innerHTML = `<i class="bi bi-arrow-up-right"></i> +${trend.pct}% vs anterior`;
+        } else if (trend.direction === 'down') {
+            el.className = 'kpi-trend trend-down';
+            el.innerHTML = `<i class="bi bi-arrow-down-right"></i> -${trend.pct}% vs anterior`;
+        } else {
+            el.className = 'kpi-trend';
+            el.style.cssText = 'background:rgba(108,117,125,0.1);color:#6c757d;';
+            el.innerHTML = `<i class="bi bi-dash"></i> Estável`;
+        }
+        el.classList.remove('d-none');
+    };
+
     const updateUI = (data) => {
         document.getElementById('kpi-revenue').textContent = (parseFloat(data.kpis.revenue) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         document.getElementById('kpi-patients').textContent = data.kpis.patients || 0;
         document.getElementById('kpi-retention').textContent = `${data.kpis.retention || 0}%`;
         document.getElementById('kpi-avg-appointments').textContent = data.kpis.avgAppointments || 0;
+        const avgScoreEl = document.getElementById('kpi-avg-score');
+        if (avgScoreEl) avgScoreEl.textContent = data.kpis.avgScore ? parseFloat(data.kpis.avgScore).toFixed(1) : 'N/A';
+
+        if (data.trends) {
+            renderTrend('kpi-revenue-trend',      data.trends.revenue);
+            renderTrend('kpi-patients-trend',     data.trends.patients);
+            renderTrend('kpi-appointments-trend', data.trends.appointments);
+        }
 
         Object.values(chartInstances).forEach(chart => { if (chart) chart.destroy(); });
 
@@ -1882,109 +2632,299 @@ function initializeMetricsPage(nutriId) {
         contentState.style.opacity = '0.4';
         contentState.style.pointerEvents = 'none';
 
-        const response = await fetchDataForPeriod(button.dataset.period);
-        updateUI(response.data);
+        lastPeriodDays = parseInt(button.dataset.period);
+        const response = await fetchDataForPeriod(lastPeriodDays);
+        lastMetricsData = response.data;
+        updateUI(lastMetricsData);
 
         contentState.style.opacity = '1';
         contentState.style.pointerEvents = 'auto';
     };
 
+    // --- Exportar relatório de métricas em PDF ---
+    const exportMetricsToPDF = async () => {
+        if (typeof html2pdf === 'undefined') {
+            window.showToast('Biblioteca de PDF não carregada.', 'error');
+            return;
+        }
+        if (!lastMetricsData) { window.showToast('Aguarde os dados carregarem.', 'error'); return; }
+
+        const btn = document.getElementById('exportReportBtn');
+        const origHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Gerando...';
+
+        // Captura imagens dos gráficos antes de montar o HTML
+        const chartRevImg  = document.getElementById('revenuePatientsChart')?.toDataURL('image/png') || '';
+        const chartApptImg = document.getElementById('appointmentsTypeChart')?.toDataURL('image/png') || '';
+        const chartGoalImg = document.getElementById('patientGoalsChart')?.toDataURL('image/png') || '';
+
+        let nutriName = 'Nutricionista';
+        try {
+            const nr = await fetch('/api/auth/nutricionista/details');
+            const nd = await nr.json();
+            if (nd.success) nutriName = nd.data.name;
+        } catch(e) {}
+
+        const periodLabel = { 7: '7 dias', 30: '30 dias', 180: '6 meses', 365: '1 ano' }[lastPeriodDays] || `${lastPeriodDays} dias`;
+        const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+        const kpis = lastMetricsData.kpis;
+        const trends = lastMetricsData.trends || {};
+
+        const trendHtml = (t) => {
+            if (!t || t.pct === null) return '';
+            if (t.direction === 'up')   return `<span style="color:#20c997;font-size:11px;">▲ +${t.pct}% vs anterior</span>`;
+            if (t.direction === 'down') return `<span style="color:#dc3545;font-size:11px;">▼ -${t.pct}% vs anterior</span>`;
+            return `<span style="color:#6c757d;font-size:11px;">— Estável</span>`;
+        };
+
+        const kpiBox = (label, value, trend) => `
+            <div style="flex:1;min-width:130px;background:#f8f9fa;border-radius:10px;padding:16px;text-align:center;border:1px solid #e9ecef;">
+                <div style="font-size:11px;color:#868e96;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">${label}</div>
+                <div style="font-size:22px;font-weight:800;color:#212529;margin-bottom:4px;">${value}</div>
+                ${trendHtml(trend)}
+            </div>`;
+
+        const el = document.createElement('div');
+        el.innerHTML = `
+        <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#2c3e50;padding:24px 32px;background:#fff;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #2a9d8f;padding-bottom:16px;margin-bottom:24px;">
+                <div>
+                    <h1 style="margin:0;font-size:22px;font-weight:800;color:#2a9d8f;">NutriCare</h1>
+                    <p style="margin:4px 0 0;font-size:12px;color:#6c757d;text-transform:uppercase;letter-spacing:1px;">Relatório de Métricas de Desempenho</p>
+                </div>
+                <div style="text-align:right;font-size:12px;color:#495057;line-height:1.6;">
+                    <strong>${nutriName}</strong><br>
+                    Período: <strong>${periodLabel}</strong><br>
+                    Gerado em: ${today}
+                </div>
+            </div>
+
+            <h3 style="font-size:14px;font-weight:700;color:#264653;text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px;">Indicadores-Chave (KPIs)</h3>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:28px;">
+                ${kpiBox('Faturamento Bruto', (parseFloat(kpis.revenue)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}), trends.revenue)}
+                ${kpiBox('Novos Pacientes', kpis.patients||0, trends.patients)}
+                ${kpiBox('Taxa de Retenção', `${kpis.retention||0}%`, null)}
+                ${kpiBox('Consultas Realizadas', kpis.avgAppointments||0, trends.appointments)}
+            </div>
+
+            ${chartRevImg ? `
+            <h3 style="font-size:14px;font-weight:700;color:#264653;text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px;">Evolução de Faturamento e Pacientes</h3>
+            <div style="margin-bottom:24px;border:1px solid #e9ecef;border-radius:8px;padding:12px;background:#fafafa;">
+                <img src="${chartRevImg}" style="width:100%;border-radius:4px;" />
+            </div>` : ''}
+
+            <div style="display:flex;gap:16px;margin-bottom:24px;">
+                ${chartApptImg ? `
+                <div style="flex:1;border:1px solid #e9ecef;border-radius:8px;padding:12px;background:#fafafa;">
+                    <div style="font-size:12px;font-weight:700;color:#264653;margin-bottom:8px;">Distribuição de Consultas</div>
+                    <img src="${chartApptImg}" style="width:100%;border-radius:4px;" />
+                </div>` : ''}
+                ${chartGoalImg ? `
+                <div style="flex:1;border:1px solid #e9ecef;border-radius:8px;padding:12px;background:#fafafa;">
+                    <div style="font-size:12px;font-weight:700;color:#264653;margin-bottom:8px;">Objetivos dos Pacientes</div>
+                    <img src="${chartGoalImg}" style="width:100%;border-radius:4px;" />
+                </div>` : ''}
+            </div>
+
+            <div style="margin-top:32px;padding-top:16px;border-top:1px dashed #bdc3c7;text-align:center;color:#95a5a6;font-size:10px;">
+                Relatório gerado digitalmente via <strong>NutriCare</strong> · ${today}
+            </div>
+        </div>`;
+
+        const opt = {
+            margin: [8, 8, 8, 8],
+            filename: `Metricas_NutriCare_${periodLabel.replace(' ','_')}.pdf`,
+            image: { type: 'jpeg', quality: 0.97 },
+            html2canvas: { scale: 2, useCORS: true, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['avoid-all', 'css'] }
+        };
+
+        try {
+            await html2pdf().set(opt).from(el).save();
+            window.showToast('Relatório exportado com sucesso!', 'success');
+        } catch(err) {
+            window.showToast('Erro ao gerar o PDF.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    };
+
+    document.getElementById('exportReportBtn')?.addEventListener('click', exportMetricsToPDF);
+
     filterButtons.addEventListener('click', handleFilterClick);
-    filterButtons.querySelector('[data-period="30"]').click();
+
+    // Carrega automaticamente o período padrão ao abrir a página.
+    // (Não usar .click() aqui: o botão padrão já tem .active e o handler sairia cedo, deixando os gráficos vazios.)
+    (async () => {
+        const initialBtn = filterButtons.querySelector('button.active') || filterButtons.querySelector('[data-period="30"]') || filterButtons.querySelector('button');
+        if (initialBtn) {
+            filterButtons.querySelectorAll('button.active').forEach(b => b.classList.remove('active'));
+            initialBtn.classList.add('active');
+            lastPeriodDays = parseInt(initialBtn.dataset.period) || 30;
+        }
+        if (contentState) { contentState.style.opacity = '0.4'; contentState.style.pointerEvents = 'none'; }
+        const response = await fetchDataForPeriod(lastPeriodDays);
+        lastMetricsData = response.data;
+        updateUI(lastMetricsData);
+        if (contentState) { contentState.style.opacity = '1'; contentState.style.pointerEvents = 'auto'; }
+    })();
 }
 
 function initializeNutriConfigPage(nutriId) {
-    const detailsForm = document.getElementById('detailsForm');
-    const passwordForm = document.getElementById('passwordForm');
-    const saveDetailsBtn = document.getElementById('saveDetailsBtn');
-    const savePasswordBtn = document.getElementById('savePasswordBtn');
-    const nameInput = document.getElementById('name');
-    const emailInput = document.getElementById('email');
-    const phoneInput = document.getElementById('phone');
-    const newPasswordInput = document.getElementById('newPassword');
-    const confirmPasswordInput = document.getElementById('confirmPassword');
 
-    const requirements = { length: document.getElementById('length-update'), lowercase: document.getElementById('lowercase-update'), uppercase: document.getElementById('uppercase-update'), special: document.getElementById('special-update'), match: document.getElementById('match-update') };
-
-    const setButtonLoading = (btn, isLoading) => {
-        const btnText = btn.querySelector('.btn-text');
-        const spinner = btn.querySelector('.spinner-container');
-        if (isLoading) { btnText.style.display = 'none'; spinner.style.display = 'inline-block'; }
-        else { btnText.style.display = 'inline-block'; spinner.style.display = 'none'; }
-        btn.disabled = isLoading;
+    // --- Navegação entre seções ---
+    window.openSection = (sectionId) => {
+        document.getElementById('settingsMenu').classList.add('hidden');
+        document.getElementById('settingsContent').classList.add('active');
+        document.querySelectorAll('.config-section').forEach(el => el.classList.add('d-none'));
+        document.getElementById(`section-${sectionId}`)?.classList.remove('d-none');
+    };
+    window.closeSection = () => {
+        document.getElementById('settingsContent').classList.remove('active');
+        document.getElementById('settingsMenu').classList.remove('hidden');
     };
 
-    const showMessage = (containerId, message, isSuccess = true) => {
-        const container = document.getElementById(containerId);
-        container.textContent = message;
-        container.className = `form-message-container ${isSuccess ? 'success' : 'error'} visible`;
-        setTimeout(() => container.classList.remove('visible'), 5000);
+    // --- Helper: loading em botão ---
+    const setBtnLoading = (btn, loading, text = 'Salvando...') => {
+        if (!btn) return;
+        if (loading) {
+            btn._orig = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${text}`;
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = btn._orig || btn.innerHTML;
+        }
     };
 
-    const loadNutriData = async () => {
+    // --- Foto de perfil ---
+    const photoPreview = document.getElementById('profilePhotoPreview');
+    const photoInput  = document.getElementById('photoFileInput');
+    const btnChangePhoto = document.getElementById('btnChangePhoto');
+
+    if (btnChangePhoto) btnChangePhoto.addEventListener('click', () => photoInput?.click());
+
+    if (photoInput) {
+        photoInput.addEventListener('change', async () => {
+            const file = photoInput.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) { window.showToast('Foto muito grande. Máx: 5MB.', 'error'); return; }
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+                if (photoPreview) photoPreview.src = ev.target.result;
+                try {
+                    const res = await fetch('/api/auth/nutricionista/photo', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fileData: ev.target.result, fileType: file.type })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        window.showToast('Foto atualizada!', 'success');
+                        // Atualiza todos os avatares da página
+                        document.querySelectorAll('#topbarAvatar, img[src*="dicebear"]').forEach(img => {
+                            img.src = data.photoUrl;
+                        });
+                    } else { window.showToast(data.message || 'Erro ao salvar foto.', 'error'); }
+                } catch(e) { window.showToast('Erro de conexão.', 'error'); }
+                finally { photoInput.value = ''; }
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // --- Carregar perfil ---
+    const loadProfileData = async () => {
         try {
-            const response = await fetch('/api/auth/nutricionista/details');
-            const result = await response.json();
-            if (result.success) { nameInput.value = result.data.name; emailInput.value = result.data.email; phoneInput.value = result.data.phone; }
-            else { showMessage('details-message', 'Erro ao carregar seus dados.', false); }
-        } catch (error) { showMessage('details-message', 'Erro de comunicação com o servidor.', false); }
+            const res = await fetch('/api/auth/nutricionista/details');
+            const result = await res.json();
+            if (result.success) {
+                const d = result.data;
+                ['name','email','phone','wppMessage','address','crnCode'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = d[id] || '';
+                });
+                // Carrega foto real se existir
+                if (d.photo_url && photoPreview) {
+                    photoPreview.src = d.photo_url;
+                } else if (d.name && photoPreview) {
+                    photoPreview.src = `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(d.name)}`;
+                }
+                // Carrega preços dos serviços
+                const prices = d.service_prices ? (typeof d.service_prices === 'string' ? JSON.parse(d.service_prices) : d.service_prices) : {};
+                document.querySelectorAll('.service-price-input').forEach(inp => {
+                    inp.value = prices[inp.dataset.service] || '';
+                });
+            }
+        } catch(e) {}
     };
 
-    if(detailsForm) {
-        detailsForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            setButtonLoading(saveDetailsBtn, true);
-            const payload = { name: nameInput.value, email: emailInput.value, phone: phoneInput.value };
-            try {
-                const response = await fetch('/api/auth/nutricionista/details', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                const result = await response.json();
-                showMessage('details-message', result.message, result.success);
-            } catch (error) { showMessage('details-message', 'Erro de comunicação ao salvar.', false); }
-            finally { setButtonLoading(saveDetailsBtn, false); }
-        });
-    }
+    // --- Submit: perfil ---
+    document.getElementById('detailsForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = e.target.querySelector('[type="submit"]');
+        setBtnLoading(btn, true);
+        try {
+            const res = await fetch('/api/auth/nutricionista/details', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name:       document.getElementById('name')?.value,
+                    email:      document.getElementById('email')?.value,
+                    phone:      document.getElementById('phone')?.value,
+                    wppMessage: document.getElementById('wppMessage')?.value,
+                    address:    document.getElementById('address')?.value,
+                    crnCode:    document.getElementById('crnCode')?.value,
+                    service_prices: (() => {
+                        const prices = {};
+                        document.querySelectorAll('.service-price-input').forEach(inp => {
+                            const val = parseFloat(inp.value);
+                            if (!isNaN(val) && val > 0) prices[inp.dataset.service] = val;
+                        });
+                        return Object.keys(prices).length ? prices : null;
+                    })()
+                })
+            });
+            const result = await res.json();
+            window.showToast(result.success ? 'Perfil atualizado!' : (result.message || 'Erro ao atualizar.'), result.success ? 'success' : 'error');
+        } catch(err) {
+            window.showToast('Erro de conexão.', 'error');
+        } finally {
+            setBtnLoading(btn, false);
+        }
+    });
 
-    const validatePassword = () => {
-        const value = newPasswordInput.value;
-        const confirmationValue = confirmPasswordInput.value;
+    // --- Submit: senha ---
+    document.getElementById('passwordForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newPass     = document.getElementById('newPassword')?.value;
+        const confirmPass = document.getElementById('confirmPassword')?.value;
+        if (newPass !== confirmPass) { window.showToast('As senhas não coincidem.', 'error'); return; }
+        const btn = e.target.querySelector('[type="submit"]');
+        setBtnLoading(btn, true, 'Processando...');
+        try {
+            const res = await fetch('/api/auth/nutricionista/password', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    currentPassword: document.getElementById('currentPassword')?.value,
+                    newPassword: newPass
+                })
+            });
+            const result = await res.json();
+            window.showToast(result.success ? 'Senha alterada!' : (result.message || 'Erro ao alterar senha.'), result.success ? 'success' : 'error');
+            if (result.success) e.target.reset();
+        } catch(err) {
+            window.showToast('Erro de conexão.', 'error');
+        } finally {
+            setBtnLoading(btn, false);
+        }
+    });
 
-        const isLengthValid = value.length >= 6;
-        const hasLowercase = /[a-z]/.test(value);
-        const hasUppercase = /[A-Z]/.test(value);
-        const hasSpecial = /[\d\W]/.test(value);
-        const doPasswordsMatch = value === confirmationValue && value.length > 0;
-
-        requirements.length.classList.toggle('valid', isLengthValid);
-        requirements.lowercase.classList.toggle('valid', hasLowercase);
-        requirements.uppercase.classList.toggle('valid', hasUppercase);
-        requirements.special.classList.toggle('valid', hasSpecial);
-        requirements.match.classList.toggle('valid', doPasswordsMatch);
-
-        return isLengthValid && hasLowercase && hasUppercase && hasSpecial && doPasswordsMatch;
-    };
-
-    if(newPasswordInput) newPasswordInput.addEventListener('input', validatePassword);
-    if(confirmPasswordInput) confirmPasswordInput.addEventListener('input', validatePassword);
-
-    if(passwordForm) {
-        passwordForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!validatePassword()) { showMessage('password-message', 'Por favor, cumpra todos os requisitos.', false); return; }
-
-            setButtonLoading(savePasswordBtn, true);
-            const payload = { currentPassword: document.getElementById('currentPassword').value, newPassword: newPasswordInput.value };
-
-            try {
-                const response = await fetch('/api/auth/nutricionista/password', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                const result = await response.json();
-                showMessage('password-message', result.message, result.success);
-                if (result.success) { passwordForm.reset(); Object.values(requirements).forEach(req => req.classList.remove('valid')); }
-            } catch (error) { showMessage('password-message', 'Erro ao alterar senha.', false); }
-            finally { setButtonLoading(savePasswordBtn, false); }
-        });
-    }
-
-    loadNutriData();
+    loadProfileData();
 }
 
 async function initializeDashboardPage(nutriId) {
@@ -2010,11 +2950,6 @@ async function initializeDashboardPage(nutriId) {
 }
 
 function updateDashboardUI(data) {
-    document.getElementById('kpi-today-appointments').textContent = data.kpis.todayAppointments;
-    document.getElementById('kpi-active-patients').textContent = data.kpis.activePatients;
-    document.getElementById('kpi-monthly-revenue').textContent = (parseFloat(data.kpis.monthlyRevenue) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    document.getElementById('kpi-avg-score').textContent = data.kpis.avgScore ? parseFloat(data.kpis.avgScore).toFixed(1) : 'N/A';
-
     const appointmentsList = document.getElementById('today-appointments-list');
     const emptyAppointmentsState = document.getElementById('empty-appointments-state');
     
@@ -2072,6 +3007,73 @@ function initializeInvoicingPage(nutriId) {
     const emptyState = document.getElementById('invoicesEmptyState');
     const monthFilter = document.getElementById('monthFilter');
     const statusFilter = document.getElementById('statusFilter');
+    const INVOICE_PAGE_SIZE = 15;
+    let invoicePage = 1;
+    let filteredInvoicesCache = [];
+
+    const renderInvoicePage = () => {
+        const total = filteredInvoicesCache.length;
+        const totalPages = Math.ceil(total / INVOICE_PAGE_SIZE);
+        const start = (invoicePage - 1) * INVOICE_PAGE_SIZE;
+        const pageItems = filteredInvoicesCache.slice(start, start + INVOICE_PAGE_SIZE);
+
+        tableBody.innerHTML = '';
+        if (total === 0) {
+            emptyState.style.display = 'block';
+        } else {
+            emptyState.style.display = 'none';
+            pageItems.forEach(invoice => {
+                const tr = document.createElement('tr');
+                const issueDate = new Date(invoice.issueDate).toLocaleDateString('pt-BR');
+                const dueDate   = new Date(invoice.dueDate).toLocaleDateString('pt-BR');
+                const amount    = parseFloat(invoice.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+                let badgeClass = 'bg-secondary'; let statusText = invoice.status;
+                if (invoice.status === 'Paid')     { badgeClass = 'bg-success'; statusText = 'Pago'; }
+                else if (invoice.status === 'Pending')  { badgeClass = 'bg-warning text-dark'; statusText = 'Pendente'; }
+                else if (invoice.status === 'Overdue')  { badgeClass = 'bg-danger'; statusText = 'Atrasado'; }
+                else if (invoice.status === 'Canceled') { badgeClass = 'bg-dark'; statusText = 'Cancelado'; }
+
+                let actionBtns = '';
+                if (invoice.payment_link && invoice.status !== 'Paid' && invoice.status !== 'Canceled') {
+                    actionBtns += `<button class="btn btn-sm btn-light border text-primary shadow-sm me-1" onclick="navigator.clipboard.writeText('${invoice.payment_link}'); window.showToast('Link copiado!', 'success')" title="Copiar Link"><i class="bi bi-link-45deg"></i></button>`;
+                }
+                if (invoice.status !== 'Paid' && invoice.status !== 'Canceled') {
+                    actionBtns += `<button class="btn btn-sm btn-light border text-success shadow-sm" onclick="markAsPaid(${invoice.id})" title="Marcar como Pago"><i class="bi bi-check2-circle"></i></button>`;
+                }
+
+                tr.innerHTML = `
+                    <td><span class="text-muted small fw-bold me-2">#${invoice.id}</span><span class="fw-medium text-dark">${invoice.patientName}</span></td>
+                    <td>${issueDate}</td>
+                    <td>${dueDate}</td>
+                    <td class="text-end fw-bold text-dark">${amount}</td>
+                    <td class="text-center"><span class="badge ${badgeClass}">${statusText}</span></td>
+                    <td class="text-end">${actionBtns || '-'}</td>`;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        // Controles de paginação
+        let paginationEl = document.getElementById('invoicePagination');
+        if (!paginationEl) {
+            paginationEl = document.createElement('div');
+            paginationEl.id = 'invoicePagination';
+            paginationEl.className = 'd-flex justify-content-between align-items-center px-2 pt-3 border-top mt-2';
+            tableBody.closest('.card-body').appendChild(paginationEl);
+        }
+        if (totalPages <= 1) { paginationEl.innerHTML = ''; return; }
+
+        paginationEl.innerHTML = `
+            <span class="text-muted small">${start + 1}–${Math.min(start + INVOICE_PAGE_SIZE, total)} de ${total} faturas</span>
+            <div class="d-flex gap-1">
+                <button class="btn btn-sm btn-light border rounded-pill px-3" id="invPrev" ${invoicePage === 1 ? 'disabled' : ''}>‹ Anterior</button>
+                <span class="btn btn-sm btn-light border rounded-pill px-3 disabled">${invoicePage} / ${totalPages}</span>
+                <button class="btn btn-sm btn-light border rounded-pill px-3" id="invNext" ${invoicePage === totalPages ? 'disabled' : ''}>Próxima ›</button>
+            </div>`;
+
+        document.getElementById('invPrev')?.addEventListener('click', () => { if (invoicePage > 1) { invoicePage--; renderInvoicePage(); } });
+        document.getElementById('invNext')?.addEventListener('click', () => { if (invoicePage < totalPages) { invoicePage++; renderInvoicePage(); } });
+    };
 
     if(!tableBody) return;
 
@@ -2109,91 +3111,86 @@ function initializeInvoicingPage(nutriId) {
                 data.patients.forEach(p => {
                     const opt = document.createElement('option');
                     opt.value = p.id;
-                    opt.textContent = p.nome;
+                    opt.dataset.type = p.patient_type || 'particular';
+                    opt.textContent = p.nome + (p.patient_type === 'convenio' ? ' 🛡️ Convênio' : '');
                     select.appendChild(opt);
                 });
             }
         } catch (e) { console.error('Erro ao carregar pacientes para fatura', e); }
     };
 
-    const loadInvoices = async () => {
+    const convenioWarning = (() => {
+        let el = document.getElementById('convenioInvoiceWarning');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'convenioInvoiceWarning';
+            el.className = 'alert alert-info border-info d-flex align-items-start gap-2 mt-3 d-none';
+            el.innerHTML = `<i class="bi bi-shield-check-fill fs-5 text-info flex-shrink-0 mt-1"></i>
+                <div><strong>Paciente atendido via Convênio</strong><br>
+                <small class="text-muted">Este paciente não realiza pagamentos diretos. O faturamento é gerido pelo convênio.</small></div>`;
+            document.getElementById('newInvoiceForm')?.appendChild(el);
+        }
+        return el;
+    });
+
+    document.getElementById('invoicePatient')?.addEventListener('change', (e) => {
+        const opt = e.target.selectedOptions[0];
+        const isConvenio = opt?.dataset.type === 'convenio';
+        const warning = document.getElementById('convenioInvoiceWarning') || convenioWarning();
+        const saveBtn = document.getElementById('saveInvoiceBtn');
+        warning.classList.toggle('d-none', !isConvenio);
+        if (saveBtn) { saveBtn.disabled = isConvenio; saveBtn.title = isConvenio ? 'Não aplicável para convênio' : ''; }
+    });
+
+    let allInvoicesCache = [];
+
+    // Aplica filtros e renderiza a partir do CACHE — instantâneo, sem ir ao servidor.
+    const applyFiltersAndRender = () => {
         const month = monthFilter.value;
         const status = statusFilter.value;
 
-        tableBody.innerHTML = '<tr><td colspan="6" class="text-center">Carregando faturas...</td></tr>';
+        // Os indicadores refletem o MÊS selecionado (mesmo escopo da tabela).
+        // O filtro de Status afeta apenas as linhas exibidas, não os cards.
+        const scoped = month
+            ? allInvoicesCache.filter(inv => String(inv.issueDate || '').slice(0, 7) === month)
+            : allInvoicesCache;
 
+        let monthlyRevenue = 0;
+        let pendingRevenue = 0;
+        let paidCount = 0;
+
+        scoped.forEach(inv => {
+            const amt = parseFloat(inv.amount) || 0;
+            const st = String(inv.status || '').toLowerCase();
+            if (st === 'paid') {
+                monthlyRevenue += amt;
+                paidCount++;
+            } else if (st === 'pending' || st === 'overdue') {
+                pendingRevenue += amt;
+            }
+        });
+
+        document.getElementById('kpi-monthly-revenue').textContent = monthlyRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        document.getElementById('kpi-pending-revenue').textContent = pendingRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        document.getElementById('kpi-avg-ticket').textContent = paidCount > 0 ? (monthlyRevenue / paidCount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00';
+
+        let filteredInvoices = scoped;
+        if (status && status !== 'all') filteredInvoices = filteredInvoices.filter(inv => String(inv.status || '').toLowerCase() === status);
+
+        filteredInvoicesCache = filteredInvoices;
+        invoicePage = 1;
+        renderInvoicePage();
+    };
+
+    // Busca as faturas no servidor UMA vez e guarda em cache.
+    const loadInvoices = async () => {
+        tableBody.innerHTML = '<tr><td colspan="6" class="text-center">Carregando faturas...</td></tr>';
         try {
             const response = await fetch('/api/auth/invoices');
             const result = await response.json();
-
             if (result.success) {
-                const allInvoices = result.data.invoices || [];
-                
-                let monthlyRevenue = 0;
-                let pendingRevenue = 0;
-                let paidCount = 0;
-                const currentMonthStr = new Date().toISOString().slice(0, 7);
-                
-                allInvoices.forEach(inv => {
-                    const amt = parseFloat(inv.amount) || 0;
-                    if (inv.status === 'Paid') {
-                        if (inv.issueDate.startsWith(currentMonthStr)) {
-                            monthlyRevenue += amt;
-                            paidCount++;
-                        }
-                    } else if (inv.status === 'Pending' || inv.status === 'Overdue') {
-                        pendingRevenue += amt;
-                    }
-                });
-                
-                document.getElementById('kpi-monthly-revenue').textContent = monthlyRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                document.getElementById('kpi-pending-revenue').textContent = pendingRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                document.getElementById('kpi-avg-ticket').textContent = paidCount > 0 ? (monthlyRevenue / paidCount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00';
-
-                let filteredInvoices = allInvoices;
-                if (month) filteredInvoices = filteredInvoices.filter(inv => inv.issueDate.startsWith(month));
-                if (status && status !== 'all') filteredInvoices = filteredInvoices.filter(inv => inv.status === status);
-                
-                tableBody.innerHTML = '';
-                if (filteredInvoices.length === 0) {
-                    emptyState.style.display = 'block';
-                } else {
-                    emptyState.style.display = 'none';
-                    filteredInvoices.forEach(invoice => {
-                        const tr = document.createElement('tr');
-                        const issueDate = new Date(invoice.issueDate).toLocaleDateString('pt-BR');
-                        const dueDate = new Date(invoice.dueDate).toLocaleDateString('pt-BR');
-                        const amount = parseFloat(invoice.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
-                        let badgeClass = 'bg-secondary';
-                        let statusText = invoice.status;
-                        if (invoice.status === 'Paid') { badgeClass = 'bg-success'; statusText = 'Pago'; }
-                        else if (invoice.status === 'Pending') { badgeClass = 'bg-warning text-dark'; statusText = 'Pendente'; }
-                        else if (invoice.status === 'Overdue') { badgeClass = 'bg-danger'; statusText = 'Atrasado'; }
-                        else if (invoice.status === 'Canceled') { badgeClass = 'bg-dark'; statusText = 'Cancelado'; }
-                        
-                        let actionBtns = '';
-                        if (invoice.payment_link && invoice.status !== 'Paid' && invoice.status !== 'Canceled') {
-                            actionBtns += `<button class="btn btn-sm btn-light border text-primary shadow-sm me-1" onclick="navigator.clipboard.writeText('${invoice.payment_link}'); window.showToast('Link de pagamento copiado!', 'success')" title="Copiar Link"><i class="bi bi-link-45deg"></i></button>`;
-                        }
-                        if (invoice.status !== 'Paid' && invoice.status !== 'Canceled') {
-                            actionBtns += `<button class="btn btn-sm btn-light border text-success shadow-sm" onclick="markAsPaid(${invoice.id})" title="Marcar como Pago"><i class="bi bi-check2-circle"></i></button>`;
-                        }
-
-                        tr.innerHTML = `
-                            <td>
-                                <span class="text-muted small fw-bold me-2">#${invoice.id}</span>
-                                <span class="fw-medium text-dark">${invoice.patientName}</span>
-                            </td>
-                            <td>${issueDate}</td>
-                            <td>${dueDate}</td>
-                            <td class="text-end fw-bold text-dark">${amount}</td>
-                            <td class="text-center"><span class="badge ${badgeClass}">${statusText}</span></td>
-                            <td class="text-end">${actionBtns || '-'}</td>
-                        `;
-                        tableBody.appendChild(tr);
-                    });
-                }
+                allInvoicesCache = result.data.invoices || [];
+                applyFiltersAndRender();
             }
         } catch (error) {
             console.error("Erro ao carregar faturas", error);
@@ -2237,6 +3234,8 @@ function initializeInvoicingPage(nutriId) {
         addInvoiceItem();
         updateInvoiceTotal();
         loadPatientsForInvoice();
+        setButtonLoading(saveInvoiceBtn, false); // garante que o botão não fique em loading perpétuo
+        document.getElementById('convenioInvoiceWarning')?.classList.add('d-none');
         modal.classList.add('is-visible');
     });
 
@@ -2254,7 +3253,7 @@ function initializeInvoicingPage(nutriId) {
 
         const payload = {
             patientId: document.getElementById('invoicePatient').value,
-            issueDate: document.getElementById('invoiceIssueDate').value,
+            issueDate: new Date().toLocaleDateString('en-CA'), // hoje (YYYY-MM-DD, fuso local)
             dueDate: document.getElementById('invoiceDueDate').value,
             items: items
         };
@@ -2293,8 +3292,8 @@ function initializeInvoicingPage(nutriId) {
         }
     });
 
-    monthFilter.addEventListener('change', loadInvoices);
-    statusFilter.addEventListener('change', loadInvoices);
+    monthFilter.addEventListener('change', applyFiltersAndRender);
+    statusFilter.addEventListener('change', applyFiltersAndRender);
 
     window.markAsPaid = async (id) => {
         window.showConfirm('Baixa Manual', 'Tem certeza que deseja marcar esta fatura como paga manualmente?', 'Sim, marcar como paga', 'primary', async () => {
@@ -2306,7 +3305,9 @@ function initializeInvoicingPage(nutriId) {
         });
     };
 
-    const now = new Date();
-    monthFilter.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    setButtonLoading(saveInvoiceBtn, false); // estado inicial: sem spinner
+
+    // Por padrão exibe TODAS as faturas; o filtro de mês só é aplicado se o profissional escolher um.
+    monthFilter.value = '';
     loadInvoices();
 }

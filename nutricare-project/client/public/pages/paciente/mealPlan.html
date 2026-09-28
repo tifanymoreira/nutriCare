@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Meu Plano Alimentar - NutriCare</title>
+    <link rel="icon" type="image/png" href="../../images/logo-mae.png" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/style.css">
+</head>
+<body class="patient-bg">
+    <header class="patient-header-glass d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-light rounded-circle border text-dark shadow-sm" onclick="history.back()" style="width: 40px; height: 40px;"><i class="bi bi-arrow-left"></i></button>
+            <h5 class="mb-0 fw-bold text-dark">Plano Alimentar</h5>
+        </div>
+    </header>
+
+    <main class="container-fluid py-4 px-3 px-md-4 mb-5">
+
+        <!-- Seletor de seções -->
+        <div class="diet-segment mb-4" id="dietTabs">
+            <button class="diet-segment-btn active" data-pane="paneMeal"><i class="bi bi-card-checklist"></i> Cardápio</button>
+            <button class="diet-segment-btn" data-pane="paneShopping"><i class="bi bi-cart-check"></i> Compras</button>
+            <button class="diet-segment-btn" data-pane="paneChef"><i class="bi bi-magic"></i> Chef IA</button>
+        </div>
+
+        <!-- ============ CARDÁPIO ============ -->
+        <section id="paneMeal" class="diet-pane">
+            <div id="mealPlanContainer">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted fw-medium">Buscando sua dieta...</p>
+                </div>
+            </div>
+            <div id="emptyMealPlanState" class="empty-state-card" style="display: none;">
+                <div class="empty-state-icon"><i class="bi bi-apple"></i></div>
+                <h5 class="empty-state-title">Nenhum plano ativo</h5>
+                <p class="empty-state-text">Seu nutricionista ainda não prescreveu um plano alimentar. Aguarde a liberação na plataforma.</p>
+            </div>
+        </section>
+
+        <!-- ============ LISTA DE COMPRAS ============ -->
+        <section id="paneShopping" class="diet-pane d-none">
+            <div class="glass-card p-4 mb-4">
+                <h6 class="fw-bold text-dark"><i class="bi bi-cart-check text-success me-2"></i>Gerador Automático</h6>
+                <p class="small text-muted mb-3">Sua lista é gerada com base na sua dieta ativa.</p>
+                <select class="form-select bg-light border-0 shadow-sm fw-bold text-primary" id="daysMultiplierSelect">
+                    <option value="7" selected>Para 7 Dias (Semanal)</option>
+                    <option value="15">Para 15 Dias (Quinzenal)</option>
+                    <option value="30">Para 30 Dias (Mensal)</option>
+                </select>
+            </div>
+
+            <div id="shoppingListContainer">
+                <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+            </div>
+            <div id="emptyShoppingState" class="empty-state-card" style="display: none;">
+                <div class="empty-state-icon"><i class="bi bi-cart-x"></i></div>
+                <h5 class="empty-state-title">Lista Vazia</h5>
+                <p class="empty-state-text">Você precisa ter um plano alimentar ativo para gerar a lista de compras.</p>
+            </div>
+        </section>
+
+        <!-- ============ CHEF IA ============ -->
+        <section id="paneChef" class="diet-pane d-none">
+            <div class="glass-card p-4 mb-4 text-center accent-primary shadow-sm">
+                <div class="meal-icon-badge mx-auto mb-2" style="background:rgba(168,85,247,0.12);color:#a855f7;"><i class="bi bi-magic"></i></div>
+                <h6 class="fw-bold text-dark">Cansou da mesma refeição?</h6>
+                <p class="small text-muted mb-3">Escolha a refeição abaixo. Nossa IA vai criar uma receita incrível usando <strong>apenas os ingredientes</strong> permitidos na sua dieta para aquele horário!</p>
+
+                <select class="form-select bg-light border-0 shadow-sm fw-bold text-primary mb-3" id="mealSelectAi">
+                    <option value="" selected disabled>Escolha a Refeição...</option>
+                </select>
+
+                <button class="btn bg-gradient-ai text-white fw-bold w-100 rounded-pill shadow-sm" id="btnGenerateAiRecipe">
+                    <i class="bi bi-stars"></i> Criar Receita
+                </button>
+            </div>
+
+            <div id="recipeResultContainer" class="glass-card p-4 d-none mb-5">
+                <div id="recipeContent"></div>
+            </div>
+        </section>
+    </main>
+
+    <nav class="mobile-bottom-nav">
+        <a href="dashboard.html" class="nav-item"><i class="bi bi-house-fill"></i>Início</a>
+        <a href="mealPlan.html" class="nav-item active"><i class="bi bi-apple"></i>Dieta</a>
+        <a href="appointments.html" class="nav-item"><i class="bi bi-calendar-event"></i>Consultas</a>
+        <a href="profile.html" class="nav-item"><i class="bi bi-person-fill"></i>Perfil</a>
+    </nav>
+
+    <div id="systemToast" class="custom-toast"><i class="bi bi-check-circle-fill toast-icon"></i><span id="toastMessage" class="ms-2"></span></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="../../js/dashboard-paciente.js"></script>
+</body>
+</html>

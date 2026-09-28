@@ -93,6 +93,7 @@
                     <li class="nav-item"><a href="nutriMetrics.html" class="nav-link"><i class="bi bi-graph-up-arrow"></i> Minhas Métricas</a></li>
                     <li class="nav-item"><a href="nutriConfig.html" class="nav-link"><i class="bi bi-person-fill-gear"></i> Meus Detalhes</a></li>
                     <li class="nav-item"><a href="nutriInvoicing.html" class="nav-link"><i class="bi bi-cash-stack"></i> Faturamento</a></li>
+                    <li class="nav-item"><a href="anamneseConfig.html" class="nav-link"><i class="bi bi-ui-checks"></i> Configurar Ficha</a></li>
                 </ul>
             </nav>
             <div class="sidebar-footer"><button id="logoutBtn" class="btn btn-logout w-100"><i class="bi bi-box-arrow-left"></i> Sair</button></div>
@@ -132,38 +133,11 @@
                     <button class="btn btn-light border fw-semibold shadow-sm rounded-pill px-3" id="openGenerateLinkModal">
                         <i class="bi bi-link-45deg text-primary me-1"></i> Link de Cadastro
                     </button>
-                    <a href="nutriAgenda.html" class="btn btn-primary-custom fw-semibold shadow-sm rounded-pill px-4">
+                    <!-- <a href="nutriAgenda.html" class="btn btn-primary-custom fw-semibold shadow-sm rounded-pill px-4">
                         <i class="bi bi-calendar-plus me-1"></i> Abrir Agenda
-                    </a>
+                    </a> -->
                 </div>
             </header>
-
-            <div class="row g-4 mb-4">
-                <div class="col-sm-6 col-xl-3">
-                    <div class="kpi-card-pro">
-                        <div class="kpi-info"><h6>Consultas Hoje</h6><h3 id="kpi-today-appointments">0</h3></div>
-                        <div class="kpi-icon-wrapper icon-appointments"><i class="bi bi-calendar-check-fill"></i></div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-xl-3">
-                    <div class="kpi-card-pro">
-                        <div class="kpi-info"><h6>Pacientes Ativos</h6><h3 id="kpi-active-patients">0</h3></div>
-                        <div class="kpi-icon-wrapper icon-patients"><i class="bi bi-people-fill"></i></div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-xl-3">
-                    <div class="kpi-card-pro">
-                        <div class="kpi-info"><h6>Faturamento (Mês)</h6><h3 id="kpi-monthly-revenue">R$ 0,00</h3></div>
-                        <div class="kpi-icon-wrapper icon-revenue"><i class="bi bi-cash-stack"></i></div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-xl-3">
-                    <div class="kpi-card-pro">
-                        <div class="kpi-info"><h6>Sua Nota Média</h6><h3 id="kpi-avg-score">N/A</h3></div>
-                        <div class="kpi-icon-wrapper icon-rating"><i class="bi bi-star-fill"></i></div>
-                    </div>
-                </div>
-            </div>
 
             <div class="row g-4">
                 
@@ -272,7 +246,13 @@
                 <p class="mb-0 text-muted small"><strong>Telefone:</strong> <span id="modalPendingPatientPhone" class="text-dark fw-medium"></span></p>
             </div>
 
-            <div class="modal-actions d-flex justify-content-center gap-3 mt-4">
+            <div id="videoLinkSection" class="text-start p-3 rounded-3 border mb-3" style="display:none; background:rgba(13,202,240,0.06); border-color:rgba(13,202,240,0.35) !important;">
+                <h6 class="fw-bold mb-1 small" style="color:#0dcaf0;"><i class="bi bi-camera-video-fill me-2"></i>Link da Videochamada <span class="fw-normal text-muted">(opcional)</span></h6>
+                <p class="text-muted small mb-2">Cole o link do Google Meet, Zoom, Teams, etc.</p>
+                <input type="url" class="form-control form-control-sm" id="videoLinkInput" placeholder="https://meet.google.com/abc-defg-hij">
+            </div>
+
+            <div class="modal-actions d-flex justify-content-center gap-3 mt-3">
                 <button id="btnRejectPending" class="btn btn-light text-danger border fw-bold w-100 rounded-pill"><i class="bi bi-x-lg me-1"></i> Recusar</button>
                 <button id="btnApprovePending" class="btn btn-primary-custom fw-bold w-100 rounded-pill"><i class="bi bi-check-lg me-1"></i> Aprovar</button>
             </div>

@@ -379,6 +379,34 @@ document.addEventListener("DOMContentLoaded", async () => {
             renderFoodLibrary(foodLibraryData);
         }
 
+        const searchInput = document.getElementById('foodSearchInput');
+        if (searchInput) {
+            let searchTimeout;
+            searchInput.addEventListener('input', (e) => {
+                const term = e.target.value.trim();
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(async () => {
+                    try {
+                        const res = await fetch(`/api/auth/foods?q=${encodeURIComponent(term)}`);
+                        const data = await res.json();
+                        if (data?.success) {
+                            foodLibraryData = data.library;
+                            const newFoods = Object.values(data.library).flat();
+                            newFoods.forEach(newF => {
+                                if (!allFoods.find(f => f.id === newF.id)) {
+                                    allFoods.push(newF);
+                                }
+                            });
+                            renderFoodLibrary(foodLibraryData);
+                            if (term !== '') {
+                                document.querySelectorAll('#foodGroupsAccordion .accordion-collapse').forEach(acc => acc.classList.add('show'));
+                            }
+                        }
+                    } catch (err) { console.error('Erro na busca de alimentos', err); }
+                }, 300);
+            });
+        }
+
         if (patientsRes?.success) {
             allPatients = patientsRes.patients;
             const list = document.getElementById("patientsListContainer");

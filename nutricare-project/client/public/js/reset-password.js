@@ -98,6 +98,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ token, newPassword })
             });
             
+            if (response.status === 429) {
+                showMessage(messageContainer, 'Muitas tentativas. Aguarde um momento antes de tentar novamente.', false);
+                btn.disabled = false;
+                textSpan.classList.remove('d-none');
+                spinner.classList.add('d-none');
+                return;
+            }
+
             const result = await response.json();
             
             if (result.success) {

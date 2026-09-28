@@ -1,6 +1,7 @@
 const router = express.Router();
 
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import {
     register, login, logout, getMe, getPatientCount, getScoreMedium,
     generateLink, patientDetails, anamneseDetails, sendMsg,
@@ -29,13 +30,44 @@ import {
     generatePatientShoppingList,
     generatePatientRecipeAI,
     markInvoiceAsPaid,
+    getInvoicePaymentLink,
     notifyPatientMealPlan,
-    updateAnamnese
+    updateAnamnese,
+    updatePatient,
+    updatePatientStatus,
+    getAnamneseConfig,
+    saveAnamneseConfig,
+    getPublicAnamneseConfig,
+    getMealFeedback,
+    saveMealFeedback,
+    getWaterTracker,
+    saveWaterTracker,
+    cancelConfirmedAppointment,
+    uploadExam,
+    listExams,
+    deleteExam,
+    uploadNutriPhoto,
+    saveClinicalNote,
+    getClinicalNotesForPatient,
+    deleteClinicalNote,
+    getPatientClinicalNotes
 } from '../controllers/auth.controller.js';
 
 import checkAuth from '../middlewares/checkAuth.js';
 import { pool } from '../config/dbConnect.js';
 import { saveAssessment, getAssessmentHistory } from '../controllers/anthropometry.controller.js';
+
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 5,
+    message: { success: false, message: 'Muitas tentativas de login. Por segurança, tente novamente após 15 minutos.' }
+});
+
+const passwordLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hora
+    max: 3,
+    message: { success: false, message: 'Muitas tentativas de recuperação. Tente novamente após 1 hora.' }
+});
 
 router.post('/save', checkAuth, saveAssessment);
 router.get('/history/:patientId', checkAuth, getAssessmentHistory); // NOVA ROTA
@@ -43,6 +75,7 @@ router.get('/history/:patientId', checkAuth, getAssessmentHistory); // NOVA ROTA
 router.get('/patient/dashboard-overview', checkAuth, getPatientDashboardOverview);
 
 router.get('/patient/:userId/invoices', checkAuth, getPatientInvoices);
+router.get('/patient/invoices/:id/pay-link', checkAuth, getInvoicePaymentLink);
 router.get('/patient/:userId/documents', checkAuth, getPatientDocuments);
 
 router.get('/nutricionista/appointment/today/:patientId', checkAuth, getTodayAppointment);
@@ -50,11 +83,11 @@ router.post('/nutricionista/appointment/save-notes', checkAuth, saveAppointmentN
 
 // Rotas de Autenticação Básica
 router.post('/register', register);
-router.post('/login', login);
+router.post('/login', loginLimiter, login);
 router.post('/logout', checkAuth, logout);
 router.get('/me', checkAuth, getMe);
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password', resetPassword);
+router.post('/forgot-password', passwordLimiter, forgotPassword);
+router.post('/reset-password', passwordLimiter, resetPassword);
 
 // Rotas de Dashboard e Métricas
 router.get('/dashboard-overview', checkAuth, getDashboardOverview);
@@ -66,6 +99,8 @@ router.get('/metrics', checkAuth, getMetrics);
 router.get('/patientList', checkAuth, patientList);
 router.get('/patientDetails/:id', checkAuth, patientDetails);
 router.get('/anamneseDetails/:id', checkAuth, anamneseDetails);
+router.put('/patients/:id', checkAuth, updatePatient);
+router.put('/patients/:id/status', checkAuth, updatePatientStatus);
 router.put('/anamnese/:patientId', checkAuth, updateAnamnese);
 router.get('/generateLink', checkAuth, generateLink);
 router.get('/sendMsg/:id', sendMsg);
@@ -82,6 +117,10 @@ router.put('/nutricionista/details', checkAuth, updateNutricionistaDetails);
 router.put('/nutricionista/password', checkAuth, updateNutricionistaPassword);
 router.get('/nutricionista/notifications', checkAuth, getNutriNotifications);
 
+// Configurações Dinâmicas de Pré-Anamnese
+router.get('/nutricionista/anamnese-config', checkAuth, getAnamneseConfig);
+router.put('/nutricionista/anamnese-config', checkAuth, saveAnamneseConfig);
+
 // Agenda Profissional (Visualização e Geração)
 router.get('/nutricionista/appointments', checkAuth, getAppointmentsForDay);
 router.put('/nutricionista/generateAgenda', checkAuth, generateAgenda);
@@ -97,6 +136,11 @@ router.post('/nutricionista/ai-diet', checkAuth, generateDietAI);
 // Rotas de Aprovação de Consultas
 router.get('/nutricionista/appointments/pending', checkAuth, getPendingAppointments);
 router.put('/nutricionista/appointments/status', checkAuth, updateAppointmentStatus);
+router.post('/nutricionista/appointments/cancel', checkAuth, cancelConfirmedAppointment);
+router.post('/nutricionista/photo', checkAuth, uploadNutriPhoto);
+router.post('/nutricionista/exams', checkAuth, uploadExam);
+router.get('/nutricionista/exams/:patientId', checkAuth, listExams);
+router.delete('/nutricionista/exams/:id', checkAuth, deleteExam);
 
 // Rotas de Consulta/Acompanhamento
 router.post('/consultations', checkAuth, createConsultation);
@@ -112,6 +156,7 @@ router.put('/invoices/:id/paid', checkAuth, markInvoiceAsPaid);
 // --- ROTAS PÚBLICAS/PACIENTE (AGENDAMENTO) ---
 router.get('/schedule/available', getNutriSchedule);
 router.post('/schedule/book', bookAppointment);
+router.get('/public/anamnese-config/:nutriId', getPublicAnamneseConfig);
 
 // Rotas do Painel do Paciente
 router.get('/patient/dashboard-overview', checkAuth, getPatientDashboardOverview);
@@ -121,12 +166,20 @@ router.delete('/patient/appointments', checkAuth, cancelAppointment);
 router.post('/patient/submit-survey', checkAuth, submitSurvey);
 router.get('/patient/shopping-list', checkAuth, generatePatientShoppingList);
 router.post('/patient/ai-recipe', checkAuth, generatePatientRecipeAI);
+router.get('/patient/meal-feedback', checkAuth, getMealFeedback);
+router.post('/patient/meal-feedback', checkAuth, saveMealFeedback);
+router.get('/patient/water', checkAuth, getWaterTracker);
+router.post('/patient/water', checkAuth, saveWaterTracker);
+router.post('/nutricionista/clinical-notes', checkAuth, saveClinicalNote);
+router.get('/nutricionista/clinical-notes/:patientId', checkAuth, getClinicalNotesForPatient);
+router.delete('/nutricionista/clinical-notes/:id', checkAuth, deleteClinicalNote);
+router.get('/patient/clinical-notes', checkAuth, getPatientClinicalNotes);
 
 // Rota auxiliar para pegar nome do Nutri na tela de agendamento público
-router.get('/nutricionista/:id', async (req, res) => {
+router.get('/public/nutricionista/:id', async (req, res) => {
     // Permite acesso público para que a tela de agendamento funcione sem login
     try {
-        const [rows] = await pool.query('SELECT name, phone, crnCode FROM nutricionista WHERE id = ?', [req.params.id]);
+        const [rows] = await pool.query('SELECT name, phone, crnCode, photo_url, service_prices FROM nutricionista WHERE id = ?', [req.params.id]);
         if (rows.length > 0) {
             res.json({ success: true, nutricionista: rows[0] });
         } else {

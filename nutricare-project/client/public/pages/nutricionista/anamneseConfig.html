@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriCare - Configurar Formulário Base</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="../../css/style.css">
+    <style>
+        .question-card {
+            transition: all 0.2s ease;
+        }
+        .question-card:hover {
+            transform: translateY(-2px);
+        }
+        .border-dashed { border: 2px dashed #dee2e6 !important; }
+        .glass-header { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #f1f3f5; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-wrapper">
+        <aside class="dashboard-sidebar">
+            <div class="sidebar-header"><a class="navbar-brand" href="#"><i class="bi bi-heart-pulse-fill"></i> NutriCare</a></div>
+            <nav class="sidebar-nav">
+                <ul class="list-unstyled">
+                    <li class="nav-item"><a href="dashboard.html" class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Visão Geral</a></li>
+                    <li class="nav-item"><a href="patientsList.html" class="nav-link"><i class="bi bi-people-fill"></i> Meus Pacientes</a></li>
+                    <li class="nav-item"><a href="nutriAgenda.html" class="nav-link"><i class="bi bi-calendar2-week-fill"></i> Minha Agenda</a></li>
+                    <li class="nav-item"><a href="nutriMetrics.html" class="nav-link"><i class="bi bi-graph-up-arrow"></i> Minhas Métricas</a></li>
+                    <li class="nav-item"><a href="nutriConfig.html" class="nav-link"><i class="bi bi-person-fill-gear"></i> Meus Detalhes</a></li>
+                    <li class="nav-item"><a href="nutriInvoicing.html" class="nav-link"><i class="bi bi-cash-stack"></i> Faturamento</a></li>
+                    <li class="nav-item active"><a href="anamneseConfig.html" class="nav-link"><i class="bi bi-ui-checks"></i> Configurar Ficha</a></li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer"><button id="logoutBtn" class="btn btn-logout w-100"><i class="bi bi-box-arrow-left"></i> Sair</button></div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main p-4 p-md-5">
+            <!-- Global Topbar UX -->
+            <div class="topbar-pro d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+                <div class="d-none d-md-flex align-items-center bg-white rounded-pill px-3 py-2 shadow-sm border border-light position-relative" style="width: 300px;">
+                    <i class="bi bi-search text-muted"></i>
+                    <input type="text" id="globalSearchInput" class="border-0 bg-transparent ms-2 w-100 shadow-none text-dark" placeholder="Buscar páginas ou pacientes..." style="outline: none; font-size: 0.85rem;" autocomplete="off">
+                    <div id="searchSuggestions" class="dropdown-menu shadow-lg border-0 rounded-4 mt-2 p-0" style="width: 100%; position: absolute; top: 100%; left: 0; z-index: 1050; max-height: 400px; overflow-y: auto;"></div>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <button class="btn btn-light rounded-circle shadow-sm border border-light" id="darkModeToggle" title="Alternar Modo Escuro"><i class="bi bi-moon-stars-fill text-dark"></i></button>
+                    <div class="dropdown">
+                        <button class="btn btn-light rounded-circle shadow-sm border border-light position-relative" data-bs-toggle="dropdown"><i class="bi bi-bell-fill text-muted"></i><span id="notificationBadge" class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle d-none"></span></button>
+                        <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 mt-2 p-0" style="width: 320px;" id="notificationDropdown">
+                            <div class="p-3 border-bottom bg-light rounded-top-4 d-flex justify-content-between align-items-center"><h6 class="mb-0 fw-bold text-dark">Notificações</h6><span id="notificationCountBadge" class="badge bg-primary rounded-pill">0</span></div>
+                            <div id="notificationList"><div class="p-4 text-center text-muted small">Carregando...</div></div>
+                            <div class="p-2 text-center"><a href="dashboard.html" class="small text-decoration-none text-primary fw-bold">Ir para Painel</a></div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 bg-white rounded-pill pe-3 p-1 shadow-sm border border-light">
+                        <img src="https://api.dicebear.com/8.x/initials/svg?seed=Nutri" id="topbarAvatar" alt="Nutri" class="rounded-circle bg-light border" width="32" height="32">
+                        <span class="small fw-bold text-dark d-none d-md-block" id="topbarNutriName">Nutricionista</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="container-fluid p-0">
+                <div class="glass-header p-4 d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 rounded-4 shadow-sm border">
+                    <div>
+                        <h1 class="h3 fw-bold text-dark mb-1"><i class="bi bi-layout-text-window-reverse text-primary me-2"></i>Construtor de Formulário</h1>
+                        <p class="text-muted mb-0 small mt-1">Gerencie as perguntas padrões ou crie novas para a ficha de pré-agendamento.</p>
+                    </div>
+                    <button id="saveConfigBtn" class="btn btn-primary-custom shadow-sm px-4 rounded-pill fw-bold">
+                        <i class="bi bi-cloud-check-fill me-2"></i> Publicar Formulário
+                    </button>
+                </div>
+
+                <div class="row px-4 px-md-5 pb-5">
+                    <div class="col-lg-10 col-xl-8 mx-auto">
+                        <div class="alert alert-primary bg-primary bg-opacity-10 border-0 text-dark mb-4 d-flex gap-3 align-items-center rounded-4 shadow-sm p-4">
+                            <i class="bi bi-lightbulb-fill fs-2 text-primary"></i>
+                            <div>
+                                <h6 class="fw-bold mb-1">Como funciona?</h6>
+                                <p class="mb-0 small text-muted">Oculte as perguntas padrões que você não utiliza clicando no ícone do olho (<i class="bi bi-eye"></i>). Para informações além do padrão, crie perguntas personalizadas no final da página.</p>
+                            </div>
+                        </div>
+
+                        <h5 class="fw-bold text-dark mb-3 mt-5 d-flex align-items-center"><i class="bi bi-shield-lock-fill text-secondary me-2"></i> Módulos Padrões do Sistema</h5>
+                        <p class="small text-muted mb-4">Edite o título exibido para o paciente ou oculte a pergunta da ficha.</p>
+                        <div id="standardQuestionsContainer" class="row align-items-stretch mb-5">
+                            <!-- Perguntas padrões renderizadas aqui -->
+                        </div>
+                                
+                        <div class="d-flex align-items-center mt-5 mb-4">
+                            <hr class="flex-grow-1 opacity-25">
+                            <span class="px-3 text-muted small fw-bold text-uppercase tracking-wider">Seu Questionário Extra</span>
+                            <hr class="flex-grow-1 opacity-25">
+                        </div>
+
+                        <h5 class="fw-bold text-dark mb-3 d-flex align-items-center"><i class="bi bi-stars text-warning me-2"></i> Perguntas Personalizadas</h5>
+                        <div id="customQuestionsContainer" class="d-flex flex-column gap-3 mb-4">
+                            <!-- Perguntas dinâmicas renderizadas aqui -->
+                        </div>
+
+                        <button id="addQuestionBtn" class="btn btn-light text-primary w-100 border-dashed py-4 fw-bold shadow-sm rounded-4 mt-3 transition hover-bg-light">
+                            <i class="bi bi-plus-circle-fill fs-5 d-block mb-1"></i> Adicionar Nova Pergunta
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal-backdrop" id="logoutModal">
+        <div class="modal-content text-center p-4 p-md-5" style="max-width: 420px;">
+            <button class="modal-close" id="closeLogoutModal">&times;</button>
+            <div class="mb-4 mt-2">
+                <div class="d-inline-flex align-items-center justify-content-center bg-danger bg-opacity-10 text-danger rounded-circle mb-3" style="width: 80px; height: 80px;">
+                    <i class="bi bi-box-arrow-right" style="font-size: 2.5rem;"></i>
+                </div>
+                <h3 class="fw-bold text-dark mb-2">Sair do sistema?</h3>
+                <p class="text-muted small mb-0">Tem certeza que deseja encerrar sua sessão atual?</p>
+            </div>
+            <div class="d-flex justify-content-center gap-3">
+                <button id="btnNo" class="btn btn-light w-50 fw-bold border">Cancelar</button>
+                <button id="btnYes" class="btn btn-danger w-50 fw-bold shadow-sm">Sim, sair</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../../js/anamneseConfig.js"></script>
+    <script type="module" src="../../js/dashboard-nutricionista.js"></script>
+</body>
+</html>

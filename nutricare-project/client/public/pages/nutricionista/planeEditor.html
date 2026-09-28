@@ -121,6 +121,7 @@
           <li class="nav-item"><a href="nutriMetrics.html" class="nav-link"><i class="bi bi-graph-up-arrow"></i> Minhas Métricas</a></li>
           <li class="nav-item"><a href="nutriConfig.html" class="nav-link"><i class="bi bi-person-fill-gear"></i> Meus Detalhes</a></li>
           <li class="nav-item"><a href="nutriInvoicing.html" class="nav-link"><i class="bi bi-cash-stack"></i> Faturamento</a></li>
+          <li class="nav-item"><a href="anamneseConfig.html" class="nav-link"><i class="bi bi-ui-checks"></i> Configurar Ficha</a></li>
         </ul>
       </nav>
       <div class="sidebar-footer"><button id="logoutBtn" class="btn btn-logout w-100"><i class="bi bi-box-arrow-left"></i> Sair</button></div>
@@ -161,7 +162,7 @@
             <div class="d-flex align-items-center gap-3 flex-wrap justify-content-end">
               <div class="btn-group shadow-sm rounded-pill" role="group">
                   <button class="btn btn-light text-danger fw-semibold border-end px-3" id="exportPlanBtn" data-bs-toggle="tooltip" title="Exportar Dieta em PDF"><i class="bi bi-file-pdf-fill me-1"></i> PDF</button>
-                  <button class="btn btn-light text-success fw-semibold px-3" id="notifyPatientBtn" data-bs-toggle="tooltip" title="Enviar para o WhatsApp do Paciente"><i class="bi bi-whatsapp me-1"></i> Enviar</button>
+                  <button class="btn btn-light text-primary fw-semibold px-3" id="notifyPatientBtn" data-bs-toggle="tooltip" title="Notificar paciente por E-mail"><i class="bi bi-envelope-fill me-1"></i> Enviar</button>
               </div>
 
               <button class="btn btn-light rounded-circle shadow-sm border border-light" id="darkModeToggle" title="Modo Escuro"><i class="bi bi-moon-stars-fill text-dark"></i></button>
@@ -350,25 +351,6 @@
       tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
       });
-
-      // Filtro de Busca de Alimentos (Resolve o Nível 3)
-      const foodSearch = document.getElementById('foodSearchInput');
-      if (foodSearch) {
-        foodSearch.addEventListener('keyup', function (e) {
-          const term = e.target.value.toLowerCase();
-          
-          document.querySelectorAll('.food-item-pro').forEach(item => {
-            const name = item.querySelector('.food-name')?.textContent.toLowerCase() || '';
-            item.style.display = name.includes(term) ? 'flex' : 'none';
-          });
-
-          // Expande os accordions (categorias) que possuem resultados para não esconder a busca
-          document.querySelectorAll('#foodGroupsAccordion .accordion-collapse').forEach(acc => {
-            const hasVisibleItems = Array.from(acc.querySelectorAll('.food-item-pro')).some(el => el.style.display === 'flex');
-            if (hasVisibleItems && term !== '') acc.classList.add('show');
-          });
-        });
-      }
       
       // --- Lógica de UX Global da página de Dieta ---
       const toggleBtn = document.getElementById('darkModeToggle');

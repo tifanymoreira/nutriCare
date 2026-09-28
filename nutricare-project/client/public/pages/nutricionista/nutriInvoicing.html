@@ -46,6 +46,9 @@
                     <li class="nav-item">
                         <a href="nutriInvoicing.html" class="nav-link"><i class="bi bi-cash-stack"></i> Faturamento</a>
                     </li>
+                    <li class="nav-item">
+                        <a href="anamneseConfig.html" class="nav-link"><i class="bi bi-ui-checks"></i> Configurar Ficha</a>
+                    </li>
                 </ul>
             </nav>
             <div class="sidebar-footer">
@@ -160,17 +163,13 @@
             
             <form id="newInvoiceForm">
                 <div class="row">
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-8 mb-3">
                         <label for="invoicePatient" class="form-label">Paciente</label>
                         <select class="form-select" id="invoicePatient" required>
                             <option value="" disabled selected>Selecione um paciente...</option>
                         </select>
                     </div>
-                    <div class="col-md-3 mb-3">
-                        <label for="invoiceIssueDate" class="form-label">Data de Emissão</label>
-                        <input type="date" class="form-control" id="invoiceIssueDate" required>
-                    </div>
-                    <div class="col-md-3 mb-3">
+                    <div class="col-md-4 mb-3">
                         <label for="invoiceDueDate" class="form-label">Data de Vencimento</label>
                         <input type="date" class="form-control" id="invoiceDueDate" required>
                     </div>
@@ -243,7 +242,7 @@
                             </h2>
                             <div id="manualInvoicing1" class="accordion-collapse collapse" data-bs-parent="#manualAccordion">
                                 <div class="accordion-body text-secondary">
-                                    Clique no botão <strong>"Nova Fatura"</strong> no topo da página. Selecione o paciente, defina a data de emissão/vencimento e adicione os itens cobrados (ex: Consulta, Bioimpedância). O sistema calculará o valor total automaticamente.
+                                    Clique no botão <strong>"Nova Fatura"</strong> no topo da página. Selecione o paciente, defina a data de vencimento e adicione os itens cobrados (ex: Consulta, Bioimpedância). A data de emissão é registrada automaticamente no dia e o sistema calcula o valor total.
                                 </div>
                             </div>
                         </div>
